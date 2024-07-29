@@ -92,4 +92,4 @@ To contribute to this project, follow these steps:
 Please ensure your changes pass all tests and follow the project's coding standards.
 
 ## License
-This project is licensed under the CC0 1.0 Universal License. See the [LICENSE](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/LICENSE) file for details.
+This project is licensed under the CC0 1.0 Universal License. See the [LICENSE](./LICENSE) file for details.
