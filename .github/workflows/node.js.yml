@@ -62,9 +62,9 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Copy files to Google Cloud Storage
-        run: |
-          gsutil cp -r ./dist/* gs://clinvar-gk-pilot/libraries
+      # - name: Copy files to Google Cloud Storage
+      #   run: |
+      #     gsutil cp -r ./dist/* gs://clinvar-gk-pilot/libraries
 
       - name: Execute BigQuery Script
         env:
