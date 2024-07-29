@@ -1,3 +1,12 @@
+
+/**
+ * Formats a given date or string into the nearest month in the format "Month Year".
+ * If the day of the month is 15 or greater, it rounds up to the next month.
+ * If the month is December, it transitions to the next year.
+ * 
+ * @param date - The date or string to be formatted.
+ * @returns The formatted date in the format "Month Year".
+ */
 function formatNearestMonth(date: Date | string): string {
   const inputDate = typeof date === 'string' ? new Date(date) : date;
   
