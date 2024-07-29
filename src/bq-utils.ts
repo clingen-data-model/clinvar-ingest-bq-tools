@@ -1,4 +1,3 @@
-
 function formatNearestMonth(date: Date | string): string {
   const inputDate = typeof date === 'string' ? new Date(date) : date;
   
@@ -195,4 +194,7 @@ function normalizeAndKeyById(inputObject: JsonObjectWithId): Record<string, Json
   return keyObjectById(inputObject);
 }
 
-
+// Attach to global object explicitly if necessary (e.g., for Node.js)
+if (typeof global !== 'undefined') {
+  (global as any).formatNearestMonth = formatNearestMonth;
+}
