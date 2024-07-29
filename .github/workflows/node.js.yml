@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20]
+        node-version: ['node20']
 
     steps:
     - name: Checkout repository
@@ -52,7 +52,7 @@ jobs:
       - name: Compile TypeScript
         run: npx tsc
 
-      - name: Setup Google Cloud SDK
+      - name: Set up Google Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
         with:
           version: 'latest'
@@ -60,7 +60,11 @@ jobs:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          credentials_json: '${{ secrets.GCP_SA_KEY }}'
+
+      - name: Set Google Cloud Project
+        run: |
+          gcloud config set project clingen-stage        
           
       - name: Copy files to Google Cloud Storage
         run: |
