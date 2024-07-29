@@ -6,6 +6,7 @@ SERVICE_ACCOUNT_EMAIL="github-clinvar-bq-utils-upload@clingen-stage.iam.gservice
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
   --role="roles/storage.objectAdmin" \
+  --role="roles/storage.objectViewer" \
   --role="roles/bigquery.dataEditor" \
   --role="roles/bigquery.jobUser" \
   --role="roles/bigquery.user" \
