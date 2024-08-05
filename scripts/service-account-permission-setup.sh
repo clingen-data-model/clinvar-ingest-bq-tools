@@ -1,16 +1,35 @@
 #!/bin/bash
 
-PROJECT_ID="clingen-stage"
-SERVICE_ACCOUNT_EMAIL="github-clinvar-bq-utils-upload@clingen-stage.iam.gserviceaccount.com"
+set -e  # Exit immediately if a command exits with a non-zero status
+
+PROJECT_ID="clingen-dev"
+SERVICE_ACCOUNT_EMAIL="github-clinvar-bq-utils-upload@${PROJECT_ID}.iam.gserviceaccount.com"
 
 gcloud projects add-iam-policy-binding $PROJECT_ID \
   --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
   --role="roles/storage.objectAdmin" \
+  --quiet > /dev/null || { echo "Failed to assign storage.objectAdmin role"; exit 1; }
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
   --role="roles/storage.objectViewer" \
+  --quiet > /dev/null || { echo "Failed to assign storage.objectViewer role"; exit 1; }
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
   --role="roles/bigquery.dataEditor" \
+  --quiet > /dev/null || { echo "Failed to assign bigquery.dataEditor role"; exit 1; }
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
   --role="roles/bigquery.jobUser" \
+  --quiet > /dev/null || { echo "Failed to assign bigquery.jobUser role"; exit 1; }
+
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+  --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
   --role="roles/bigquery.user" \
-  --condition=None \
-  --format=json
+  --quiet > /dev/null || { echo "Failed to assign bigquery.user role"; exit 1; }
+
+echo "All roles assigned successfully."
 
 echo "Service account permissions setup completed."
