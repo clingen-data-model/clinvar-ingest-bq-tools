@@ -11,26 +11,31 @@ do
   gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/storage.objectAdmin" \
+    --condition=None \
     --quiet > /dev/null || { echo "Failed to assign storage.objectAdmin role"; exit 1; }
 
   gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/storage.objectViewer" \
+    --condition=None \
     --quiet > /dev/null || { echo "Failed to assign storage.objectViewer role"; exit 1; }
 
   gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/bigquery.dataEditor" \
+    --condition=None \
     --quiet > /dev/null || { echo "Failed to assign bigquery.dataEditor role"; exit 1; }
 
   gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/bigquery.jobUser" \
+    --condition=None \
     --quiet > /dev/null || { echo "Failed to assign bigquery.jobUser role"; exit 1; }
 
   gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="serviceAccount:$SERVICE_ACCOUNT_EMAIL" \
     --role="roles/bigquery.user" \
+    --condition=None \
     --quiet > /dev/null || { echo "Failed to assign bigquery.user role"; exit 1; }
 done
 

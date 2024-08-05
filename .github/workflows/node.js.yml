@@ -74,7 +74,7 @@ jobs:
         env:
           PROJECT_ID: 'clingen-stage'
         run: |
-          echo "Executing BigQuery scripts..."
+          echo "Executing BigQuery scripts for clingen-stage..."
           for file in ./scripts/*.sql; do
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
