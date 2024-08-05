@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.deriveHGVS`(
+CREATE OR REPLACE FUNCTION `clinvar_ingest.deriveHGVS`(
   variationType STRING,
   seqLoc STRUCT<
     for_display BOOL,
@@ -28,7 +28,7 @@ CREATE OR REPLACE FUNCTION `clinvar_curator.deriveHGVS`(
 RETURNS STRING
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return deriveHGVS(variationType, seqLoc);
 """;
@@ -80,7 +80,7 @@ WITH x as (
     STRUCT(null, null, null, null, 'NC_001.10', '1', null, null, 50, 70, 900, 2001, null, null, null, null,null, null, null, null, null, null) as seq
 )
 SELECT 
-  `clinvar_curator.deriveHGVS`( x.variation_type, x.seq),
+  `clinvar_ingest.deriveHGVS`( x.variation_type, x.seq),
   x.variation_type,
   x.seq
 FROM x;

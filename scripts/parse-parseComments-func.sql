@@ -1,17 +1,17 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseComments`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseComments`(json STRING)
 RETURNS ARRAY<STRUCT<text STRING, type STRING, source STRING>>
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseComments(json);
 """;
 
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseCommentItems`(json_comments ARRAY<STRING>)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseCommentItems`(json_comments ARRAY<STRING>)
 RETURNS ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING>>
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseCommentItems(json_xrefs);
 """;
@@ -52,4 +52,4 @@ WITH x as (
     }
     """ as content
 )
-select JSON_EXTRACT(x.content,r'$'), `clingen-stage.clinvar_curator.parseComments`(JSON_EXTRACT(x.content,r'$')) as comment from x;
+select JSON_EXTRACT(x.content,r'$'), `clinvar_ingest.parseComments`(JSON_EXTRACT(x.content,r'$')) as comment from x;

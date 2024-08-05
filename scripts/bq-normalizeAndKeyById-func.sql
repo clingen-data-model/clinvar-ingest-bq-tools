@@ -1,8 +1,8 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.normalizeAndKeyById`(json JSON)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.normalizeAndKeyById`(json JSON)
 RETURNS JSON
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/bq-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/bq-utils.js'])
 AS r"""
   return normalizeAndKeyById(json);
 """;
@@ -20,5 +20,5 @@ WITH x as (
 )
 select 
   x.json_data as before,
-  `clinvar_curator.normalizeAndKeyById`(json_data) as after 
+  `clinvar_ingest.normalizeAndKeyById`(json_data) as after 
 from x;

@@ -56,7 +56,7 @@ jobs:
       - name: Compile TypeScript
         run: npx tsc
 
-      - name: Authenticate to Google Cloud for clingen-stage
+      - name: Authenticate to Google Cloud for clingen-swc
         uses: google-github-actions/auth@v1
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
@@ -66,9 +66,9 @@ jobs:
         with:
           version: 'latest'
 
-      - name: Copy files to Google Cloud Storage for clingen-stage
+      - name: Copy javascript functions that are referenced by scripts to Google Cloud Storage
         run: |
-          gsutil cp -r ./dist/* gs://clinvar-gk-pilot/libraries
+          gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
       
       - name: Execute BigQuery Script for clingen-stage
         env:
@@ -79,20 +79,6 @@ jobs:
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           done
-
-      - name: Authenticate to Google Cloud for clingen-dev
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_DEV_KEY }}
-
-      - name: Setup Google Cloud SDK for clingen-dev
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          version: 'latest'
-
-      - name: Copy files to Google Cloud Storage for clingen-dev
-        run: |
-          gsutil cp -r ./dist/* gs://clinvar-gk-pilot-dev/libraries
     
       - name: Execute BigQuery Script for clingen-dev
         env:

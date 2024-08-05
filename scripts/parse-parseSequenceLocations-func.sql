@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseSequenceLocations`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseSequenceLocations`(json STRING)
 RETURNS ARRAY<STRUCT<
   for_display BOOL,
   assembly STRING, 
@@ -25,7 +25,7 @@ RETURNS ARRAY<STRUCT<
 >>
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseSequenceLocations(json);
 """;
@@ -60,5 +60,5 @@ WITH x as (
 )
 select 
   x.content,
-  `clinvar_curator.parseSequenceLocations`(JSON_EXTRACT(x.content, r'$.Location')) as seq 
+  `clinvar_ingest.parseSequenceLocations`(JSON_EXTRACT(x.content, r'$.Location')) as seq 
 from x;

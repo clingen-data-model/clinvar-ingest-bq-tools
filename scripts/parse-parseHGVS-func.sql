@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseHGVS`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseHGVS`(json STRING)
   RETURNS ARRAY<
     STRUCT<
       nucleotide_expression STRUCT<
@@ -24,7 +24,7 @@ CREATE OR REPLACE FUNCTION `clinvar_curator.parseHGVS`(json STRING)
       assembly STRING,
       type STRING>>
 LANGUAGE js 
-  OPTIONS (library=["gs://clinvar-gk-pilot/libraries/parse-utils.js"]) 
+  OPTIONS (library=["gs://clinvar-ingest/bq-tools/parse-utils.js"]) 
 AS r"""
   return parseHGVS(json);
 """;
@@ -72,4 +72,4 @@ WITH x AS (
     }
     """ as content
 )
-select `clinvar_curator.parseHGVS`(x.content) as hgvs from x;
+select `clinvar_ingest.parseHGVS`(x.content) as hgvs from x;

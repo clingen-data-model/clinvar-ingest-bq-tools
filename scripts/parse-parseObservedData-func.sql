@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseObservedData`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseObservedData`(json STRING)
 RETURNS 
   ARRAY<
     STRUCT<
@@ -11,7 +11,7 @@ RETURNS
   >
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseObservedData(json);
 """;
@@ -61,4 +61,4 @@ WITH x as (
     }
   """ as content
 )
-select `clinvar_curator.parseObservedData`(x.content) as od from x;
+select `clinvar_ingest.parseObservedData`(x.content) as od from x;

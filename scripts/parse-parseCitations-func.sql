@@ -1,8 +1,8 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseCitations`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseCitations`(json STRING)
 RETURNS ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, curie STRING>>
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseCitations(json);
 """;
@@ -23,4 +23,4 @@ WITH x as (
 
     """ as content
 )
-select `clinvar_curator.parseCitations`(JSON_EXTRACT(x.content,r'$.Interpretation')) as interp from x;
+select `clinvar_ingest.parseCitations`(JSON_EXTRACT(x.content,r'$.Interpretation')) as interp from x;

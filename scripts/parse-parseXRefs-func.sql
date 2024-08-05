@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseXRefs`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseXRefs`(json STRING)
 RETURNS ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING, ref_field STRING>>
 LANGUAGE js  
   OPTIONS (
@@ -7,11 +7,11 @@ AS r"""
   return parseXRefs(json);
 """;
 
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseXRefItems`(json_xrefs ARRAY<STRING>)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseXRefItems`(json_xrefs ARRAY<STRING>)
 RETURNS ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING, ref_field STRING>>
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseXRefItems(json_xrefs);
 """;
@@ -38,6 +38,6 @@ recs as (
   group by key
 )
 select
-  `clinvar_curator.parseXRefItems`(recs.xrefs) as xref_items,
-  `clinvar_curator.parseXRefs`(recs.content) as xrefs
+  `clinvar_ingest.parseXRefItems`(recs.xrefs) as xref_items,
+  `clinvar_ingest.parseXRefs`(recs.content) as xrefs
 from recs;

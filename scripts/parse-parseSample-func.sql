@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseSample`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseSample`(json STRING)
 RETURNS STRUCT<
   sample_description STRUCT<
     description STRUCT<
@@ -135,7 +135,7 @@ RETURNS STRUCT<
   source_type STRING>
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseSample(json);
 """;
@@ -164,7 +164,7 @@ WITH x as (
 ),
 samples as (
 select 
-  `clinvar_curator.parseSample`(x.content) as sample
+  `clinvar_ingest.parseSample`(x.content) as sample
 from x
 )
 select

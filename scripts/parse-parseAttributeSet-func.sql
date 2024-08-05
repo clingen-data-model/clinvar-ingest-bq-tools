@@ -1,4 +1,4 @@
-CREATE OR REPLACE FUNCTION `clinvar_curator.parseAttributeSet`(json STRING)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.parseAttributeSet`(json STRING)
 RETURNS 
   ARRAY<
     STRUCT<
@@ -10,7 +10,7 @@ RETURNS
   >
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseAttributeSet(json);
 """;
@@ -85,4 +85,4 @@ WITH x as (
     }
     """ as content
 )
-select `clinvar_curator.parseAttributeSet`(x.content) as sx from x;
+select `clinvar_ingest.parseAttributeSet`(x.content) as sx from x;
