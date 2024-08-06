@@ -70,15 +70,15 @@ jobs:
         run: |
           gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
       
-      - name: Execute BigQuery Script for clingen-stage
-        env:
-          PROJECT_ID: 'clingen-stage'
-        run: |
-          echo "Executing BigQuery scripts for clingen-stage..."
-          for file in ./scripts/*.sql; do
-            echo "Executing $file..."
-            bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
-          done
+      # - name: Execute BigQuery Script for clingen-stage
+      #   env:
+      #     PROJECT_ID: 'clingen-stage'
+      #   run: |
+      #     echo "Executing BigQuery scripts for clingen-stage..."
+      #     for file in ./scripts/*.sql; do
+      #       echo "Executing $file..."
+      #       bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
+      #     done
     
       - name: Execute BigQuery Script for clingen-dev
         env:
