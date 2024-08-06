@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `clinvar-ingest.scv_summary_proc`(start_with DATE)
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.scv_summary_proc`(start_with DATE)
 BEGIN
 
   FOR rec IN (select s.schema_name, s.release_date, s.prev_release_date, s.next_release_date FROM clinvar_ingest.schemas_on_or_after(start_with) as s)
