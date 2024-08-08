@@ -2,7 +2,7 @@ CREATE OR REPLACE FUNCTION `clinvar_ingest.parseXRefs`(json STRING)
 RETURNS ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING, ref_field STRING>>
 LANGUAGE js  
   OPTIONS (
-    library=['gs://clinvar-gk-pilot/libraries/parse-utils.js'])
+    library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
   return parseXRefs(json);
 """;
