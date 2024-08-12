@@ -236,7 +236,7 @@ BEGIN
         SELECT 
           *,
           -- when extracting 'has_range_endpoints', 'start_pos' and 'end_pos', ignore the unsupported LRG_??? accessions.
-          REGEXP_CONTAINS(hgvs_source, r'([gmcnr]\\.\\([0-9\\?]+_[0-9\\?]+\\)_\\([0-9\\?]+_[0-9\\?]+\\)(dup|del)[ACTGN]*$') as has_range_endpoints,
+          REGEXP_CONTAINS(hgvs_source, r'[gmcnr]\\.\\([0-9\\?]+_[0-9\\?]+\\)_\\([0-9\\?]+_[0-9\\?]+\\)(dup|del)[ACTGN]*$') as has_range_endpoints,
           CAST(REGEXP_EXTRACT(hgvs_source, r'[gmcnr]\\.([0-9]+)') AS INT64) AS start_pos,
           CAST(REGEXP_EXTRACT(hgvs_source, r'[gmcnr]\\.[0-9]+_([0-9]+)') AS INT64) AS end_pos,
           CASE 
