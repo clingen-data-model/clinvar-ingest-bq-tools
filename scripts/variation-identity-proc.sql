@@ -235,9 +235,10 @@ BEGIN
       h_top AS (
         SELECT 
           *,
-          REGEXP_CONTAINS(hgvs_source, r'^(NC|NT|NW|NG|NM|NR|XM|XR)_[0-9]+\\.[0-9]+\\:[gmcnr]\\.\\([0-9\\?]+_[0-9\\?]+\\)_\\([0-9\\?]+_[0-9\\?]+\\)(dup|del)[ACTGN]*$') as has_range_endpoints,
-          CAST(REGEXP_EXTRACT(hgvs_source, r'^[NX][CTWGMR]_[0-9]+\\.[0-9]+\\:[gmcnr]\\.([0-9]+)') AS INT64) AS start_pos,
-          CAST(REGEXP_EXTRACT(hgvs_source, r'^[NX][CTWGMR]_[0-9]+\\.[0-9]+\\:[gmcnr]\\.[0-9]+_([0-9]+)') AS INT64) AS end_pos,
+          -- when extracting 'has_range_endpoints', 'start_pos' and 'end_pos', ignore the unsupported LRG_??? accessions.
+          REGEXP_CONTAINS(hgvs_source, r'([gmcnr]\\.\\([0-9\\?]+_[0-9\\?]+\\)_\\([0-9\\?]+_[0-9\\?]+\\)(dup|del)[ACTGN]*$') as has_range_endpoints,
+          CAST(REGEXP_EXTRACT(hgvs_source, r'[gmcnr]\\.([0-9]+)') AS INT64) AS start_pos,
+          CAST(REGEXP_EXTRACT(hgvs_source, r'[gmcnr]\\.[0-9]+_([0-9]+)') AS INT64) AS end_pos,
           CASE 
             WHEN assembly_version=38 THEN 1
             WHEN assembly_version=37 THEN 2
@@ -313,7 +314,8 @@ BEGIN
       UPDATE `%s.temp_variation` tv
         SET tv.vrs_class = 
           CASE 
-            WHEN tv.variation_type IN ('Deletion', 'Duplication') AND (var.derived_variant_length > 10000 OR var.has_range_endpoints) THEN
+            WHEN (tv.variation_type IN ('Deletion', 'Duplication')) 
+              AND (var.derived_variant_length IS NULL OR var.derived_variant_length > 10000 OR var.has_range_endpoints) THEN
               'CopyNumberChange'
             WHEN tv.variation_type IN ('Deletion', 'Duplication', 'Indel', 'Insertion', 'Microsatellite', 'Tandem duplication', 'single nucleotide variant', 'Microsatellite') AND NOT var.has_range_endpoints THEN
               'Allele'
