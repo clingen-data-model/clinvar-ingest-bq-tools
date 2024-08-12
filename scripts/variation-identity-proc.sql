@@ -523,9 +523,9 @@ BEGIN
           tv.vrs_class = 'CopyNumberChange',
           CASE 
             WHEN tv.variation_type IN ('Deletion', 'copy number loss') THEN
-              "efo:0030067"
+              "EFO:0030067"
             WHEN tv.variation_type IN ('Duplication', 'copy number gain') THEN
-              "efo:0030070"
+              "EFO:0030070"
             ELSE
               NULL
             END,
