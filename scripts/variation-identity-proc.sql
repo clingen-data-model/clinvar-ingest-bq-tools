@@ -584,7 +584,7 @@ BEGIN
           from (
             select 
               vm.*,
-              row_number() over (partition by vm.variation_id order by vm.precedence, vm.assembly_version desc, vm.accession) as rn
+              row_number() over (partition by vm.variation_id order by vm.precedence, vm.assembly_version desc, vm.issue, vm.accession) as rn
             from `%s.variation_members` vm
             )
           where rn = 1
