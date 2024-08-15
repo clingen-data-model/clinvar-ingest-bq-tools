@@ -2,6 +2,9 @@ const rewire = require('rewire');
 const parseUtils = rewire('../dist/parse-utils.js');
 
 // Get the functions to test
+const buildGeneListOutput = parseUtils.__get__('buildGeneListOutput');  
+const buildGeneListsOutput = parseUtils.__get__('buildGeneListsOutput');
+const parseGeneLists = parseUtils.__get__('parseGeneLists');
 const buildCommentOutput = parseUtils.__get__('buildCommentOutput');
 const buildCommentsOutput = parseUtils.__get__('buildCommentsOutput');
 const parseComments = parseUtils.__get__('parseComments');
@@ -25,6 +28,30 @@ const parseProteinExpression = parseUtils.__get__('parseProteinExpression');
 const buildHGVSOutput = parseUtils.__get__('buildHGVSOutput');
 const buildHGVSArrayOutput = parseUtils.__get__('buildHGVSArrayOutput');
 const parseHGVS = parseUtils.__get__('parseHGVS');
+
+test('buildGeneListOutput should build GeneListOutput correctly', () => {
+  const input = { Gene: { '@Symbol': 'Symbol1', 'Name': 'HGNC1','@RelationshipType': 'asserted, not computed' } };
+  const expectedOutput = { symbol: 'Symbol1', name: 'HGNC1', relationship_type: 'asserted, not computed'};
+  expect(buildGeneListOutput(input)).toEqual(expectedOutput);
+});
+
+test('buildGeneListsOutput should build an array of GeneListOutput correctly', () => {
+  const input = [
+    { Gene: { '@Symbol': 'Symbol1', 'Name': 'HGNC1','@RelationshipType': 'asserted, not computed' } },
+    { Gene: { '@Symbol': 'Symbol2', 'Name': 'HGNC2','@RelationshipType': 'asserted, not computed' } }
+  ];
+  const expectedOutput = [
+    { symbol: 'Symbol1', name: 'HGNC1', relationship_type: 'asserted, not computed' },
+    { symbol: 'Symbol2', name: 'HGNC2', relationship_type: 'asserted, not computed' }
+  ];
+  expect(buildGeneListsOutput(input)).toEqual(expectedOutput);
+});
+
+test('parseGeneLists should parse JSON input correctly', () => {
+  const json = '{"GeneList":[{"Gene":{"@Symbol":"Symbol1","Name":"HGNC1","@RelationshipType":"asserted, not computed"}}]}';
+  const expectedOutput = [{ symbol: 'Symbol1', name: 'HGNC1', relationship_type: 'asserted, not computed' }];
+  expect(parseGeneLists(json)).toEqual(expectedOutput);
+});
 
 test('buildCommentOutput should build CommentOutput correctly', () => {
   const input = { $: 'This is a comment', '@Type': 'Type1', '@DataSource': 'Source1' };

@@ -7,6 +7,89 @@
  * - ObservedData, SetElement, TraitRelationship, and ClinicalAssertionTrait.
  */
 
+
+// -- GeneList interfaces and functions --
+
+// below is an example of a JSON object that represents a clinical assertion variant object
+  // "GeneList": {
+  //   "Gene": {
+  //     "@Symbol":"ZMPSTE24"
+  //     "@RelationshipType":"asserted, but not computed"
+  //     "Name":"name of gene"
+  //   }
+  // }
+
+/**
+ * Represents the input structure for a gene list.
+ */
+interface GeneListInput {
+  Gene?: {
+    '@Symbol'?: string;
+    '@RelationshipType'?: string;
+    Name?: string;
+  };
+}
+
+/**
+ * Represents the output structure for a gene list.
+ */
+interface GeneListOutput {
+  symbol: string | null;
+  relationship_type: string | null;
+  name: string | null;
+}
+
+interface GeneListData {
+  GeneList?: GeneListInput | GeneListInput[];
+}
+
+/**
+ * Builds a GeneListOutput object based on the provided GeneListInput.
+ * @param item - The GeneListInput object.
+ * @returns The corresponding GeneListOutput object.
+ */
+function buildGeneListOutput(item: GeneListInput): GeneListOutput {
+  return {
+    symbol: item.Gene && item.Gene['@Symbol'] ? item.Gene['@Symbol'] : null,
+    relationship_type: item.Gene && item.Gene['@RelationshipType'] ? item.Gene['@RelationshipType'] : null,
+    name: item.Gene && item.Gene.Name ? item.Gene.Name : null
+  };
+}
+
+/**
+ * Builds an array of GeneListOutput objects based on the provided GeneListInput argument.
+ * @param items - The array of GeneListInput objects or a single GeneListInput object
+ * @returns An array of GeneListOutput objects.
+ */
+function buildGeneListsOutput(items: GeneListInput | GeneListInput[]): GeneListOutput[] {
+  if (!Array.isArray(items)) {
+    items = [items];
+  }
+
+  return items.map((item): GeneListOutput => ({
+    ...buildGeneListOutput(item)
+  }));
+}
+
+/**
+ * Parses the JSON input and returns an array of GeneListOutput objects.
+ * @param json - The JSON input string.
+ * @returns An array of GeneListOutput objects.
+ * @throws {Error} If the JSON input is invalid.
+ */
+function parseGeneLists(json: string): GeneListOutput[] {
+  let data: GeneListData;
+  try {
+    data = JSON.parse(json);
+  } catch (e) {
+    throw new Error('Invalid JSON input');
+  }
+
+  let geneLists = data && data.GeneList ? data.GeneList : [];
+
+  return buildGeneListsOutput(geneLists);
+}
+
 // -- Comment interfaces and functions --
 
 // below is an example of a JSON object that represents a comment object
@@ -17,7 +100,7 @@
 // }]
 
 /**
- * Represents the input structure for a comment.
+ * Represents the input structure for a gene list.
  */
 interface CommentInput {
   $?: string;
