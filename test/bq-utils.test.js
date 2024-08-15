@@ -30,7 +30,7 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     start: 'null',
     end: '[null, null]',
     value_test: 'value1',
-    condition_test: 'condition1'
+    objectCondition_complex: 'condition1'
   };
   const result = normalizeAndKeyById(inputObject);
   expect(result).toEqual({
@@ -40,7 +40,7 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
       start: null,
       end: [null, null],
       value: 'value1',
-      condition: 'condition1'
+      objectCondition: 'condition1'
     }
   });
 });
