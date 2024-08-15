@@ -80,7 +80,7 @@ BEGIN
             ) as activity
           ),
           STRUCT(
-            "First in ClinVar" as label,
+            "First in Clinvar" as label,
             "Contribution" as type,
             gks.submitter as agent,
             gks.date_created as date,
@@ -137,7 +137,7 @@ BEGIN
               ),
               null
             ) as isReportedIn
-          ) as method
+          ) as specifiedBy
         from `%s.gk_pilot_scv` gks
         cross join unnest(gks.attribs) as a
         left join unnest(a.citation) as c
@@ -148,10 +148,25 @@ BEGIN
           c.source,
           c.url
       ),
+      scv_moi as (
+        select
+          gks.id,
+          a.attribute.value as label
+        from `%s.gk_pilot_scv` gks
+        cross join unnest(gks.attribs) as a
+        where a.attribute.type = "ModeOfInheritance"
+      ),
       scv_ext as (
         select
           gks.id,
-          "clinvarReviewStatus" as name, 
+          "alleleOrigin" as name, 
+          gks.origin as value
+        from `%s.gk_pilot_scv` gks
+        where (gks.review_status is not null)
+        UNION ALL      
+        select
+          gks.id,
+          "reviewStatus" as name, 
           gks.review_status as value
         from `%s.gk_pilot_scv` gks
         where (gks.review_status is not null)
@@ -165,7 +180,7 @@ BEGIN
         UNION ALL
         select
           gks.id,
-          "clinvarMethodCategory" as name, 
+          "methodCategory" as name, 
           gks.method_type as value
         from `%s.gk_pilot_scv` gks
         where (gks.method_type is not null)
@@ -184,28 +199,30 @@ BEGIN
         from scv_ext as se
         group by se.id
       )
+      -- final output before it is normalized into json
       select 
         gks.id as scv_id,
         gks.version as scv_ver,  
+
         FORMAT('%%s.%%i', gks.id, gks.version) as id,
         (
           CASE cct.clinvar_prop_type
-          WHEN 'path' THEN 'VariationPathogenicity' 
-          WHEN 'dr' THEN 'ClinVarDrugResponse' 
-          WHEN 'np' THEN 'ClinVarNonAssertion' 
-          ELSE 'ClinVarOtherAssertion' 
+          WHEN 'path' THEN 'VariantPathogenicityStatement' 
+          WHEN 'dr' THEN 'VariantDrugResponseStatement' 
+          WHEN 'np' THEN 'VariantNoAssertionStatement' 
+          ELSE 'VariantMiscallaneousAssertionStatement' 
           END
         ) as type,
-        cv as variation,  
+        cv as subjectVariation,  
         (
           CASE cct.clinvar_prop_type
           WHEN 'path' THEN 'isCausalFor'
-          WHEN 'dr' THEN 'isClinVarDrugResponseFor'
-          WHEN 'np' THEN 'isClinVarNonAssertionFor'
-          ELSE 'isClinVarOtherAssertionFor'
+          WHEN 'dr' THEN 'isClinvarDrugResponseFor'
+          WHEN 'np' THEN 'isClinvarNonAssertionFor'
+          ELSE 'isClinvarOtherAssertionFor'
           END
         ) as predicate,
-        simple_cond.condition as condition_simple,
+        simple_cond.condition as objectCondition_simple,
         IF(
           complex_cond.scv_id is not null,
           STRUCT(
@@ -221,29 +238,29 @@ BEGIN
           ),
           null
         )
-        as condition_complex,
+        as objectCondition_complex,
         STRUCT(
           cct.label as label,
           cct.classification_code as code,
           "https://dataexchange.clinicalgenome.org/codes/" as system
-        ) as classification,
+        ) as subjectClassification,
         STRUCT(
           cct.strength_label as label,
           cct.strength_code as code,
           "https://dataexchange.clinicalgenome.org/codes/" as system
         ) as strength,
         cct.direction,
-        gks.description,
+        gks.classification_comment as statementText,
         STRUCT (
           cct.penetrance_level as penetrance
-        ) as qualifiers,
+        ) as penetranceQualifier,
         contrib.contributions,
-        scv_method.method,
+        scv_method.specifiedBy,
         scv_citations.isReportedIn,
         scv_exts.extensions
       from  `%s.gk_pilot_scv` gks
       -- use the pre-processed gk_pilot_catvars table since you will need to reprocess everthing inlined again
-      -- NOTE teh pre_catvar.id is a CURIE (dumb idea - now that i'm trying to join - maybe go back and keep it simple)
+      -- NOTE the pre_catvar.id is a CURIE (dumb idea - now that i'm trying to join - maybe go back and keep it simple)
       join `%s.pre_catvar` cv
       on
         SPLIT(cv.id, ":")[OFFSET(1)] = gks.variation_id
@@ -299,7 +316,7 @@ BEGIN
       ) complex_cond
       on
         complex_cond.scv_id = gks.id
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gk_pilot_statement`

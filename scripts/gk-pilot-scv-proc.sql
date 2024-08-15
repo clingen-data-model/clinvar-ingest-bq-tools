@@ -6,14 +6,6 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gk_pilot_scv`
       AS
-        WITH interp AS (
-          select 
-            ca.id,
-            STRING_AGG(JSON_EXTRACT_SCALAR(description, '$.text'), "\\n") as description
-          from `%s.clinical_assertion` ca
-          left join unnest(ca.interpretation_comments) as description
-          group by ca.id
-        )
         SELECT 
           ca.id,
           ca.version,
@@ -36,8 +28,9 @@ BEGIN
           scv.review_status,
           scv.submitted_classification,
           scv.method_type,
+          scv.origin,
           scv.classif_type,
-          interp.description,
+          scv.classification_comment,
           STRUCT (
             FORMAT("clinvar.submitter:%%s",ca.submitter_id) as id,
             "Agent" as type,
@@ -49,14 +42,13 @@ BEGIN
           `clinvar_ingest.parseCitations`(JSON_EXTRACT(ca.content,"$.Interpretation")) as interpCitations
           
         from `%s.clinical_assertion` ca
-        left join interp on interp.id = ca.id 
         left join `%s.scv_summary` scv
         on
           scv.id = ca.id
         left join `%s.submitter` s
         on
           s.id = ca.submitter_id
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
   END FOR;
 
 END;
