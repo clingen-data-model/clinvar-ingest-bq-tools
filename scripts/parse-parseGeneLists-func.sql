@@ -21,7 +21,9 @@ WITH x as (
       },
       "GeneList": {
         "Gene": {
-          "@Symbol": "BAP1"
+          "@Symbol": "BAP1",
+          "Name": {"$": "BAP1 gene family"},
+          "@RelationshipType": "submitted, not computed"
         }
       }
     }
