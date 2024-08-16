@@ -251,9 +251,8 @@ BEGIN
         ) as strength,
         cct.direction,
         gks.classification_comment as statementText,
-        STRUCT (
-          cct.penetrance_level as penetrance
-        ) as penetranceQualifier,
+        cct.penetrance_level as penetranceQualifier,
+        ??? as geneContextQualifier,
         contrib.contributions,
         scv_method.specifiedBy,
         scv_citations.isReportedIn,
