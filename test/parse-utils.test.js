@@ -30,15 +30,15 @@ const buildHGVSArrayOutput = parseUtils.__get__('buildHGVSArrayOutput');
 const parseHGVS = parseUtils.__get__('parseHGVS');
 
 test('buildGeneListOutput should build GeneListOutput correctly', () => {
-  const input = { Gene: { '@Symbol': 'Symbol1', 'Name': 'HGNC1','@RelationshipType': 'asserted, not computed' } };
+  const input = { Gene: { '@Symbol': 'Symbol1', 'Name': {'$':'HGNC1'},'@RelationshipType': 'asserted, not computed' } };
   const expectedOutput = { symbol: 'Symbol1', name: 'HGNC1', relationship_type: 'asserted, not computed'};
   expect(buildGeneListOutput(input)).toEqual(expectedOutput);
 });
 
 test('buildGeneListsOutput should build an array of GeneListOutput correctly', () => {
   const input = [
-    { Gene: { '@Symbol': 'Symbol1', 'Name': 'HGNC1','@RelationshipType': 'asserted, not computed' } },
-    { Gene: { '@Symbol': 'Symbol2', 'Name': 'HGNC2','@RelationshipType': 'asserted, not computed' } }
+    { Gene: { '@Symbol': 'Symbol1', 'Name': {'$':'HGNC1'},'@RelationshipType': 'asserted, not computed' } },
+    { Gene: { '@Symbol': 'Symbol2', 'Name': {'$':'HGNC2'},'@RelationshipType': 'asserted, not computed' } }
   ];
   const expectedOutput = [
     { symbol: 'Symbol1', name: 'HGNC1', relationship_type: 'asserted, not computed' },
@@ -48,7 +48,7 @@ test('buildGeneListsOutput should build an array of GeneListOutput correctly', (
 });
 
 test('parseGeneLists should parse JSON input correctly', () => {
-  const json = '{"GeneList":[{"Gene":{"@Symbol":"Symbol1","Name":"HGNC1","@RelationshipType":"asserted, not computed"}}]}';
+  const json = '{"GeneList":[{"Gene":{"@Symbol":"Symbol1","Name":{"$":"HGNC1"},"@RelationshipType":"asserted, not computed"}}]}';
   const expectedOutput = [{ symbol: 'Symbol1', name: 'HGNC1', relationship_type: 'asserted, not computed' }];
   expect(parseGeneLists(json)).toEqual(expectedOutput);
 });

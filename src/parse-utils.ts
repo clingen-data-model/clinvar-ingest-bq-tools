@@ -11,24 +11,28 @@
 // -- GeneList interfaces and functions --
 
 // below is an example of a JSON object that represents a clinical assertion variant object
-  // "GeneList": {
-  //   "Gene": {
-  //     "@Symbol":"ZMPSTE24"
-  //     "@RelationshipType":"asserted, but not computed"
-  //     "Name":"name of gene"
-  //   }
-  // }
+// {
+//   "GeneList": {
+//     "Gene": {
+//       "@Symbol":"ZMPSTE24"
+//       "@RelationshipType":"asserted, but not computed"
+//       "Name":{"$":"name of gene"}
+//     }
+//   }
+// }
 
 /**
  * Represents the input structure for a gene list.
  */
 interface GeneListInput {
   Gene?: {
-    '@Symbol'?: string;
-    '@RelationshipType'?: string;
-    Name?: string;
+    '@Symbol': string;
+    '@RelationshipType': string;
+    Name: {
+      $: string;
+    };
   };
-}
+} 
 
 /**
  * Represents the output structure for a gene list.
@@ -38,6 +42,7 @@ interface GeneListOutput {
   relationship_type: string | null;
   name: string | null;
 }
+
 
 interface GeneListData {
   GeneList?: GeneListInput | GeneListInput[];
@@ -50,9 +55,9 @@ interface GeneListData {
  */
 function buildGeneListOutput(item: GeneListInput): GeneListOutput {
   return {
-    symbol: item.Gene && item.Gene['@Symbol'] ? item.Gene['@Symbol'] : null,
-    relationship_type: item.Gene && item.Gene['@RelationshipType'] ? item.Gene['@RelationshipType'] : null,
-    name: item.Gene && item.Gene.Name ? item.Gene.Name : null
+    symbol: item.Gene ? item.Gene['@Symbol'] : null,
+    relationship_type: item.Gene ? item.Gene['@RelationshipType'] : null,
+    name: item.Gene && item.Gene.Name ? item.Gene.Name.$ : null
   };
 }
 
