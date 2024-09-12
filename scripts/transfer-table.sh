@@ -2,7 +2,7 @@
 SOURCE_TABLE='clingen-stage:clinvar_2024_07_16_v1_6_62.variation_identity'
 SOURCE_REGION='us'
 DESTINATION_TABLE='clingen-dev:clinvar_2024_07_16_v1_0_0_beta1.variation_identity_from_stage'
-DESTINATION_REGION='us-east1'
+DESTINATION_REGION='us'
 SCHEMA_FILE='schema.json'
 FINAL_SCHEMA_FILE='final_schema.json'
 GCS_PATH="'gs://clinvar-ingest/temp/stage-$SOURCE_TABLE-*.json'"
