@@ -138,10 +138,10 @@ BEGIN
       AS 
       WITH axn_chr_repair AS (
         select 
-          variation_id,
-          accession,
-          IFNULL((CAST(REGEXP_EXTRACT(accession, r'CM000([0-9]+)\\.1') as INTEGER) - 662), CAST(REGEXP_EXTRACT(accession, r'NC_[0]+([0-9]+)\\.[0-9]+') AS INTEGER)) as derived_chr,
-          CASE accession
+          `in`.variation_id,
+          `in`.accession,
+          IFNULL((CAST(REGEXP_EXTRACT(`in`.accession, r'CM000([0-9]+)\\.1') as INTEGER) - 662), CAST(REGEXP_EXTRACT(`in`.accession, r'NC_[0]+([0-9]+)\\.[0-9]+') AS INTEGER)) as derived_chr,
+          CASE `in`.accession
             WHEN "CM000663.1" THEN "NC_000001.10"
             WHEN "CM000664.1" THEN "NC_000002.11"
             WHEN "CM000665.1" THEN "NC_000003.11"
@@ -166,20 +166,20 @@ BEGIN
             WHEN "CM000684.1" THEN "NC_000022.10"
             WHEN "CM000685.1" THEN "NC_000023.10"
             WHEN "CM000686.1" THEN "NC_000024.9"
-            ELSE accession
+            ELSE `in`.accession
           END AS NCBI_accession
-          from `%s.variation_members`
+          from `%s.gk_pilot_vrs` 
         where 
-          chr is null and assembly_version is not null
+          `in`.chr is null and `in`.assembly_version is not null
       ),
       seqref_ext_item AS (
-        select 
+        select
           exp.variation_id,
           exp.accession,
           'chromosome' as name, 
           IFNULL(
             (CASE acr.derived_chr WHEN 24 THEN "Y" WHEN 23 THEN "X" ELSE CAST(acr.derived_chr as STRING) END), 
-            vm.chr
+            vrs.`in`.chr
           ) as value_string,
           CAST(null as BOOLEAN) as value_boolean,
           CAST(null as STRING) as value_system,
@@ -191,12 +191,12 @@ BEGIN
           acr.variation_id = exp.variation_id
           and
           acr.NCBI_accession = exp.accession
-        join `%s.variation_members` vm
+        join `%s.gk_pilot_vrs` vrs
         on
-          vm.variation_id = exp.variation_id
+          vrs.`in`.variation_id = exp.variation_id
           and
-          IFNULL(acr.NCBI_accession, vm.accession) = exp.accession
-        WHERE vm.chr is not null OR acr.derived_chr is not null
+          IFNULL(acr.NCBI_accession, vrs.`in`.accession) = exp.accession
+        WHERE vrs.`in`.chr is not null OR acr.derived_chr is not null
         UNION ALL
         select DISTINCT
           exp.variation_id,
@@ -226,146 +226,20 @@ BEGIN
         group by 
           variation_id,
           accession
-      ),
-      var_ext_item as (
-        SELECT 
-          vm.variation_id,
-          vm.accession,
-          'molecular consequence' as name, 
-          CAST(null as STRING) as value_string,
-          CAST(null as BOOLEAN) as value_boolean,
-          SPLIT(consq_id,":")[OFFSET(0)] as value_system,
-          SPLIT(consq_id,":")[OFFSET(1)] as value_code,
-          consq_label as value_label
-        FROM `%s.variation_members` vm
-        WHERE consq_id is not null
-        UNION ALL
-        SELECT 
-          vm.variation_id,
-          vm.accession,
-          'mane select' as name, 
-          CAST(null as STRING) as value_string,
-          TRUE as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
-        FROM `%s.variation_members` vm
-        WHERE mane_select
-        UNION ALL
-        SELECT
-          vm.variation_id,
-          vm.accession,
-          'mane plus' as name, 
-          CAST(null as STRING) as value_string,
-          TRUE as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
-        FROM `%s.variation_members` vm
-        WHERE mane_plus
-        UNION ALL
-        SELECT DISTINCT 
-          vh.variation_id,
-          vh.accession,
-          'protein expression' as name, 
-          e.protein as value_string,
-          CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
-        from `%s.variation_hgvs` vh
-        cross join unnest(expr) as e
-        where
-          e.protein is not null
-        UNION ALL
-        SELECT DISTINCT
-          vl.variation_id,
-          vl.accession,
-          'clinvar vcf' as name, 
-          format('%%s-%%i-%%s-%%s', vl.chr, vl.position_vcf, IFNULL(vl.reference_allele_vcf,''), IFNULL(vl.alternate_allele_vcf,'')) as value_string,
-          CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
-        from `%s.variation_loc` vl
-        where
-          vl.position_vcf is not null
-        UNION ALL
-        select DISTINCT
-          exp.variation_id,
-          exp.accession,
-          'clinvar hgvs type' as name, 
-          exp.types[OFFSET(0)] as value_string,
-          CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
-        from `%s.gk_pilot_pre_catvar_expression` exp
-        where ARRAY_LENGTH(exp.types) > 0
-        UNION ALL
-        select DISTINCT
-          exp.variation_id,
-          exp.accession,
-          'pre-processing vrs issue' as name, 
-          exp.issues[OFFSET(0)] as value_string,
-          CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
-        from `%s.gk_pilot_pre_catvar_expression` exp
-        where ARRAY_LENGTH(exp.issues) > 0
-      ),
-      var_ext as (
-        select
-          var_ext_item.variation_id,
-          IFNULL(acr.NCBI_accession, var_ext_item.accession) as accession,
-          array_agg(
-            STRUCT(
-              var_ext_item.name as name, 
-              var_ext_item.value_string, 
-              var_ext_item.value_boolean, 
-              STRUCT(var_ext_item.value_system as system, var_ext_item.value_code as code, var_ext_item.value_label as label) as value_coding
-            )
-          ) as extensions
-        from var_ext_item
-        left join axn_chr_repair as acr
-          on
-            acr.variation_id = var_ext_item.variation_id
-            and
-            acr.accession = var_ext_item.accession
-        group by
-          var_ext_item.variation_id,
-          IFNULL(acr.NCBI_accession, var_ext_item.accession)
-      ),
-      vm_axn_rep AS (
-        select 
-          *
-        from (
-          select 
-            vm.*,
-            row_number() over (partition by vm.variation_id, IFNULL(acr.NCBI_accession, vm.accession) order by vm.precedence) as rn
-          from `%s.variation_members` vm
-          left join axn_chr_repair as acr
-          on
-            acr.variation_id = vm.variation_id
-            and
-            acr.accession = vm.accession
-        )
-      )  
+      )
       select 
-        r.variation_id, 
-        r.accession,
-        r.precedence,
+        r.`in`.variation_id, 
+        r.`in`.accession,
+        r.`in`.precedence,
         STRUCT(
-          FORMAT('clinvar:%%s-%%s',r.variation_id, r.accession) as id,
-          r.vrs_class as type,
-          IF(r.fmt = 'gnomad', FORMAT('%%s (%%s)',r.source, exp.assembly), r.source) as label,
+          FORMAT('clinvar:%%s-%%s',r.`in`.variation_id, r.`in`.accession) as id,
+          r.`in`.vrs_class as type,
+          IF(r.`in`.fmt = 'gnomad', FORMAT('%%s (%%s)',r.`in`.source, exp.assembly), r.`in`.source) as label,
           exp.expressions,
-          ext.extensions,
           STRUCT(
             'SequenceLocation' as type,
             STRUCT(
-              r.accession as id,
+              r.`in`.accession as id,
               'SequenceReference' as type,
               'na' as residueAlphabet,
               sqext.extensions
@@ -373,42 +247,149 @@ BEGIN
             vl.derived_start as start,
             vl.derived_stop as `end`
           ) as location,
-          if(ARRAY_LENGTH(r.range_copies)>0, TO_JSON_STRING(r.range_copies), CAST(r.absolute_copies as STRING)) as copies,
-          r.copy_change_type as copyChange
+          if(ARRAY_LENGTH(r.`in`.range_copies)>0, TO_JSON_STRING(r.`in`.range_copies), CAST(r.`in`.absolute_copies as STRING)) as copies,
+          r.`in`.copy_change_type as copyChange
         ) member
-      from vm_axn_rep r
-      left join var_ext ext
-      on 
-        ext.variation_id = r.variation_id 
-        and 
-        ext.accession = r.accession
+      from `%s.gk_pilot_vrs` r
       left join `%s.gk_pilot_pre_catvar_expression` exp
       on 
-        exp.variation_id = r.variation_id 
+        exp.variation_id = r.`in`.variation_id 
         and 
-        exp.accession = r.accession
+        exp.accession = r.`in`.accession
       left join seqref_ext sqext
       on 
-        sqext.variation_id = r.variation_id 
+        sqext.variation_id = r.`in`.variation_id 
         and 
-        sqext.accession = r.accession
+        sqext.accession = r.`in`.accession
       left join `%s.variation_loc` vl
       on
-        vl.variation_id = r.variation_id
+        vl.variation_id = r.`in`.variation_id
         and
-        vl.accession = r.accession
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+        vl.accession = r.`in`.accession
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       -- build pre-merged variation members
       CREATE OR REPLACE TABLE `%s.gk_pilot_pre_catvar`
       AS
-      WITH cat_ext_item AS (
+      WITH so_lookup AS (
+        SELECT
+          so_item.*
+        FROM 
+        (
+          SELECT
+            [
+              STRUCT('SO:0001583' as code, 'missense_variant' as label),
+              STRUCT('SO:0001627' as code, 'intron_variant' as label),
+              STRUCT('SO:0001820' as code, 'inframe_indel' as label),
+              STRUCT('SO:0001822' as code, 'inframe_deletion' as label),
+              STRUCT('SO:0002073' as code, 'no_sequence_alteration' as label),
+              STRUCT('SO:0001821' as code, 'inframe_insertion' as label),
+              STRUCT('SO:0001587' as code, 'stop_gained' as label),
+              STRUCT('SO:0001623' as code, '5_prime_UTR_variant' as label),
+              STRUCT('SO:0001578' as code, 'stop_lost' as label),
+              STRUCT('SO:0002153' as code, 'genic_upstream_transcript_variant' as label),
+              STRUCT('SO:0001574' as code, 'splice_acceptor_variant' as label),
+              STRUCT('SO:0001619' as code, 'non_coding_transcript_variant' as label),
+              STRUCT('SO:0002152' as code, 'genic_downstream_transcript_variant' as label),
+              STRUCT('SO:0001575' as code, 'splice_donor_variant' as label),
+              STRUCT('SO:0001624' as code, '3_prime_UTR_variant' as label),
+              STRUCT('SO:0001819' as code, 'synonymous_variant' as label),
+              STRUCT('SO:0001589' as code, 'frameshift_variant' as label),
+              STRUCT('SO:0001582' as code, 'initiator_codon_variant' as label)
+            ] AS so_items
+          ) as so_list
+          cross join unnest(so_list.so_items) as so_item
+      ),
+      hgvs_items AS (
+        select 
+          vh.variation_id,
+          vh.accession,
+          format('hgvs.%%s', IFNULL(REGEXP_EXTRACT(exp.nucleotide, r':([gmcnrp])\\.'), '?')) as nucleotide_syntax,
+          exp.nucleotide as nucleotide_value,
+          format('hgvs.%%s', IFNULL(REGEXP_EXTRACT(exp.protein, r':([gmcnrp])\\.'), '?')) as protein_syntax,
+          exp.protein as protein_value,
+          SPLIT(vh.consq_id) as consq_ids,
+          vh.hgvs_source,
+          vh.mane_plus,
+          vh.mane_select ,
+          vh.type
+        from `%s.variation_hgvs` vh
+        left join unnest(vh.expr) as exp
+      ),
+      hgvs_consq AS (
+        SELECT
+          hgvs.variation_id,
+          hgvs.nucleotide_value,
+          c_id,
+          sl.code as consq_code,
+          sl.label as consq_label
+        FROM hgvs_items hgvs
+        cross join unnest(hgvs.consq_ids) c_id
+        left join so_lookup sl
+        on
+          sl.code = c_id
+      ),
+      hgvs_item_consq AS (
+        select
+          hgvs.variation_id,
+          hgvs.nucleotide_value,
+          ARRAY_AGG(
+            STRUCT(
+              hcsq.consq_code as code,
+              'http://purl.obolibrary.org/obo/' as system,
+              hcsq.consq_label as label
+            )
+          ) as molecularConsequence
+        from hgvs_items hgvs
+        join hgvs_consq hcsq
+        on
+          hcsq.variation_id = hgvs.variation_id
+          and
+          hcsq.nucleotide_value = hgvs.nucleotide_value
+        group by
+          hgvs.variation_id,
+          hgvs.nucleotide_value
+      ),
+      var_ext_hgvs_list as (
+        select
+          hgvs.variation_id,
+          ARRAY_AGG(
+            STRUCT(
+              STRUCT(
+                hgvs.nucleotide_syntax as syntax,
+                hgvs.nucleotide_value as value
+              ) as nucleotideExpression,
+              hgvs.type as nucleotideType,
+              -- CAST(null as STRING) as clinvarVcf,
+              -- CAST(null as STRING) as preProcessingVrsIssue,
+              hgvs.mane_select as maneSelect,
+              hgvs.mane_plus as manePlus,
+              IF(
+                hgvs.protein_value is not null,
+                STRUCT(
+                  hgvs.protein_syntax as syntax,
+                  hgvs.protein_value as value
+                ),
+                null
+              ) as proteinExpression,
+              hcsq.molecularConsequence
+            )
+          ) value
+        from hgvs_items hgvs 
+        left join hgvs_item_consq hcsq
+        on
+          hcsq.variation_id = hgvs.variation_id
+          AND
+          hcsq.nucleotide_value = hgvs.nucleotide_value
+        group by
+          hgvs.variation_id
+      ),
+      cat_ext_item AS (
         select
           vrs.`in`.variation_id,
           'catVarSubType' as name,
           (
-            
             IF(
               vrs.`out`.errors is not null,
               -- if there are any vrs processing errors then use DescribedVariation,
@@ -421,9 +402,8 @@ BEGIN
             )
           ) as value_string,
           CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
+          null as value_coding,
+          null as value_array
         from `%s.gk_pilot_vrs` vrs
         union all
         select
@@ -431,9 +411,8 @@ BEGIN
           'variationType' as name,
           vi.variation_type as value_string,
           CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
+          null as value_coding,
+          null as value_array
         from `%s.variation_identity` vi
         WHERE vi.variation_type is not null
         union all
@@ -442,9 +421,7 @@ BEGIN
           'subclassType' as name,
           vi.subclass_type as value_string,
           CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
+          null as value_array
         from `%s.variation_identity` vi
         where vi.subclass_type is not null
         union all
@@ -453,9 +430,8 @@ BEGIN
           'cytogeneticLocation' as name,
           vi.cytogenetic as value_string,
           CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
+          null as value_coding,
+          null as value_array
         from `%s.variation_identity` vi
         where vi.cytogenetic is not null
         UNION ALL
@@ -464,11 +440,19 @@ BEGIN
           'vrsProcessingErrors' as name,
           vrs.out.errors as value_string,
           CAST(null as BOOLEAN) as value_boolean,
-          CAST(null as STRING) as value_system,
-          CAST(null as STRING) as value_code,
-          CAST(null as STRING) as value_label
+          null as value_coding,
+          null as value_array
         from `%s.gk_pilot_vrs` vrs
         where vrs.out.errors is not null
+        UNION ALL
+        select
+          vhl.variation_id,
+          'hgvsList' as name,
+          CAST(null as STRING) as value_string,
+          CAST(null as BOOLEAN) as value_boolean,
+          null as value_coding,
+          vhl.value as value_array
+        from var_ext_hgvs_list vhl
       ),
       cat_exts AS (
         select
@@ -478,7 +462,8 @@ BEGIN
               x.name, 
               x.value_string, 
               x.value_boolean, 
-              STRUCT(x.value_system as system, x.value_code as code, x.value_label as label) as value_coding
+              x.value_coding,
+              x.value_array
             )
           ) as extensions
         from cat_ext_item x
@@ -671,7 +656,7 @@ BEGIN
       left join cv_constraints cx
       on
         cx.variation_id = cv.variation_id
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gk_pilot_catvar`
