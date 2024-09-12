@@ -130,7 +130,7 @@ BEGIN
         exp_item.variation_id,
         IFNULL(acr.NCBI_accession, exp_item.accession),
         exp_item.assembly_version 
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       -- build pre-merged variation members
@@ -282,7 +282,7 @@ BEGIN
           vl.variation_id,
           vl.accession,
           'clinvar vcf' as name, 
-          format('%%s-%%i-%%s-%%s', vl.chr, vl.position_vcf, IFNULL(vl.ref_allele_vcf,''), IFNULL(vl.alt_allele_vcf,'')) as value_string,
+          format('%%s-%%i-%%s-%%s', vl.chr, vl.position_vcf, IFNULL(vl.reference_allele_vcf,''), IFNULL(vl.alternate_allele_vcf,'')) as value_string,
           CAST(null as BOOLEAN) as value_boolean,
           CAST(null as STRING) as value_system,
           CAST(null as STRING) as value_code,
@@ -405,6 +405,28 @@ BEGIN
       AS
       WITH cat_ext_item AS (
         select
+          vrs.`in`.variation_id,
+          'catVarSubType' as name,
+          (
+            
+            IF(
+              vrs.`out`.errors is not null,
+              -- if there are any vrs processing errors then use DescribedVariation,
+              'DescribedVariation',
+              CASE vrs.`in`.vrs_class 
+              WHEN 'Allele' THEN 'CanonicalAllele' 
+              WHEN 'CopyNumberChange' THEN 'CategoricalCnvChange' 
+              WHEN 'CopyNumberCount' THEN 'CategoricalCnvCount' 
+              ELSE 'DescribedVariation' END
+            )
+          ) as value_string,
+          CAST(null as BOOLEAN) as value_boolean,
+          CAST(null as STRING) as value_system,
+          CAST(null as STRING) as value_code,
+          CAST(null as STRING) as value_label
+        from `%s.gk_pilot_vrs` vrs
+        union all
+        select
           variation_id,
           'variationType' as name,
           vi.variation_type as value_string,
@@ -495,8 +517,7 @@ BEGIN
             ) as state,
             CAST(vrs.`out`.copies as STRING) as copies,
             vrs.`out`.copyChange,
-            tvm.member.expressions,
-            tvm.member.extensions
+            tvm.member.expressions
           ) member,
           tvm.member.copies,
           tvm.member.copyChange
@@ -539,8 +560,7 @@ BEGIN
             ) as state,
             tvm.member.copies,
             tvm.member.copyChange,
-            tvm.member.expressions,
-            tvm.member.extensions
+            tvm.member.expressions
           ) member,
           tvm.member.copies,
           tvm.member.copyChange
@@ -557,13 +577,6 @@ BEGIN
         select
           vi.variation_id,
           vi.name as label,
-          (
-            CASE vi.vrs_class 
-            WHEN 'Allele' THEN 'CanonicalAllele' 
-            WHEN 'CopyNumberChange' THEN 'CategoricalCnv' 
-            WHEN 'CopyNumberCount' THEN 'CategoricalCnv' 
-            ELSE 'DescribedVariation' END
-          ) as type,
           ARRAY_AGG(m.member IGNORE NULLS ORDER BY m.precedence) as members
         from `%s.variation_identity` vi
         left join mem_merge m
@@ -571,17 +584,79 @@ BEGIN
           m.variation_id = vi.variation_id
         group by
           vi.variation_id,
-          vi.name,
-          vi.vrs_class
+          vi.name
+      ),
+      cv_constraint_item AS (
+
+        SELECT
+          vrs.`in`.variation_id,
+          'DefiningContextConstraint' as type,
+          vrs.`out` as definingContext_allele,
+          null as definingContext_location,
+          ['sequence_liftover','transcript_projection'] as relations,
+          null as copies,
+          null as copyChange
+        from `%s.gk_pilot_vrs` vrs
+        WHERE vrs.`out`.type = 'Allele' 
+        UNION ALL
+        SELECT
+          vrs.`in`.variation_id,
+          'DefiningContextConstraint' as type,
+          null as definingContext_allele,
+          vrs.`out`.location as definingContext_location,
+          ['sequence_liftover'] as relations,
+          null as copies,
+          null as copyChange
+        from `%s.gk_pilot_vrs` vrs
+        WHERE vrs.`out`.type IN ('CopyNumberCount' , 'CopyNumberChange')
+        UNION ALL
+        SELECT
+          vrs.`in`.variation_id,
+          'CopyCountConstraint' as type,
+          null as definingContext_allele,
+          null as definingContext_location,
+          null as relations,
+          vrs.`out`.copies as copies,
+          null as copyChange
+        from `%s.gk_pilot_vrs` vrs
+        WHERE vrs.`out`.type = 'CopyNumberCount' 
+        UNION ALL
+        SELECT
+          vrs.`in`.variation_id,
+          'CopyChangeConstraint' as type,
+          null as definingContext_allele,
+          null as definingContext_location,
+          null as relations,
+          null as copies,
+          STRUCT(
+            'https://www.ebi.ac.uk/ols4/search?ontology=efo&q=' as system,
+            vrs.`out`.copyChange as code,
+            IF (
+              vrs.`out`.copyChange = 'EFO:0030067',
+              'Copy Number Loss',
+              'Copy Number Gain'
+            ) as label
+          ) as copyChange
+        from `%s.gk_pilot_vrs` vrs
+        WHERE vrs.`out`.type = 'CopyNumberChange' 
+
+      ),
+      cv_constraints AS (
+        SELECT
+          ci.variation_id,
+          ARRAY_AGG(
+            STRUCT(ci.type, ci.definingContext_allele, ci.definingContext_location, relations, copies, copyChange)
+          ) as constraints
+        FROM cv_constraint_item ci
+        GROUP BY
+          ci.variation_id
       )
+
       select
         FORMAT('clinvar:%%s',cv.variation_id) as id,
-        cv.type,
+        'CategoricalVariant' as type,
         cv.label,
-        IF(cv.type = 'CanonicalAllele' AND ARRAY_LENGTH(cv.members) > 0, cv.members[OFFSET(0)], null) as definingContext,
-        IF(cv.type = 'CategoricalCnv' AND ARRAY_LENGTH(cv.members) > 0, cv.members[OFFSET(0)].location, null ) as location,
-        IF(cv.type = 'CategoricalCnv' AND ARRAY_LENGTH(cv.members) > 0, cv.members[OFFSET(0)].copies, CAST(null as STRING) ) as copies,
-        IF(cv.type = 'CategoricalCnv' AND ARRAY_LENGTH(cv.members) > 0, cv.members[OFFSET(0)].copyChange, CAST(null as STRING) ) as copyChange,
+        cx.constraints,
         cv.members,
         vi.mappings,
         x.extensions
@@ -593,7 +668,10 @@ BEGIN
       join cat_exts x 
       on
         x.variation_id = cv.variation_id
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+      left join cv_constraints cx
+      on
+        cx.variation_id = cv.variation_id
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gk_pilot_catvar`

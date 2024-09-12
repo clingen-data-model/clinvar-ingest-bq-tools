@@ -30,7 +30,12 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     start: 'null',
     end: '[null, null]',
     value_test: 'value1',
-    objectCondition_complex: 'condition1'
+    objectCondition_complex: 'condition1',
+    definingContext_location: 
+      {
+        locationId: 'prefix:123',
+        locationName: 'test'
+      }
   };
   const result = normalizeAndKeyById(inputObject);
   expect(result).toEqual({
@@ -40,7 +45,8 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
       start: null,
       end: [null, null],
       value: 'value1',
-      objectCondition: 'condition1'
+      objectCondition: 'condition1',
+      definingContext: {  locationId: 'prefix:123', locationName: 'test' }
     }
   });
 });

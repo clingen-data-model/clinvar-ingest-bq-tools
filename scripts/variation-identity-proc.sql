@@ -167,7 +167,7 @@ BEGIN
         -- these will need to be left for handling later (add this to the RELEASE NOTES)
         select 
           v.id as variation_id,
-          hgvs.nucleotide_expression.sequence_accession as accession,
+          hgvs.nucleotide_expression.sequence_accession_version as accession,
           hgvs.type,
           hgvs.assembly,
           hgvs.nucleotide_expression.expression as nucleotide,
@@ -190,12 +190,12 @@ BEGIN
         cross join unnest (`clinvar_ingest.parseHGVS`(JSON_EXTRACT(v.content, r'$.HGVSlist')) ) as hgvs
         left join unnest(hgvs.molecular_consequence) as mc
         WHERE 
-          hgvs.nucleotide_expression.sequence_accession is not null
+          hgvs.nucleotide_expression.sequence_accession_version is not null
         group by
           v.id,
           hgvs.type,
           hgvs.assembly,
-          hgvs.nucleotide_expression.sequence_accession,
+          hgvs.nucleotide_expression.sequence_accession_version,
           hgvs.nucleotide_expression.expression,
           hgvs.protein_expression.expression,
           hgvs.nucleotide_expression.mane_select,
@@ -640,36 +640,3 @@ BEGIN
 
   END FOR;
 END;
-
-
-
-
-
-
--- select
---   var.id,
---   var.name,
---   var.variation_type,
---   var.subclass_type,
---   cav.content
--- FROM var
--- LEFT JOIN `clinvar_2024_03_31_v1_6_62.clinical_assertion` ca
--- on ca.variation_id = var.id
--- LEFT JOIN `clinvar_2024_03_31_v1_6_62.clinical_assertion_variation` cav
--- on
---   cav.clinical_assertion_id = ca.id
--- where
---   REGEXP_CONTAINS(name, r'^[NX][CGM]_[0-9]+\.[0-9]+\:[cg]\.[0-9]+_[0-9]+(del|dup|ins|delins)[ACTG]*$')
---   OR
-
---   REGEXP_CONTAINS(name, r'^[NX][CGM]_[0-9]+\.[0-9]+\:[cg]\.[0-9]+(del|dup|delins)[ACTG]*$')
---   OR
-
---   REGEXP_CONTAINS(name, r'^[NX][CGM]_[0-9]+\.[0-9]+\:[cg]\.[0-9]+[ACTG]+\>[ACTG]+$')
-
--- select count(distinct variation_id)
--- FROM `clinvar_2024_03_31_v1_6_62.temp_variation` tv
--- -- 2,816,554
-
--- and variation_id = "560122"
--- 2,783,716
