@@ -421,6 +421,7 @@ BEGIN
           'subclassType' as name,
           vi.subclass_type as value_string,
           CAST(null as BOOLEAN) as value_boolean,
+          null as value_coding,
           null as value_array
         from `%s.variation_identity` vi
         where vi.subclass_type is not null
