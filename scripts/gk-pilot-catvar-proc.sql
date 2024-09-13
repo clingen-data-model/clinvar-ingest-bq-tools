@@ -577,23 +577,33 @@ BEGIN
         SELECT
           vrs.`in`.variation_id,
           'DefiningContextConstraint' as type,
-          vrs.`out` as definingContext_allele,
+          m.member as definingContext_allele,
           null as definingContext_location,
           ['sequence_liftover','transcript_projection'] as relations,
           null as copies,
           null as copyChange
         from `%s.gk_pilot_vrs` vrs
+        join mem_merge m
+        on
+          m.variation_id = vrs.`in`.variation_id
+          and
+          m.member.accession = vrs.`in`.accession
         WHERE vrs.`out`.type = 'Allele' 
         UNION ALL
         SELECT
           vrs.`in`.variation_id,
           'DefiningContextConstraint' as type,
           null as definingContext_allele,
-          vrs.`out`.location as definingContext_location,
+          m.member.location as definingContext_location,
           ['sequence_liftover'] as relations,
           null as copies,
           null as copyChange
         from `%s.gk_pilot_vrs` vrs
+        join mem_merge m
+        on
+          m.variation_id = vrs.`in`.variation_id
+          and
+          m.member.accession = vrs.`in`.accession
         WHERE vrs.`out`.type IN ('CopyNumberCount' , 'CopyNumberChange')
         UNION ALL
         SELECT
