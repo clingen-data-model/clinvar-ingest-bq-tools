@@ -587,7 +587,7 @@ BEGIN
         on
           m.variation_id = vrs.`in`.variation_id
           and
-          m.member.accession = vrs.`in`.accession
+          m.accession = vrs.`in`.accession
         WHERE vrs.`out`.type = 'Allele' 
         UNION ALL
         SELECT
@@ -603,7 +603,7 @@ BEGIN
         on
           m.variation_id = vrs.`in`.variation_id
           and
-          m.member.accession = vrs.`in`.accession
+          m.accession = vrs.`in`.accession
         WHERE vrs.`out`.type IN ('CopyNumberCount' , 'CopyNumberChange')
         UNION ALL
         SELECT
