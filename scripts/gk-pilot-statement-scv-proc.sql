@@ -1,9 +1,9 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.gk_pilot_statement_proc`(on_date DATE)
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.gk_pilot_statement_scv_proc`(on_date DATE)
 BEGIN
   FOR rec IN (select s.schema_name FROM clinvar_ingest.schema_on(on_date) as s)
   DO
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `%s.gk_pilot_pre_statement`
+      CREATE OR REPLACE TABLE `%s.gk_pilot_pre_statement_scv`
       as
       WITH scv_citation AS
       (
@@ -324,7 +324,7 @@ BEGIN
     """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `%s.gk_pilot_statement`
+      CREATE OR REPLACE TABLE `%s.gk_pilot_statement_scv`
       AS
       WITH x as (
         SELECT 
@@ -332,7 +332,7 @@ BEGIN
             TO_JSON(tv),
           remove_empty => TRUE
           ) AS json_data
-        FROM `%s.gk_pilot_pre_statement` tv
+        FROM `%s.gk_pilot_pre_statement_scv` tv
       )
       select `clinvar_ingest.normalizeAndKeyById`(x.json_data) as rec from x
     """, rec.schema_name, rec.schema_name);
