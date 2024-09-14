@@ -251,7 +251,7 @@ BEGIN
           cct.label as label,
           cct.classification_code as code,
           "https://dataexchange.clinicalgenome.org/codes/" as system
-        ) as subjectClassification,
+        ) as classification,
         STRUCT(
           cct.strength_label as label,
           cct.strength_code as code,
@@ -260,7 +260,7 @@ BEGIN
         cct.direction,
         gks.classification_comment as statementText,
         cct.penetrance_level as penetranceQualifier,
-        gks.geneContextQualfier as geneContextQualifier,
+        gks.geneContextQualifier,
         contrib.contributions,
         scv_method.specifiedBy,
         scv_citations.reportedIn,
@@ -288,10 +288,10 @@ BEGIN
         select
           gkt.scv_id,
           gkt.condition
-        from `%s.gk_pilot_traits` gkt
+        from `%s.gk_pilot_trait` gkt
         JOIN (
           select scv_id
-          from `%s.gk_pilot_traits`
+          from `%s.gk_pilot_trait`
           group by scv_id
           having count(*) = 1
         ) solo 
@@ -306,10 +306,10 @@ BEGIN
           gkt.trait_set_type,
           STRING_AGG(CONCAT("- ",gkt.condition.label), "\\n" ORDER BY gkt.condition.label) as label,
           ARRAY_AGG(gkt.condition) as traits
-        from `%s.gk_pilot_traits` gkt
+        from `%s.gk_pilot_trait` gkt
         JOIN (
           select scv_id
-          from `%s.gk_pilot_traits`
+          from `%s.gk_pilot_trait`
           group by scv_id
           having count(*) > 1
         ) multi 
@@ -321,7 +321,7 @@ BEGIN
       ) complex_cond
       on
         complex_cond.scv_id = gks.id
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gk_pilot_statement`

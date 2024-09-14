@@ -1,0 +1,388 @@
+{
+  "SCV003922823.1": {
+    "contributions": [
+      {
+        "activity": {
+          "code": "CRO_0000105",
+          "label": "submitter role",
+          "system": "http://purl.obolibrary.org/obo/"
+        },
+        "agent": {
+          "id": "clinvar.submitter:500026",
+          "label": "Women's Health and Genetics/Laboratory Corporation of America, LabCorp",
+          "type": "Agent"
+        },
+        "date": "2023-05-13",
+        "label": "Last Updated",
+        "type": "Contribution"
+      },
+      {
+        "activity": {
+          "code": "CRO_0000105",
+          "label": "submitter role",
+          "system": "http://purl.obolibrary.org/obo/"
+        },
+        "agent": {
+          "id": "clinvar.submitter:500026",
+          "label": "Women's Health and Genetics/Laboratory Corporation of America, LabCorp",
+          "type": "Agent"
+        },
+        "date": "2023-05-13",
+        "label": "First in Clinvar",
+        "type": "Contribution"
+      },
+      {
+        "activity": {
+          "code": "CRO_0000001",
+          "label": "author role",
+          "system": "http://purl.obolibrary.org/obo/"
+        },
+        "agent": {
+          "id": "clinvar.submitter:500026",
+          "label": "Women's Health and Genetics/Laboratory Corporation of America, LabCorp",
+          "type": "Agent"
+        },
+        "date": "2023-03-22",
+        "label": "Last Evaluated",
+        "type": "Contribution"
+      }
+    ],
+    "direction": "supports",
+    "extensions": [
+      {
+        "name": "localKey",
+        "value": "NM_000051.3:c.8476_8477dupAA|MedGen:C0004135"
+      },
+      {
+        "name": "methodCategory",
+        "value": "clinical testing"
+      },
+      {
+        "name": "submittedClassification",
+        "value": "Pathogenic"
+      },
+      {
+        "name": "alleleOrigin",
+        "value": "germline"
+      },
+      {
+        "name": "reviewStatus",
+        "value": "criteria provided, single submitter"
+      }
+    ],
+    "geneContextQualifier": [
+      {
+        "code": "472",
+        "label": "ATM",
+        "system": "https://www.ncbi.nlm.nih.gov/gene/"
+      }
+    ],
+    "id": "SCV003922823.1",
+    "objectCondition": {
+      "id": "clinvarTrait:4635",
+      "label": "Ataxia-telangiectasia syndrome",
+      "mappings": [
+        {
+          "coding": {
+            "code": "C0004135",
+            "system": "https://www.ncbi.nlm.nih.gov/medgen/"
+          },
+          "relation": "exactMatch"
+        }
+      ],
+      "type": "Disease"
+    },
+    "predicate": "isCausalFor",
+    "reportedIn": [
+      {
+        "pmid": "9463314",
+        "type": "Document",
+        "url": "https://pubmed.ncbi.nlm.nih.gov/9463314"
+      }
+    ],
+    "scv_id": "SCV003922823",
+    "scv_ver": 1,
+    "specifiedBy": {
+      "label": "LabCorp Variant Classification Summary - May 2015",
+      "reportedIn": {
+        "type": "Document",
+        "url": "https://submit.ncbi.nlm.nih.gov/api/2.0/files/rtxspsnt/labcorp_variant_classification_method_-_may_2015.pdf/?format=attachment"
+      },
+      "type": "Method"
+    },
+    "statementText": "Variant summary: ATM c.8476_8477dupAA (p.Asn2826LysfsX32) results in a premature termination codon, predicted to cause a truncation of the encoded protein or absence of the protein due to nonsense mediated decay, which are commonly known mechanisms for disease. Truncations downstream of this position have been classified as pathogenic by our laboratory. The variant was absent in 251310 control chromosomes. c.8476_8477dupAA has been reported in the literature in individuals affected with Ataxia-Telangiectasia (Stankovic_1998). To our knowledge, no experimental evidence demonstrating an impact on protein function has been reported. Two clinical diagnostic laboratories have submitted clinical-significance assessments for this variant to ClinVar after 2014 without evidence for independent evaluation. All laboratories classified the variant as pathogenic. Based on the evidence outlined above, the variant was classified as pathogenic.",
+    "strength": {
+      "code": "cg000101",
+      "label": "definitive",
+      "system": "https://dataexchange.clinicalgenome.org/codes/"
+    },
+    "classification": {
+      "code": "cg000006",
+      "label": "Pathogenic",
+      "system": "https://dataexchange.clinicalgenome.org/codes/"
+    },
+    "subjectVariation": {
+      "constraints": [
+        {
+          "definingContext": {
+            "digest": "_TJvs_wUAFBHh9NsZE6ZhzgXELmUfr3w",
+            "expressions": [
+              {
+                "syntax": "spdi",
+                "value": "NC_000011.10:108345797:AAAA:AAAAAA"
+              },
+              {
+                "syntax": "hgvs.g",
+                "value": "NC_000011.10:g.108345800_108345801dup"
+              },
+              {
+                "syntax": "gnomad",
+                "value": "11-108345797-C-CAA"
+              }
+            ],
+            "id": "ga4gh:VA._TJvs_wUAFBHh9NsZE6ZhzgXELmUfr3w",
+            "label": "NC_000011.10:108345797:AAAA:AAAAAA",
+            "location": {
+              "digest": "rV_fRgIJSXeERlbW0Np0y1N2xN92KWO0",
+              "end": 108345801,
+              "id": "ga4gh:SL.rV_fRgIJSXeERlbW0Np0y1N2xN92KWO0",
+              "sequenceReference": {
+                "extensions": [
+                  {
+                    "name": "assembly",
+                    "value": "GRCh38"
+                  },
+                  {
+                    "name": "chromosome",
+                    "value": "11"
+                  }
+                ],
+                "id": "NC_000011.10",
+                "refgetAccession": "SQ.2NkFm8HK88MqeNkCgj78KidCAXgnsfV1",
+                "residueAlphabet": "na",
+                "type": "SequenceReference"
+              },
+              "start": 108345797,
+              "type": "SequenceLocation"
+            },
+            "state": {
+              "length": 6,
+              "repeatSubunitLength": 2,
+              "sequence": "AAAAAA",
+              "type": "ReferenceLengthExpression"
+            },
+            "type": "Allele"
+          },
+          "relations": [
+            "sequence_liftover",
+            "transcript_projection"
+          ],
+          "type": "DefiningContextConstraint"
+        }
+      ],
+      "extensions": [
+        {
+          "name": "catVarSubType",
+          "value": "CanonicalAllele"
+        },
+        {
+          "name": "subclassType",
+          "value": "SimpleAllele"
+        },
+        {
+          "name": "hgvsList",
+          "value": [
+            {
+              "nucleotideExpression": {
+                "syntax": "hgvs.g",
+                "value": "NC_000011.10:g.108345800_108345801dup"
+              },
+              "nucleotideType": "genomic, top-level"
+            },
+            {
+              "molecularConsequence": [
+                {
+                  "code": "SO:0001589",
+                  "label": "frameshift_variant",
+                  "system": "http://purl.obolibrary.org/obo/"
+                }
+              ],
+              "nucleotideExpression": {
+                "syntax": "hgvs.c",
+                "value": "NM_001351834.2:c.8476_8477dup"
+              },
+              "nucleotideType": "coding",
+              "proteinExpression": {
+                "syntax": "hgvs.p",
+                "value": "NP_001338763.1:p.Asn2826fs"
+              }
+            },
+            {
+              "molecularConsequence": [
+                {
+                  "code": "SO:0001589",
+                  "label": "frameshift_variant",
+                  "system": "http://purl.obolibrary.org/obo/"
+                }
+              ],
+              "nucleotideExpression": {
+                "syntax": "hgvs.c",
+                "value": "NM_000051.3:c.8476_8477dupAA"
+              },
+              "nucleotideType": "coding"
+            },
+            {
+              "nucleotideExpression": {
+                "syntax": "hgvs.c",
+                "value": "LRG_135t1:c.8476_8477dup"
+              },
+              "nucleotideType": "coding",
+              "proteinExpression": {
+                "syntax": "hgvs.p",
+                "value": "LRG_135p1:p.Asn2826Lysfs"
+              }
+            },
+            {
+              "nucleotideExpression": {
+                "syntax": "hgvs.g",
+                "value": "LRG_135:g.127969_127970dup"
+              },
+              "nucleotideType": "genomic"
+            },
+            {
+              "nucleotideExpression": {
+                "syntax": "hgvs.g",
+                "value": "NG_054724.1:g.129034_129035dup"
+              },
+              "nucleotideType": "genomic"
+            },
+            {
+              "molecularConsequence": [
+                {
+                  "code": "SO:0001627",
+                  "label": "intron_variant",
+                  "system": "http://purl.obolibrary.org/obo/"
+                }
+              ],
+              "nucleotideExpression": {
+                "syntax": "hgvs.c",
+                "value": "NM_001351110.2:c.695-10507_695-10506dup"
+              },
+              "nucleotideType": "coding"
+            },
+            {
+              "nucleotideExpression": {
+                "syntax": "hgvs.g",
+                "value": "NG_009830.1:g.127969_127970dup"
+              },
+              "nucleotideType": "genomic"
+            },
+            {
+              "maneSelect": true,
+              "molecularConsequence": [
+                {
+                  "code": "SO:0001589",
+                  "label": "frameshift_variant",
+                  "system": "http://purl.obolibrary.org/obo/"
+                }
+              ],
+              "nucleotideExpression": {
+                "syntax": "hgvs.c",
+                "value": "NM_000051.4:c.8476_8477dup"
+              },
+              "nucleotideType": "coding",
+              "proteinExpression": {
+                "syntax": "hgvs.p",
+                "value": "NP_000042.3:p.Asn2826fs"
+              }
+            },
+            {
+              "nucleotideExpression": {
+                "syntax": "hgvs.g",
+                "value": "NC_000011.9:g.108216527_108216528dup"
+              },
+              "nucleotideType": "genomic, top-level"
+            },
+            {
+              "molecularConsequence": [
+                {
+                  "code": "SO:0001627",
+                  "label": "intron_variant",
+                  "system": "http://purl.obolibrary.org/obo/"
+                }
+              ],
+              "nucleotideExpression": {
+                "syntax": "hgvs.c",
+                "value": "NM_001330368.2:c.641-36728_641-36727dup"
+              },
+              "nucleotideType": "coding"
+            }
+          ]
+        },
+        {
+          "name": "variationType",
+          "value": "Duplication"
+        },
+        {
+          "name": "cytogeneticLocation",
+          "value": "11q22.3"
+        }
+      ],
+      "id": "clinvar:186852",
+      "label": "NM_000051.4(ATM):c.8476_8477dup (p.Asn2826fs)",
+      "members": [
+        {
+          "digest": "_TJvs_wUAFBHh9NsZE6ZhzgXELmUfr3w",
+          "expressions": [
+            {
+              "syntax": "spdi",
+              "value": "NC_000011.10:108345797:AAAA:AAAAAA"
+            },
+            {
+              "syntax": "hgvs.g",
+              "value": "NC_000011.10:g.108345800_108345801dup"
+            },
+            {
+              "syntax": "gnomad",
+              "value": "11-108345797-C-CAA"
+            }
+          ],
+          "id": "ga4gh:VA._TJvs_wUAFBHh9NsZE6ZhzgXELmUfr3w",
+          "label": "NC_000011.10:108345797:AAAA:AAAAAA",
+          "location": {
+            "digest": "rV_fRgIJSXeERlbW0Np0y1N2xN92KWO0",
+            "end": 108345801,
+            "id": "ga4gh:SL.rV_fRgIJSXeERlbW0Np0y1N2xN92KWO0",
+            "sequenceReference": {
+              "extensions": [
+                {
+                  "name": "assembly",
+                  "value": "GRCh38"
+                },
+                {
+                  "name": "chromosome",
+                  "value": "11"
+                }
+              ],
+              "id": "NC_000011.10",
+              "refgetAccession": "SQ.2NkFm8HK88MqeNkCgj78KidCAXgnsfV1",
+              "residueAlphabet": "na",
+              "type": "SequenceReference"
+            },
+            "start": 108345797,
+            "type": "SequenceLocation"
+          },
+          "state": {
+            "length": 6,
+            "repeatSubunitLength": 2,
+            "sequence": "AAAAAA",
+            "type": "ReferenceLengthExpression"
+          },
+          "type": "Allele"
+        }
+      ],
+      "type": "CategoricalVariant"
+    },
+    "type": "VariantPathogenicityStatement"
+  }
+}
