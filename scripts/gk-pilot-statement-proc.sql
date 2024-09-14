@@ -60,7 +60,7 @@ BEGIN
       scv_citations as (
         SELECT
           id,
-          ARRAY_AGG(doc) as isReportedIn
+          ARRAY_AGG(doc) as reportedIn
         from scv_citation
         group by id
       ),
@@ -136,7 +136,7 @@ BEGIN
                 END as url
               ),
               null
-            ) as isReportedIn
+            ) as reportedIn
           ) as specifiedBy
         from `%s.gk_pilot_scv` gks
         cross join unnest(gks.attribs) as a
@@ -213,7 +213,15 @@ BEGIN
           ELSE 'VariantMiscallaneousAssertionStatement' 
           END
         ) as type,
-        cv as subjectVariation,  
+        STRUCT(
+          cv.id as id,
+          cv.type as type,
+          cv.label as label,
+          cv.constraints as constraints,
+          cv.members as members,
+          cv.mappings as mappings,
+          cv.extensions as extensions
+        ) as subjectVariation,   
         (
           CASE cct.clinvar_prop_type
           WHEN 'path' THEN 'isCausalFor'
@@ -252,15 +260,13 @@ BEGIN
         cct.direction,
         gks.classification_comment as statementText,
         cct.penetrance_level as penetranceQualifier,
-        ??? as geneContextQualifier,
+        gks.geneContextQualfier as geneContextQualifier,
         contrib.contributions,
         scv_method.specifiedBy,
-        scv_citations.isReportedIn,
+        scv_citations.reportedIn,
         scv_exts.extensions
       from  `%s.gk_pilot_scv` gks
-      -- use the pre-processed gk_pilot_catvars table since you will need to reprocess everthing inlined again
-      -- NOTE the pre_catvar.id is a CURIE (dumb idea - now that i'm trying to join - maybe go back and keep it simple)
-      join `%s.pre_catvar` cv
+      join `%s.gk_pilot_pre_catvar` cv
       on
         SPLIT(cv.id, ":")[OFFSET(1)] = gks.variation_id
       left join scv_citations

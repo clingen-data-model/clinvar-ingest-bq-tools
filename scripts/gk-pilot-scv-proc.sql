@@ -6,6 +6,32 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gk_pilot_scv`
       AS
+        WITH scv_genes AS (
+          SELECT
+            DISTINCT
+            cav.clinical_assertion_id,
+            gene_symbol
+          FROM `%s.clinical_assertion_variation` cav
+          CROSS JOIN UNNEST(clinvar_ingest.parseGeneLists(cav.content)) as g
+          CROSS JOIN UNNEST(SPLIT(g.symbol)) as gene_symbol
+        ),
+        scv_gene_qualifiers AS (
+          SELECT
+            sg.clinical_assertion_id,
+            ARRAY_AGG(
+              STRUCT(
+                sg.gene_symbol as label,
+                g.id as code,
+                IF(g.id is null, null, 'https://www.ncbi.nlm.nih.gov/gene/') as system
+              )
+            ) geneContextQualifier
+          FROM scv_genes sg
+          LEFT JOIN `%s.gene` g
+          ON
+            LOWER(g.symbol) = LOWER(sg.gene_symbol)
+          GROUP BY
+            sg.clinical_assertion_id
+        )
         SELECT 
           ca.id,
           ca.version,
@@ -39,7 +65,8 @@ BEGIN
           JSON_EXTRACT_SCALAR(ca.content, "$.ClinVarAccession['@DateCreated']") as record_date_created,
           JSON_EXTRACT_SCALAR(ca.content, "$.ClinVarAccession['@DateUpdated']") as record_date_updated,
           `clinvar_ingest.parseAttributeSet`(ca.content) as attribs,
-          `clinvar_ingest.parseCitations`(JSON_EXTRACT(ca.content,"$.Interpretation")) as interpCitations
+          `clinvar_ingest.parseCitations`(JSON_EXTRACT(ca.content,"$.Interpretation")) as interpCitations,
+          sgq.geneContextQualifier
           
         from `%s.clinical_assertion` ca
         left join `%s.scv_summary` scv
@@ -48,7 +75,10 @@ BEGIN
         left join `%s.submitter` s
         on
           s.id = ca.submitter_id
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+        left join scv_gene_qualifiers sgq
+        on
+          sgq.clinical_assertion_id = ca.id
+    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
   END FOR;
 
 END;
