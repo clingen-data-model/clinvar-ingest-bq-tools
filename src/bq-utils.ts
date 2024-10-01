@@ -230,6 +230,12 @@ type SigType = {
  * - Percentages are rounded to three decimal places.
  */
 function createSigType(nosig_count: number, unc_count: number, sig_count: number): SigType[] {
+  
+  // Convert inputs to numbers (integers) to avoid concatenation when used in SQL function
+  nosig_count = Number(nosig_count);
+  unc_count = Number(unc_count);
+  sig_count = Number(sig_count);
+
   // Check if the total count is zero to avoid division by zero
   if ((nosig_count + unc_count + sig_count) === 0) {
     return [
