@@ -1,0 +1,54 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "'ClinVar Releases'!A:H"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "monthly_release",
+        "type": "STRING"
+      },
+      {
+        "name": "xml_filedate",
+        "type": "TIMESTAMP"
+      },
+      {
+        "name": "xml_filename",
+        "type": "STRING"
+      },
+      {
+        "name": "release_date",
+        "type": "DATE"
+      },
+      {
+        "name": "type",
+        "type": "STRING"
+      },
+      {
+        "name": "monthly_filename",
+        "type": "STRING"
+      },
+      {
+        "name": "monthly_filedate",
+        "type": "TIMESTAMP"
+      },
+      {
+        "name": "terra_project_id",
+        "type": "STRING"
+      },
+      {
+        "name": "dataset_name",
+        "type": "STRING"
+      },
+      {
+        "name": "terra_snapshot_dataproject",
+        "type": "STRING"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1bADskBcobHTmmXungY09beWPDEa1nqM-PP__86yGVj0/edit\\#gid\\=103170125"
+  ]
+}

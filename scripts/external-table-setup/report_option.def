@@ -1,0 +1,26 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "'Report Options'!A:C"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "report_id",
+        "type": "STRING"
+      },
+      {
+        "name": "name",
+        "type": "STRING"
+      },
+      {
+        "name": "value",
+        "type": "STRING"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1bADskBcobHTmmXungY09beWPDEa1nqM-PP__86yGVj0/edit\\#gid\\=991770796"
+  ]
+}

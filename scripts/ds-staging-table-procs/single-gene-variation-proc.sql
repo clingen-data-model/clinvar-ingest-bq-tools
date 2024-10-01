@@ -321,7 +321,7 @@ END;
 -- FROM x
 -- join `clingen-stage.clinvar_2019_06_01_v0.gene_association` ga on x.release_date = ga.release_date and x.variation_id = ga.variation_id
 -- left join `clingen-stage.clinvar_2019_06_01_v0.gene` g on g.id = ga.gene_id and x.release_date = g.release_date
--- left join `clingen-stage.clinvar_curator.cancer_genes` cg on g.hgnc_id = cg.hgnc_id
+-- left join `clingen-stage.clinvar_ingest.cancer_genes` cg on g.hgnc_id = cg.hgnc_id
 -- ;
 
 

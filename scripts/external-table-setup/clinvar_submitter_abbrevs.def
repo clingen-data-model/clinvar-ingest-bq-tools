@@ -1,0 +1,26 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "'ClinVar Submitter Abbreviations (curated)'!A:C"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "submitter_id",
+        "type": "STRING"
+      },
+      {
+        "name": "current_name",
+        "type": "STRING"
+      },
+      {
+        "name": "current_abbrev",
+        "type": "STRING"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1bADskBcobHTmmXungY09beWPDEa1nqM-PP__86yGVj0/edit\\#gid\\=1759509088"
+  ]
+}

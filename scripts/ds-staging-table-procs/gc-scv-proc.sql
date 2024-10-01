@@ -38,7 +38,7 @@ BEGIN
             WHERE od.attribute.type = 'SampleVariantID'
           ) as sample_variant_id,
           cao.id as scv_obs_id
-        FROM `clinvar_curator.report_submitter` rs
+        FROM `clinvar_ingest.report_submitter` rs
         JOIN `%s.scv_summary` scv
         ON
           rs.submitter_id = scv.submitter_id 

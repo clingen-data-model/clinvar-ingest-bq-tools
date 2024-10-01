@@ -74,8 +74,8 @@ jobs:
         env:
           PROJECT_ID: 'clingen-stage'
         run: |
-          echo "Executing BigQuery scripts for clingen-stage..."
-          for file in ./scripts/*.sql; do
+          echo "Executing BigQuery scripts for clingen-stage...(only sql files ending in -func.sql)"
+          for file in ./scripts/**/*{-func.sql}.sql; do
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           done
@@ -84,8 +84,8 @@ jobs:
         env:
           PROJECT_ID: 'clingen-dev'
         run: |
-          echo "Executing BigQuery scripts for clingen-dev..."
-          for file in ./scripts/*.sql; do
+          echo "Executing BigQuery scripts for clingen-dev...(all files ending in -func.sql or -proc.sql)"
+          for file in ./scripts/**/*{-func.sql,-proc.sql}.sql; do
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           done

@@ -1,0 +1,42 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "'Report Submitter List'!A:G"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "report_id",
+        "type": "STRING"
+      },
+      {
+        "name": "submitter_id",
+        "type": "STRING"
+      },
+      {
+        "name": "clinvar_name",
+        "type": "STRING"
+      },
+      {
+        "name": "type",
+        "type": "STRING"
+      },
+      {
+        "name": "clingen_name",
+        "type": "STRING"
+      },
+      {
+        "name": "active",
+        "type": "BOOLEAN"
+      },
+      {
+        "name": "clingen_abbrev",
+        "type": "STRING"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1bADskBcobHTmmXungY09beWPDEa1nqM-PP__86yGVj0/edit\\#gid\\=2067576827"
+  ]
+}
