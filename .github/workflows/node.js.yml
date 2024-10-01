@@ -1,4 +1,4 @@
-name: Node.js CI 
+  name: Node.js CI 
 
 on:
   push:
@@ -14,88 +14,124 @@ jobs:
       matrix:
         node-version: [20]  # Specify Node.js 20
 
+    # Output whether the build job runs based on the file changes
+    outputs:
+      should_run_build: ${{ steps.build_check.outputs.build_ran }}
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
 
+    - name: Check if TypeScript files were modified
+      id: build_check
+      run: |
+        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+        if [[ "$MODIFIED_FILES" == *"src/**/*.ts"* ]]; then
+          echo "Build should run."
+          echo "::set-output name=build_ran::true"
+        else
+          echo "No TypeScript files were modified."
+          echo "::set-output name=build_ran::false"
+        fi
+
     - name: Setup Node.js
+      if: steps.build_check.outputs.build_ran == 'true'
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
-    
+
     - name: Install dependencies
+      if: steps.build_check.outputs.build_ran == 'true'
       run: npm install
 
     - name: Compile TypeScript
+      if: steps.build_check.outputs.build_ran == 'true'
       run: npx tsc
 
     - name: Run tests
+      if: steps.build_check.outputs.build_ran == 'true'
       run: npm test
 
+    - name: Upload artifacts
+      if: steps.build_check.outputs.build_ran == 'true'
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: ./dist
+        
   deploy:
     runs-on: ubuntu-latest
     needs: build
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-
-    strategy:
-      matrix:
-        node-version: [20]  # Specify Node.js 20
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v3
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: ${{ matrix.node-version }}
+    - name: Download artifacts
+      if: needs.build.outputs.should_run_build == 'true'
+      uses: actions/download-artifact@v3
+      with:
+        name: dist
 
-      - name: Install dependencies
-        run: npm install
+    - name: Authenticate to Google Cloud for clingen-swc
+      if: needs.build.outputs.should_run_build == 'true'
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      - name: Compile TypeScript
-        run: npx tsc
+    - name: Setup Google Cloud SDK
+      if: needs.build.outputs.should_run_build == 'true'
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        version: 'latest'
 
-      - name: Authenticate to Google Cloud for clingen-swc
-        uses: google-github-actions/auth@v1
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+    - name: Get modified files
+      id: get_changed_files
+      run: |
+        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+        echo "$MODIFIED_FILES" > modified_files.txt
 
-      - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v1
-        with:
-          version: 'latest'
-
-      - name: Copy javascript functions that are referenced by scripts to Google Cloud Storage
-        run: |
-          gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
-      
-      - name: Execute clingen-stage BigQuery Function Scripts
-        run: |
-          echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
-          for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
+    - name: Execute clingen-stage BigQuery Function Scripts
+      run: |
+        echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
+        MODIFIED_FILES=$(cat modified_files.txt)
+        for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
+          if echo "$MODIFIED_FILES" | grep -q "$file"; then
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
-          done
-        env:
-          PROJECT_ID: 'clingen-stage'
-    
-      - name: Execute clingen-dev BigQuery Function Scripts
-        run: |
-          echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
-          for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
-            echo "Executing $file..."
-            bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
-          done
-        env:
-          PROJECT_ID: 'clingen-dev'
+          else
+            echo "Skipping $file as it was not modified."
+          fi
+        done
+      env:
+        PROJECT_ID: 'clingen-stage'
 
-      - name: Execute clingen-dev BigQuery Procedure Scripts
-        run: |
-          echo "Executing BigQuery procedure scripts for clingen-stage in alphabetical order..."
-          for file in $(find ./scripts -type f -name '*-proc.sql' | sort); do
+    - name: Execute clingen-dev BigQuery Function Scripts
+      run: |
+        echo "Executing BigQuery function scripts for clingen-dev in alphabetical order..."
+        MODIFIED_FILES=$(cat modified_files.txt)
+        for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
+          if echo "$MODIFIED_FILES" | grep -q "$file"; then
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
-          done
-        env:
-          PROJECT_ID: 'clingen-dev'    
+          else
+            echo "Skipping $file as it was not modified."
+          fi
+        done
+      env:
+        PROJECT_ID: 'clingen-dev'
+
+    - name: Execute clingen-dev BigQuery Procedure Scripts
+      run: |
+        echo "Executing BigQuery procedure scripts for clingen-dev in alphabetical order..."
+        MODIFIED_FILES=$(cat modified_files.txt)
+        for file in $(find ./scripts -type f -name '*-proc.sql' | sort); do
+          if echo "$MODIFIED_FILES" | grep -q "$file"; then
+            echo "Executing $file..."
+            bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
+          else
+            echo "Skipping $file as it was not modified."
+          fi
+        done
+      env:
+        PROJECT_ID: 'clingen-dev'
