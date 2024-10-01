@@ -21,6 +21,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 2  # Fetch the last two commits to ensure `git diff` works
 
     - name: Check if TypeScript files were modified
       id: build_check
@@ -66,6 +68,8 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v3
+      with:
+        fetch-depth: 2  # Fetch the last two commits to ensure `git diff` works
 
     - name: Download artifacts
       if: needs.build.outputs.should_run_build == 'true'
