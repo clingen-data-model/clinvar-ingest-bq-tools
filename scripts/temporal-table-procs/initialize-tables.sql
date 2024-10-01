@@ -475,7 +475,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.voi_scv`
   deleted_count	INT64
 );
 
-CREATE OR REPLACE TABLE `clinvar_ingest.voi_scv`
+CREATE OR REPLACE TABLE `clinvar_ingest.voi_top_group_change`
 (
   variation_id	STRING,
   rpt_stmt_type	STRING,
