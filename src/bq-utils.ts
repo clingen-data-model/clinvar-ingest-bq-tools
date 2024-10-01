@@ -210,3 +210,43 @@ function normalizeAndKeyById(inputObject: JsonObjectWithId): Record<string, Json
 if (typeof global !== 'undefined') {
   (global as any).formatNearestMonth = formatNearestMonth;
 }
+
+
+type SigType = {
+  count: number;
+  percent: number;
+};
+
+/**
+ * Creates an array of SigType objects representing the count and percentage of each significance type.
+ *
+ * @param nosig_count - The count of non-significant items.
+ * @param unc_count - The count of uncertain items.
+ * @param sig_count - The count of significant items.
+ * @returns An array of SigType objects, each containing the count and percentage of the respective significance type.
+ *
+ * @remarks
+ * - If the total count of all types is zero, the function returns an array with zero counts and percentages.
+ * - Percentages are rounded to three decimal places.
+ */
+function createSigType(nosig_count: number, unc_count: number, sig_count: number): SigType[] {
+  // Check if the total count is zero to avoid division by zero
+  if ((nosig_count + unc_count + sig_count) === 0) {
+    return [
+      { count: 0, percent: 0 },
+      { count: 0, percent: 0 },
+      { count: 0, percent: 0 }
+    ];
+  }
+
+  // Calculate the total count
+  const total = nosig_count + unc_count + sig_count;
+
+  // Calculate percentages and return an array of SigType objects
+  // The returned array ORDINAL positions must be: 0 = nosig, 1 = unc, 2 = sig
+  return [
+    { count: nosig_count, percent: Math.round((nosig_count / total) * 1000) / 1000 },
+    { count: unc_count, percent: Math.round((unc_count / total) * 1000) / 1000 },
+    { count: sig_count, percent: Math.round((sig_count / total) * 1000) / 1000 }
+  ];
+}

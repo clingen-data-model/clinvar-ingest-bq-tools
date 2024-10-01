@@ -416,3 +416,12 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_gc_scvs`
   deleted_release_date DATE,
   deleted_count INT DEFAULT 0
 );
+
+
+-- *****************  clinvar_var_scv_change *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_var_scv_change`
+(
+  variation_id STRING NOT NULL,
+  start_release_date DATE,
+  end_release_date DATE
+);

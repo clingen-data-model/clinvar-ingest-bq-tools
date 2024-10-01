@@ -50,3 +50,42 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     }
   });
 });
+const createSigType = bqUtils.__get__('createSigType');
+
+test('createSigType should return correct counts and percentages', () => {
+    expect(createSigType(0, 0, 0)).toEqual([
+        { count: 0, percent: 0 },
+        { count: 0, percent: 0 },
+        { count: 0, percent: 0 }
+    ]);
+
+    expect(createSigType(10, 0, 0)).toEqual([
+        { count: 10, percent: 1 },
+        { count: 0, percent: 0 },
+        { count: 0, percent: 0 }
+    ]);
+
+    expect(createSigType(0, 10, 0)).toEqual([
+        { count: 0, percent: 0 },
+        { count: 10, percent: 1 },
+        { count: 0, percent: 0 }
+    ]);
+
+    expect(createSigType(0, 0, 10)).toEqual([
+        { count: 0, percent: 0 },
+        { count: 0, percent: 0 },
+        { count: 10, percent: 1 }
+    ]);
+
+    expect(createSigType(10, 10, 10)).toEqual([
+        { count: 10, percent: 0.333 },
+        { count: 10, percent: 0.333 },
+        { count: 10, percent: 0.333 }
+    ]);
+
+    expect(createSigType(5, 10, 15)).toEqual([
+        { count: 5, percent: 0.167 },
+        { count: 10, percent: 0.333 },
+        { count: 15, percent: 0.5 }
+    ]);
+});
