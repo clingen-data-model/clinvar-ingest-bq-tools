@@ -92,19 +92,19 @@ jobs:
         version: 'latest'
 
     - name: Get modified files
+      id: get_changed_files
       run: |
-        git fetch origin main --depth=2
-        PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
-        MODIFIED_FILES=$(git diff --name-only $PREVIOUS_COMMIT HEAD)
+        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
         echo "$MODIFIED_FILES" > modified_files.txt
-        echo "$MODIFIED_FILES"
+        echo "MODIFIED_FILES=$MODIFIED_FILES" >> $GITHUB_ENV  # Export to environment variable
+        cat modified_files.txt
 
     - name: Execute clingen-stage BigQuery Function Scripts
       run: |
         echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
-        MODIFIED_FILES=$(cat modified_files.txt)
         for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
-          if echo "$MODIFIED_FILES" | grep -q "$file"; then
+          relative_file=$(realpath --relative-to=. "$file")  # Get relative path of the file
+          if grep -q "$relative_file" modified_files.txt; then
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           else
@@ -117,9 +117,9 @@ jobs:
     - name: Execute clingen-dev BigQuery Function Scripts
       run: |
         echo "Executing BigQuery function scripts for clingen-dev in alphabetical order..."
-        MODIFIED_FILES=$(cat modified_files.txt)
         for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
-          if echo "$MODIFIED_FILES" | grep -q "$file"; then
+          relative_file=$(realpath --relative-to=. "$file")  # Get relative path of the file
+          if grep -q "$relative_file" modified_files.txt; then
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           else
@@ -132,9 +132,9 @@ jobs:
     - name: Execute clingen-dev BigQuery Procedure Scripts
       run: |
         echo "Executing BigQuery procedure scripts for clingen-dev in alphabetical order..."
-        MODIFIED_FILES=$(cat modified_files.txt)
         for file in $(find ./scripts -type f -name '*-proc.sql' | sort); do
-          if echo "$MODIFIED_FILES" | grep -q "$file"; then
+          relative_file=$(realpath --relative-to=. "$file")  # Get relative path of the file
+          if grep -q "$relative_file" modified_files.txt; then
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           else
