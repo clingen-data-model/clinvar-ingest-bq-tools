@@ -70,25 +70,32 @@ jobs:
         run: |
           gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
       
-      - name: Execute BigQuery Script for clingen-stage
+      - name: Execute clingen-stage BigQuery Function Scripts
+        run: |
+          echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
+          for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
+            echo "Executing $file..."
+            bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
+          done
         env:
           PROJECT_ID: 'clingen-stage'
+    
+      - name: Execute clingen-dev BigQuery Function Scripts
         run: |
-          echo "Executing BigQuery scripts for clingen-stage...(only sql files ending in -func.sql)"
-          for file in $(find ./scripts -type f -name '*-func.sql'); do
+          echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
+          for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           done
-    
-      - name: Execute BigQuery Script for clingen-dev
         env:
           PROJECT_ID: 'clingen-dev'
+
+      - name: Execute clingen-dev BigQuery Procedure Scripts
         run: |
-          echo "Executing BigQuery scripts for clingen-dev...(all files ending in -func.sql or -proc.sql)"
-          for file in $(find ./scripts -type f \( -name '*-func.sql' -o -name '*-proc.sql' \)); do
+          echo "Executing BigQuery procedure scripts for clingen-stage in alphabetical order..."
+          for file in $(find ./scripts -type f -name '*-proc.sql' | sort); do
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           done
-
-    
-    
+        env:
+          PROJECT_ID: 'clingen-dev'    
