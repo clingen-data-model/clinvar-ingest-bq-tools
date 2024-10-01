@@ -11,7 +11,7 @@
 
 
 
-CREATE FUNCTION `clinvar_ingest.createSigType`(nosig_count INTEGER, unc_count INTEGER, sig_count INTEGER)
+CREATE OR REPLACE FUNCTION `clinvar_ingest.createSigType`(nosig_count INTEGER, unc_count INTEGER, sig_count INTEGER)
 RETURNS ARRAY<STRUCT<count INTEGER, percent NUMERIC>>
 AS (
   IF(
