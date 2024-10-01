@@ -425,3 +425,61 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_var_scv_change`
   start_release_date DATE,
   end_release_date DATE
 );
+
+
+
+
+CREATE OR REPLACE TABLE `clinvar_ingest.voi_group`
+(
+  start_release_date	DATE,
+  end_release_date	DATE,
+  variation_id	STRING,
+  rpt_stmt_type	STRING,
+  rank	INT64,
+  unique_clinsig_type_count	INT64,
+  agg_sig_type	INT64,
+  sig_type	ARRAY<STRUCT<count INT64, percent NUMERIC>>,
+  max_last_evaluated	DATE,
+  max_submission_date	DATE,
+  submission_count	INT64,
+  submitter_count	INT64,
+  agg_classif	STRING,
+  agg_classif_w_count	STRING
+);
+
+
+CREATE OR REPLACE TABLE `clinvar_ingest.voi_scv`
+(
+  variation_id	STRING,
+  id	STRING,
+  version	INT64,
+  full_scv_id	STRING,
+  rpt_stmt_type	STRING,
+  rank	INT64,
+  last_evaluated	DATE,
+  classif_type	STRING,
+  submitted_classification	STRING,
+  clinsig_type	INT64,
+  classification_label	STRING,
+  classification_abbrev	STRING,
+  submitter_id	STRING,
+  submitter_name	STRING,
+  submitter_abbrev	STRING,
+  submission_date	DATE,
+  origin	STRING,
+  affected_status	STRING,
+  method_type	STRING,
+  start_release_date	DATE,
+  end_release_date	DATE,
+  deleted_release_date	DATE,
+  deleted_count	INT64
+);
+
+CREATE OR REPLACE TABLE `clinvar_ingest.voi_scv`
+(
+  variation_id	STRING,
+  rpt_stmt_type	STRING,
+  top_rank	INT64,
+  start_release_date	DATE,
+  end_release_date	DATE
+);
