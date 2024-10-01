@@ -19,13 +19,9 @@ AS (
     FROM INFORMATION_SCHEMA.SCHEMATA iss
     WHERE 
       (
-        (
-          REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d+_\d+_\d+$')
-        )
-        OR
-        (
-          REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d+_\d+_\d+_beta\d+$') 
-        )
+        REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d+_\d+_\d+$')
+      OR
+        REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d+_\d+_\d+_beta\d+$') 
       )
       AND
       iss.schema_name <> "clinvar_2019_06_01_v0"
