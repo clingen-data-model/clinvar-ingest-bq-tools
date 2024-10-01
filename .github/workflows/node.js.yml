@@ -96,7 +96,6 @@ jobs:
       run: |
         MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
         echo "$MODIFIED_FILES" > modified_files.txt
-        echo "MODIFIED_FILES=$MODIFIED_FILES" >> $GITHUB_ENV  # Export to environment variable
         cat modified_files.txt
 
     - name: Execute clingen-stage BigQuery Function Scripts
