@@ -35,7 +35,7 @@ jobs:
         echo "$MODIFIED_FILES"
 
         # Check if the modified_files.txt has any content
-        if [[ -s modified_files.txt ]]; then
+        if [[ -n "$MODIFIED_FILES" ]]; then
           echo "Build should run."
           echo "::set-output name=build_ran::true"
         else
