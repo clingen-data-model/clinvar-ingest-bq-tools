@@ -27,17 +27,22 @@ jobs:
     - name: Check if TypeScript files were modified
       id: build_check
       run: |
-        git fetch origin main --depth=2
-        PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
-        MODIFIED_FILES=$(git diff --name-only $PREVIOUS_COMMIT HEAD)
-        if [[ "$MODIFIED_FILES" == *"src/**/*.ts"* ]]; then
+        # Get modified files that are in the 'src/' folder and end with '.ts'
+        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^src/.*\.ts$')
+        
+        # Print the modified files for debugging
+        echo "Modified files:"
+        echo "$MODIFIED_FILES"
+
+        # Check if the modified_files.txt has any content
+        if [[ -s modified_files.txt ]]; then
           echo "Build should run."
           echo "::set-output name=build_ran::true"
         else
           echo "No TypeScript files were modified."
           echo "::set-output name=build_ran::false"
         fi
-
+        
     - name: Setup Node.js
       if: steps.build_check.outputs.build_ran == 'true'
       uses: actions/setup-node@v3
@@ -73,8 +78,28 @@ jobs:
       with:
         fetch-depth: 2  # Fetch the last two commits to ensure `git diff` works
 
+    - name: Get modified files
+      id: get_changed_files
+      run: |
+        # Get modified files that are in the 'scripts/' folder and end with '-func.sql' or '-proc.sql'
+        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^scripts/.*\(-func\.sql\| -proc\.sql\)$')
+        
+        # Output the filtered list of modified files
+        echo "$MODIFIED_FILES" > modified_files.txt
+
+        # Check if the modified_files.txt has any content
+        if [[ -s modified_files.txt ]]; then
+          echo "::set-output name=modified_files_exist::true"
+        else
+          echo "::set-output name=modified_files_exist::false"
+        fi
+        
+        # Print the modified files for debugging purposes
+        echo "Modified files:"
+        cat modified_files.txt
+
     - name: Download artifacts
-      if: needs.build.outputs.should_run_build == 'true'
+      if: needs.build.outputs.should_run_build == 'true' && (steps.get_changed_files.outputs.modified_files_exist == 'true')
       uses: actions/download-artifact@v3
       with:
         name: dist
@@ -86,19 +111,13 @@ jobs:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
     - name: Setup Google Cloud SDK
-      if: needs.build.outputs.should_run_build == 'true'
+      if: needs.build.outputs.should_run_build == 'true' && (steps.get_changed_files.outputs.modified_files_exist == 'true')
       uses: google-github-actions/setup-gcloud@v1
       with:
         version: 'latest'
 
-    - name: Get modified files
-      id: get_changed_files
-      run: |
-        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-        echo "$MODIFIED_FILES" > modified_files.txt
-        cat modified_files.txt
-
     - name: Execute clingen-stage BigQuery Function Scripts
+      if: steps.get_changed_files.outputs.modified_files_exist == 'true'
       run: |
         echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
         for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
@@ -114,6 +133,7 @@ jobs:
         PROJECT_ID: 'clingen-stage'
 
     - name: Execute clingen-dev BigQuery Function Scripts
+      if: steps.get_changed_files.outputs.modified_files_exist == 'true'
       run: |
         echo "Executing BigQuery function scripts for clingen-dev in alphabetical order..."
         for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
@@ -129,6 +149,7 @@ jobs:
         PROJECT_ID: 'clingen-dev'
 
     - name: Execute clingen-dev BigQuery Procedure Scripts
+      if: steps.get_changed_files.outputs.modified_files_exist == 'true'
       run: |
         echo "Executing BigQuery procedure scripts for clingen-dev in alphabetical order..."
         for file in $(find ./scripts -type f -name '*-proc.sql' | sort); do
