@@ -20,7 +20,7 @@ AS (
     WHERE 
       (
         REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d+_\d+_\d+$')
-        OR
+      OR
         REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d+_\d+_\d+_beta\d+$') 
       )
       AND

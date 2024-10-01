@@ -27,7 +27,9 @@ jobs:
     - name: Check if TypeScript files were modified
       id: build_check
       run: |
-        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
+        git fetch origin main --depth=2
+        PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
+        MODIFIED_FILES=$(git diff --name-only $PREVIOUS_COMMIT HEAD)
         if [[ "$MODIFIED_FILES" == *"src/**/*.ts"* ]]; then
           echo "Build should run."
           echo "::set-output name=build_ran::true"
@@ -90,10 +92,12 @@ jobs:
         version: 'latest'
 
     - name: Get modified files
-      id: get_changed_files
       run: |
-        MODIFIED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
+        git fetch origin main --depth=2
+        PREVIOUS_COMMIT=$(git rev-parse HEAD~1)
+        MODIFIED_FILES=$(git diff --name-only $PREVIOUS_COMMIT HEAD)
         echo "$MODIFIED_FILES" > modified_files.txt
+        echo "$MODIFIED_FILES"
 
     - name: Execute clingen-stage BigQuery Function Scripts
       run: |
