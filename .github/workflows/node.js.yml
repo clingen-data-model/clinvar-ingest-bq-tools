@@ -75,7 +75,7 @@ jobs:
           PROJECT_ID: 'clingen-stage'
         run: |
           echo "Executing BigQuery scripts for clingen-stage...(only sql files ending in -func.sql)"
-          for file in ./scripts/**/*{-func.sql}.sql; do
+          for file in $(find ./scripts -type f -name '*-func.sql'); do
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           done
@@ -85,7 +85,7 @@ jobs:
           PROJECT_ID: 'clingen-dev'
         run: |
           echo "Executing BigQuery scripts for clingen-dev...(all files ending in -func.sql or -proc.sql)"
-          for file in ./scripts/**/*{-func.sql,-proc.sql}.sql; do
+          for file in $(find ./scripts -type f \( -name '*-func.sql' -o -name '*-proc.sql' \)); do
             echo "Executing $file..."
             bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
           done
