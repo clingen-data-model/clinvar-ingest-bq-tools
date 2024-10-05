@@ -306,7 +306,6 @@ BEGIN
         h_top.varlen_precedence,
         h_top.start_pos,
         h_top.end_pos
-      -- 27,550,574 (2024-04-07)
     """, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""

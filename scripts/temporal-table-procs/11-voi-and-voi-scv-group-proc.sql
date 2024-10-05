@@ -119,4 +119,3 @@ END;
 -- E               s5----------e5          s1 <= e5 AND e1 >= s5.   TRUE
 -- F s6--e6                                s1 <= e6 AND e1 >= s6.   FALSE
 -- G.                          s7--e7      s1 <= e7 AND e1 >= s7.   FALSE
-

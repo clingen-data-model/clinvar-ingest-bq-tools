@@ -78,7 +78,7 @@ jobs:
       with:
         fetch-depth: 2  # Fetch the last two commits to ensure `git diff` works
 
-    - name: Get modified files
+    - name: Get modified proc and func sql files
       id: get_changed_files
       run: |
         # Get modified files that are in the 'scripts/' folder and end with '-func.sql' or '-proc.sql'
@@ -116,11 +116,11 @@ jobs:
       with:
         version: 'latest'
 
-    - name: Execute clingen-stage BigQuery Function Scripts
+    - name: Execute clingen-stage modified sql Scripts
       if: steps.get_changed_files.outputs.modified_files_exist == 'true'
       run: |
-        echo "Executing BigQuery function scripts for clingen-stage in alphabetical order..."
-        for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
+        echo "Executing sql scripts for clingen-stage in alphabetical order..."
+        for file in $(find ./scripts -type f -name '*.sql' | sort); do
           relative_file=$(realpath --relative-to=. "$file")  # Get relative path of the file
           if grep -q "$relative_file" modified_files.txt; then
             echo "Executing $file..."
@@ -132,27 +132,11 @@ jobs:
       env:
         PROJECT_ID: 'clingen-stage'
 
-    - name: Execute clingen-dev BigQuery Function Scripts
+    - name: Execute clingen-dev modified sql Scripts
       if: steps.get_changed_files.outputs.modified_files_exist == 'true'
       run: |
-        echo "Executing BigQuery function scripts for clingen-dev in alphabetical order..."
-        for file in $(find ./scripts -type f -name '*-func.sql' | sort); do
-          relative_file=$(realpath --relative-to=. "$file")  # Get relative path of the file
-          if grep -q "$relative_file" modified_files.txt; then
-            echo "Executing $file..."
-            bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
-          else
-            echo "Skipping $file as it was not modified."
-          fi
-        done
-      env:
-        PROJECT_ID: 'clingen-dev'
-
-    - name: Execute clingen-dev BigQuery Procedure Scripts
-      if: steps.get_changed_files.outputs.modified_files_exist == 'true'
-      run: |
-        echo "Executing BigQuery procedure scripts for clingen-dev in alphabetical order..."
-        for file in $(find ./scripts -type f -name '*-proc.sql' | sort); do
+        echo "Executing sql scripts for clingen-dev in alphabetical order..."
+        for file in $(find ./scripts -type f -name '*.sql' | sort); do
           relative_file=$(realpath --relative-to=. "$file")  # Get relative path of the file
           if grep -q "$relative_file" modified_files.txt; then
             echo "Executing $file..."
