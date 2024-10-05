@@ -62,14 +62,14 @@ BEGIN
         var.range_copies,
         -- establish baseline vrs_class target type, updated later for copyChange and allele and text
         CASE
+          WHEN var.canonical_spdi is not null THEN
+            'Allele'
           WHEN (
             ((ARRAY_LENGTH(var.range_copies) > 0) OR var.absolute_copies is not null) 
             and 
             var.variation_type in ('copy number gain','copy number loss','Deletion','Duplication')
           ) THEN
             'CopyNumberCount'
-          WHEN var.canonical_spdi is not null THEN
-            'Allele'
           WHEN var.subclass_type = 'Genotype' THEN
             'Not Available'
           WHEN var.subclass_type = 'Haplotype' THEN
@@ -315,7 +315,7 @@ BEGIN
         SET tv.vrs_class = 
           CASE 
             WHEN (tv.variation_type IN ('Deletion', 'Duplication')) 
-              AND (var.derived_variant_length IS NULL OR var.derived_variant_length > 10000 OR var.has_range_endpoints) THEN
+              AND (var.derived_variant_length IS NULL OR var.derived_variant_length > 1000 OR var.has_range_endpoints) THEN
               'CopyNumberChange'
             WHEN tv.variation_type IN ('Deletion', 'Duplication', 'Indel', 'Insertion', 'Microsatellite', 'Tandem duplication', 'single nucleotide variant', 'Microsatellite') AND NOT var.has_range_endpoints THEN
               'Allele'
