@@ -85,7 +85,6 @@ BEGIN
         END as issue,
         var.content
       FROM var
-      -- 2,800,531 (4/7/2024)
     """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
  
     EXECUTE IMMEDIATE FORMAT("""

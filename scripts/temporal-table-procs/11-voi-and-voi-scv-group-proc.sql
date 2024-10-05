@@ -102,8 +102,6 @@ BEGIN
 
 END;
 
-
-
 -- select count(*) from `clinvar_ingest.voi_scv_group`;
 
 -- find intersection between voi and voi_scv windows for the same variant to create the voi_group records
