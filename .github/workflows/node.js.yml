@@ -103,6 +103,7 @@ jobs:
       uses: actions/download-artifact@v3
       with:
         name: dist
+        path: ./dist  # Make sure the files are downloaded into the correct path
 
     - name: Authenticate to Google Cloud for clingen-swc
       if: (needs.build.outputs.js_library_rebuilt == 'true') || (steps.get_changed_files.outputs.modified_files_exist == 'true')
@@ -119,7 +120,13 @@ jobs:
     - name: Copy javascript libraries to Google Cloud Storage
       if: needs.build.outputs.js_library_rebuilt == 'true' 
       run: |
-        gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
+        if [ -z "$(ls -A ./dist)" ]; then
+          echo "No files found in ./dist, skipping upload."
+          exit 0
+        else
+          echo "Files found, proceeding with upload."
+          gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
+        fi
 
     - name: Execute clingen-stage modified sql Scripts
       if: steps.get_changed_files.outputs.modified_files_exist == 'true'

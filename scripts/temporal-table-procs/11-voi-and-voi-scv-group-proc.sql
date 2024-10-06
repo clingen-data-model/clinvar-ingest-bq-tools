@@ -102,8 +102,6 @@ BEGIN
 
 END;
 
--- select count(*) from `clinvar_ingest.voi_scv_group`;
-
 -- find intersection between voi and voi_scv windows for the same variant to create the voi_group records
 -- date window intersection is found by using the condition ((start_window1 <= end_window2) AND (end_window1 >= start_window2))
 -- the start and end dates are always inclusive, meaning the start date is the date that the record is first available and
