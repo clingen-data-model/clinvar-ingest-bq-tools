@@ -14,9 +14,9 @@ jobs:
       matrix:
         node-version: [20]  # Specify Node.js 20
 
-    # Output whether the build job runs based on the file changes
+    # Only run workflow if TypeScript files were modified
     outputs:
-      should_run_build: ${{ steps.build_check.outputs.build_ran }}
+      js_library_rebuilt: ${{ steps.build_check.outputs.ts_files_modified }}
 
     steps:
     - name: Checkout repository
@@ -36,33 +36,33 @@ jobs:
 
         # Check if MODIFIED_FILES has any content
         if [[ -n "$MODIFIED_FILES" ]]; then
-          echo "Build should run."
-          echo "::set-output name=build_ran::true"
+          echo "Typescript files were modified."
+          echo "::set-output name=ts_files_modified::true"
         else
           echo "No TypeScript files were modified."
-          echo "::set-output name=build_ran::false"
+          echo "::set-output name=ts_files_modified::false"
         fi
         
     - name: Setup Node.js
-      if: steps.build_check.outputs.build_ran == 'true'
+      if: steps.build_check.outputs.ts_files_modified == 'true'
       uses: actions/setup-node@v3
       with:
         node-version: ${{ matrix.node-version }}
 
     - name: Install dependencies
-      if: steps.build_check.outputs.build_ran == 'true'
+      if: steps.build_check.outputs.ts_files_modified == 'true'
       run: npm install
 
     - name: Compile TypeScript
-      if: steps.build_check.outputs.build_ran == 'true'
+      if: steps.build_check.outputs.ts_files_modified == 'true'
       run: npx tsc
 
     - name: Run tests
-      if: steps.build_check.outputs.build_ran == 'true'
+      if: steps.build_check.outputs.ts_files_modified == 'true'
       run: npm test
 
     - name: Upload artifacts
-      if: steps.build_check.outputs.build_ran == 'true'
+      if: steps.build_check.outputs.ts_files_modified == 'true'
       uses: actions/upload-artifact@v3
       with:
         name: dist
@@ -99,22 +99,27 @@ jobs:
         cat modified_files.txt
 
     - name: Download artifacts
-      if: needs.build.outputs.should_run_build == 'true' && (steps.get_changed_files.outputs.modified_files_exist == 'true')
+      if: needs.build.outputs.js_library_rebuilt == 'true' 
       uses: actions/download-artifact@v3
       with:
         name: dist
 
     - name: Authenticate to Google Cloud for clingen-swc
-      if: needs.build.outputs.should_run_build == 'true'
+      if: (needs.build.outputs.js_library_rebuilt == 'true') || (steps.get_changed_files.outputs.modified_files_exist == 'true')
       uses: google-github-actions/auth@v1
       with:
         credentials_json: ${{ secrets.GCP_SA_KEY }}
 
     - name: Setup Google Cloud SDK
-      if: needs.build.outputs.should_run_build == 'true' && (steps.get_changed_files.outputs.modified_files_exist == 'true')
+      if: (needs.build.outputs.js_library_rebuilt == 'true') || (steps.get_changed_files.outputs.modified_files_exist == 'true')
       uses: google-github-actions/setup-gcloud@v1
       with:
         version: 'latest'
+
+    - name: Copy javascript libraries to Google Cloud Storage
+      if: needs.build.outputs.js_library_rebuilt == 'true' 
+      run: |
+        gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
 
     - name: Execute clingen-stage modified sql Scripts
       if: steps.get_changed_files.outputs.modified_files_exist == 'true'

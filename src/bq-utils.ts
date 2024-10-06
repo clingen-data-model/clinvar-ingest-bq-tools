@@ -211,7 +211,6 @@ if (typeof global !== 'undefined') {
   (global as any).formatNearestMonth = formatNearestMonth;
 }
 
-
 type SigType = {
   count: number;
   percent: number;
