@@ -126,7 +126,7 @@ BEGIN
           gc_case.variation_id,
           gc_case.lab_id as submitter_id,
           gc_case.case_report_key,
-          STRING_AGG(DISTINCT FORMAT("%%s.%%i", lab_scv.id, lab_scv.version) ORDER BY lab_scv.id, lab_scv.version) as acxn,
+          STRING_AGG(DISTINCT FORMAT("%%s.%%i", lab_scv.id, lab_scv.version)) as acxn,
           STRING_AGG(DISTINCT lab_scv.classif_type ORDER BY lab_scv.classif_type) as classif_type,
           STRING_AGG(DISTINCT lab_scv.submitted_classification ORDER BY lab_scv.submitted_classification) as classification,
           MIN(lab_scv.last_evaluated) as last_evaluated,
