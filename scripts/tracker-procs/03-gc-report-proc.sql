@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `clinvar_curator.gc_report_proc`(start_with DATE)
+CREATE OR REPLACE PROCEDURE `variation_tracker.gc_report_proc`(start_with DATE)
 BEGIN
 
   FOR rec IN (select s.schema_name, s.release_date, s.prev_release_date, s.next_release_date FROM clinvar_ingest.schemas_on_or_after(start_with) as s)
@@ -16,7 +16,7 @@ BEGIN
         scv.classif_type,
         scv.submitted_classification,
         scv.last_evaluated
-      from `clinvar_curator.report_submitter` rs
+      from `variation_tracker.report_submitter` rs
       join `%s.scv_summary` scv
       on
         scv.submitter_id = rs.submitter_id
@@ -89,7 +89,7 @@ BEGIN
         left join `%s.gene` g
         on
           sgv.gene_id = g.id 
-        join `clinvar_curator.clinvar_vcvs` cvcv
+        join `clinvar_ingest.clinvar_vcvs` cvcv
         on
           cvcv.variation_id = gc_scv.variation_id
           and
@@ -168,7 +168,7 @@ BEGIN
           v.gc_scv_count,
           STRING_AGG(split( sgrp.scv_label, "%%")[0]||"%%", "\\n" ORDER BY sgrp.rank desc, sgrp.scv_group_type, sgrp.scv_label) as all_scvs
         from v
-        join `clinvar_curator.voi_scv_group` sgrp
+        join `clinvar_ingest.voi_scv_group` sgrp
         on
           sgrp.variation_id = v.variation_id and
           %T between sgrp.start_release_date and sgrp.end_release_date
@@ -342,7 +342,7 @@ BEGIN
 
 END;
 
--- CALL `clinvar_curator.gc_report_proc`(DATE'2023-01-01');
+-- CALL `clinvar_ingest.gc_report_proc`(DATE'2023-01-01');
 
 -- CREATE OR REPLACE TABLE `variation_tracker.gc_variation`
 -- (

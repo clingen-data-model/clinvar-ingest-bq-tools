@@ -1,14 +1,14 @@
 -- report_variations (run when you want to update the variants of inteterest driven by the reporting tables for vceps, etc...)
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.report_variation_proc`()
+CREATE OR REPLACE PROCEDURE `variation_tracker.report_variation_proc`()
 BEGIN
 
-  CREATE OR REPLACE TABLE `clinvar_ingest.report_variation`
+  CREATE OR REPLACE TABLE `variation_tracker.report_variation`
   AS
   SELECT
     r.id as report_id, 
     scv.variation_id
-  FROM `clinvar_ingest.report` r
-  JOIN `clinvar_ingest.report_submitter` rs 
+  FROM `variation_tracker.report` r
+  JOIN `variation_tracker.report_submitter` rs 
   ON 
     rs.report_id = r.id
   JOIN `clinvar_ingest.clinvar_scvs` scv 
@@ -22,8 +22,8 @@ BEGIN
   SELECT 
     r.id as report_id, 
     vsg.variation_id
-  FROM `clinvar_ingest.report` r
-  JOIN `clinvar_ingest.report_gene` rg 
+  FROM `variation_tracker.report` r
+  JOIN `variation_tracker.report_gene` rg 
   ON 
     rg.report_id = r.id
   JOIN `clinvar_ingest.entrez_gene` cg 
@@ -40,8 +40,8 @@ BEGIN
   SELECT 
     r.id as report_id, 
     cv.id as variation_id
-  FROM `clinvar_ingest.report` r
-  JOIN `clinvar_ingest.report_variant_list` rvl 
+  FROM `variation_tracker.report` r
+  JOIN `variation_tracker.report_variant_list` rvl 
   ON 
     rvl.report_id = r.id
   JOIN `clinvar_ingest.clinvar_variations` cv 

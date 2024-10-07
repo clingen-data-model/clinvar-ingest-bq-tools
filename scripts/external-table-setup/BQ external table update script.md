@@ -33,7 +33,7 @@ A word of caution...if using the `autodetect: true` please reference the data ty
 ```
 bq mk \
 --external_table_definition=report_submitters.def \
-clinvar_ingest.report_submitter
+variation_tracker.report_submitter
 ```
 this will create a table called `report_submitter` in the `clingen-stage.clinvar_ingest` dataset based on the google sheet link and range from the `report_submitters.def` file definition.
 

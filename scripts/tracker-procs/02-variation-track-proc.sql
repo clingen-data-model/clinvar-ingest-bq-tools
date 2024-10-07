@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.variation_track_proc`()
+CREATE OR REPLACE PROCEDURE `variation_tracker.variation_track_proc`()
 BEGIN
   DECLARE disable_out_of_date_alerts BOOLEAN DEFAULT FALSE;
   FOR rec IN
@@ -6,11 +6,11 @@ BEGIN
       select 
         r.id, r.name, r.abbrev, lower(format("%s_%s", r.id, r.abbrev)) as tname, 
         ARRAY_AGG( STRUCT(ro.name, ro.value) ) as opts
-      from `clinvar_ingest.report` r
-      join `clinvar_ingest.report_submitter` rs 
+      from `variation_tracker.report` r
+      join `variation_tracker.report_submitter` rs 
       on 
         rs.report_id = r.id and rs.active
-      left join `clinvar_ingest.report_option` ro
+      left join `variation_tracker.report_option` ro
       on 
         ro.report_id = r.id
       group by 
@@ -29,7 +29,7 @@ BEGIN
         vg.rank,
         FALSE as report_submitter_variation
 
-      from `clinvar_ingest.report_variation` rv
+      from `variation_tracker.report_variation` rv
       join `clinvar_ingest.voi_group` vg on vg.variation_id = rv.variation_id
       join `clinvar_ingest.all_schemas`() cv on 
         cv.release_date between vg.start_release_date and vg.end_release_date
@@ -63,7 +63,7 @@ BEGIN
         vs.rpt_stmt_type = vsg.rpt_stmt_type AND
         vs.rank = vsg.rank AND
         rv.report_release_date between vs.start_release_date and vs.end_release_date
-      left join `clinvar_ingest.report_submitter` rs on 
+      left join `variation_tracker.report_submitter` rs on 
         rs.report_id = rv.report_id AND 
         vs.submitter_id = rs.submitter_id
     """, rec.tname, rec.tname);
@@ -356,10 +356,10 @@ BEGIN
         vp.report_release_date between vv.start_release_date and vv.end_release_date
       join 
       (
-        select release_date,
-          LEAD(release_date, 1, CURRENT_DATE()) OVER (ORDER BY release_date ASC) as next_release_date
-        FROM `clinvar_ingest.clinvar_project_releases`
-        WHERE NOT ENDS_WITH(release_type, 'placeholder')
+        select 
+          release_date,
+          IF(next_release_date = DATE'9999-12-31', CURRENT_DATE(), next_release_date) next_release_date
+        FROM `clinvar_ingest.schemas_on_or_after`(clinvar_ingest.cvc_project_start_date())
       ) rel
       on
         vp.report_release_date = rel.release_date

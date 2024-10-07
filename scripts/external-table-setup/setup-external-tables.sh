@@ -9,25 +9,26 @@ gcloud auth login --enable-gdrive-access
 # set the project id
 gcloud config set project $PROJECT_ID
 
-# create the google sheet external table
-# bq mk --external_table_definition=report_submitter.def clinvar_ingest.report_submitter
+# Define the list of table and dataset pairs
+# Each entry is a tuple where the first element is the table name and the second element is the dataset name
+table_definitions=(
+  "clinvar_releases,clinvar_ingest"
+  "clinvar_submitter_abbrevs,clinvar_ingest"
+  "report,variation_tracker"
+  "report_option,variation_tracker"
+  "report_submitter,variation_tracker"
+  "report_gene,variation_tracker"
+  "report_variant_list,variation_tracker"
+)
 
-# Define the list of table names (assuming the file names match the table names)
-table_names=(
-  "clinvar_releases"
-  "clinvar_submitter_abbrevs"
-  "report" 
-  "report_option"
-  "report_submitter" 
-  "report_gene" 
-  "report_variant_list"
-) 
-
-# Loop over each table name to create the external tables
-for table_name in "${table_names[@]}"; do
+# Loop over each tuple to create the external tables
+for table_def in "${table_definitions[@]}"; do
+  # Split the tuple into table name and dataset
+  IFS=',' read -r table_name dataset <<< "$table_def"
+  
   # Construct the external table definition file and the corresponding table name
   definition_file="${table_name}.def"
-  target_table="clinvar_ingest.${table_name}"
+  target_table="${dataset}.${table_name}"
   
   # Create the google sheet external table
   bq mk --external_table_definition="$definition_file" "$target_table"
