@@ -31,7 +31,7 @@ BEGIN
 
       from `clinvar_ingest.report_variation` rv
       join `clinvar_ingest.voi_group` vg on vg.variation_id = rv.variation_id
-      join `clinvar_ingest.clinvar_project_releases` cv on 
+      join `clinvar_ingest.all_schemas`() cv on 
         cv.release_date between vg.start_release_date and vg.end_release_date
       where rv.report_id = "%s"
     """, rec.tname, rec.id);
