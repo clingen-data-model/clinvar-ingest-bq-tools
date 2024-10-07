@@ -1,0 +1,38 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "'Review & Submit'!C:H"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "annotation_id",
+        "type": "STRING"
+      },
+      {
+        "name": "date_added",
+        "type": "TIMESTAMP"
+      },
+      {
+        "name": "status",
+        "type": "STRING"
+      },
+      {
+        "name": "reviewer",
+        "type": "STRING"
+      },
+      {
+        "name": "notes",
+        "type": "STRING"
+      },
+      {
+        "name": "date_last_updated",
+        "type": "TIMESTAMP"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1ZPADw8DPh5iZxqsNDVM24T1p4AzmStqrcpOWdtHOUp8/edit\\#gid\\=459495004"
+  ]
+}

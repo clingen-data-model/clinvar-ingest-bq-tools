@@ -1,0 +1,82 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "'SCV Records'!A:Q"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "vcv_id",
+        "type": "STRING"
+      },
+      {
+        "name": "variation_name",
+        "type": "STRING"
+      },
+      {
+        "name": "scv_id",
+        "type": "STRING"
+      },
+      {
+        "name": "submitter_name",
+        "type": "STRING"
+      },
+      {
+        "name": "interpretation",
+        "type": "STRING"
+      },
+      {
+        "name": "action",
+        "type": "STRING"
+      },
+      {
+        "name": "reason",
+        "type": "STRING"
+      },
+      {
+        "name": "notes",
+        "type": "STRING"
+      },
+      {
+        "name": "annotation_date",
+        "type": "TIMESTAMP"
+      },
+      {
+        "name": "submitter_id",
+        "type": "STRING"
+      },
+      {
+        "name": "variation_id",
+        "type": "STRING"
+      },
+      {
+        "name": "curator_email",
+        "type": "STRING"
+      },
+      {
+        "name": "override_field",
+        "type": "STRING"
+      },
+      {
+        "name": "override_value",
+        "type": "STRING"
+      },
+      {
+        "name": "column_o",
+        "type": "STRING"
+      },
+      {
+        "name": "retired",
+        "type": "BOOLEAN"
+      },
+      {
+        "name": "retired_date",
+        "type": "DATE"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1dUnmBZSnz3aeB948b7pIq0iT7_FuCDvtv6FXaVsNcOo/edit\\#gid\\=0"
+  ]
+}

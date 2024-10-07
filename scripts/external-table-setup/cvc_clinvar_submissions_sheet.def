@@ -1,0 +1,30 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "Submissions!A:D"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "annotation_id",
+        "type": "STRING"
+      },
+      {
+        "name": "scv_id",
+        "type": "STRING"
+      },
+      {
+        "name": "scv_ver",
+        "type": "STRING"
+      },
+      {
+        "name": "batch_id",
+        "type": "STRING"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1ZPADw8DPh5iZxqsNDVM24T1p4AzmStqrcpOWdtHOUp8/edit\\#gid\\=1610447327"
+  ]
+}

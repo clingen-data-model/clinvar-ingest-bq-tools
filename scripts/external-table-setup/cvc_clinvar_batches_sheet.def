@@ -1,0 +1,22 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 1,
+    "range": "Batches!A:B"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "batch_id",
+        "type": "STRING"
+      },
+      {
+        "name": "finalized_datetime",
+        "type": "TIMESTAMP"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/1ZPADw8DPh5iZxqsNDVM24T1p4AzmStqrcpOWdtHOUp8/edit\\#gid\\=1311142758"
+  ]
+}

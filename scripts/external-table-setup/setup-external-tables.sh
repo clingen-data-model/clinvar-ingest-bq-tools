@@ -12,6 +12,10 @@ gcloud config set project $PROJECT_ID
 # Define the list of table and dataset pairs
 # Each entry is a tuple where the first element is the table name and the second element is the dataset name
 table_definitions=(
+  "clinvar_annotations,clinvar_curator"
+  "cvc_clinvar_reviews_sheet,clinvar_curator"
+  "cvc_clinvar_submissions_sheet,clinvar_curator"
+  "cvc_clinvar_batches_sheet,clinvar_curator"
   "clinvar_releases,clinvar_ingest"
   "clinvar_submitter_abbrevs,clinvar_ingest"
   "report,variation_tracker"
