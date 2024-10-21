@@ -1,4 +1,4 @@
-  -- calc voi summary
+-- calc voi summary
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.voi_summary_change_proc`()
 BEGIN
 

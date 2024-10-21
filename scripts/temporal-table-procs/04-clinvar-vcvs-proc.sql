@@ -1,21 +1,3 @@
--- add vcv ids and names with the original release date and most_recent release date 
--- - for all vcvs over time, if deleted, mark release it was first not shown (or deleted from)
-
--- -- initialize table 
--- CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
--- (
---   variation_id STRING NOT NULL,
---   id STRING NOT NULL, 
---   version INT NOT NULL, 
---   rank INT NOT NULL, 
---   last_evaluated DATE,
---   agg_classification STRING,
---   start_release_date DATE,
---   end_release_date DATE,
---   deleted_release_date DATE,
---   deleted_count INT DEFAULT 0
--- );
-
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_vcvs_proc`(start_with DATE)
 BEGIN
 

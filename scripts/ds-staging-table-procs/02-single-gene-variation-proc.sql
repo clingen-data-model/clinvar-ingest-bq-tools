@@ -286,7 +286,7 @@ END;
 
 -- -- PRE 2019-07-01 data setup one-off
 -- -- remove duplicates from contrived gene_association table in pre-2019-07-01 data
--- CREATE OR REPLACE TABLE `clingen-stage.clinvar_2019_06_01_v0.gene_association`
+-- CREATE OR REPLACE TABLE `clinvar_2019_06_01_v0.gene_association`
 -- AS
 -- SELECT x.release_date, x.gene_id, x.variation_id, x.relationship_type, x.source
 -- FROM (
@@ -295,18 +295,18 @@ END;
 --       ROW_NUMBER()
 --           OVER (PARTITION BY release_date, gene_id, variation_id)
 --           row_number
---   FROM `clingen-stage.clinvar_2019_06_01_v0.gene_association`
+--   FROM `clinvar_2019_06_01_v0.gene_association`
 -- ) x
 -- WHERE x.row_number = 1
 -- ;
 
 -- -- contrive a single_gene_variation table for the pre-2019-07-01 data
--- CREATE OR REPLACE TABLE `clingen-stage.clinvar_2019_06_01_v0.single_gene_variation`
+-- CREATE OR REPLACE TABLE `clinvar_2019_06_01_v0.single_gene_variation`
 -- AS
 -- WITH x AS
 -- (
 --   select release_date, variation_id
---   from  `clingen-stage.clinvar_2019_06_01_v0.gene_association`
+--   from  `clinvar_2019_06_01_v0.gene_association`
 --   group by release_date, variation_id
 --   having count(*) = 1
 -- )
@@ -319,27 +319,27 @@ END;
 --   (cg.hgnc_id IS NOT NULL) as somatic,
 --   FALSE as mane_select
 -- FROM x
--- join `clingen-stage.clinvar_2019_06_01_v0.gene_association` ga on x.release_date = ga.release_date and x.variation_id = ga.variation_id
--- left join `clingen-stage.clinvar_2019_06_01_v0.gene` g on g.id = ga.gene_id and x.release_date = g.release_date
--- left join `clingen-stage.clinvar_ingest.cancer_genes` cg on g.hgnc_id = cg.hgnc_id
+-- join `clinvar_2019_06_01_v0.gene_association` ga on x.release_date = ga.release_date and x.variation_id = ga.variation_id
+-- left join `clinvar_2019_06_01_v0.gene` g on g.id = ga.gene_id and x.release_date = g.release_date
+-- left join `clinvar_ingest.cancer_genes` cg on g.hgnc_id = cg.hgnc_id
 -- ;
 
 
   -- -- validate between steps?...
   -- select vsg.* 
-  -- from `clingen-stage.clinvar_2022_05_17_v1_6_46.single_gene_variation` vsg
+  -- from `clinvar_2022_05_17_v1_6_46.single_gene_variation` vsg
   -- join ( select vsg2.variation_id 
-  --        from `clingen-stage.clinvar_2022_05_17_v1_6_46.single_gene_variation` vsg2 
+  --        from `clinvar_2022_05_17_v1_6_46.single_gene_variation` vsg2 
   --        group by vsg2.variation_id having count(distinct vsg2.gene_id) > 1) vsg2 on  vsg.variation_id = vsg2.variation_id
   -- order by 1,3;
 
 
     -- -- Helper: To Find duplicate gene ids in release
     -- select count(distinct ga.variation_id), ga.gene_id, g.symbol, g.hgnc_id
-    -- from `clingen-stage.clinvar_2022_05_17_v1_6_46.gene_association` ga, 
-    --      `clingen-stage.clinvar_2022_05_17_v1_6_46.gene` g,
+    -- from `clinvar_2022_05_17_v1_6_46.gene_association` ga, 
+    --      `clinvar_2022_05_17_v1_6_46.gene` g,
     --      (SELECT ARRAY_AGG(id) as gene_ids 
-    --        from `clingen-stage.clinvar_2022_05_17_v1_6_46.gene` g 
+    --        from `clinvar_2022_05_17_v1_6_46.gene` g 
     --         group by hgnc_id, symbol, release_date, full_name 
     --         having count(distinct id)>1 ) as gx,
     --      UNNEST(gx.gene_ids) as gid
