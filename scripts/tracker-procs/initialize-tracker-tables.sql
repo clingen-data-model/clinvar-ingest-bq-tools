@@ -57,3 +57,16 @@ CREATE OR REPLACE TABLE `variation_tracker.gc_case`
   classification_comment STRING
 )
 ;
+
+CREATE OR REPLACE TABLE `variation_tracker.alert_type` AS  
+SELECT * FROM UNNEST([
+  STRUCT(NULL AS sort_order, '' AS label),
+  (0, 'Out of Date'),
+  (1, 'P/LP vs Newer VUS/B/LB'),
+  (2, 'VUS vs Newer P/LP'),
+  (3, 'VUS vs Newer B/LB'),
+  (4, 'B/LB vs Newer P/LP'),
+  (5, 'B/LB vs Newer VUS')
+])
+WHERE NOT sort_order IS NULL
+;

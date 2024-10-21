@@ -1,4 +1,4 @@
-  -- create or replace voi_top_group_change
+-- create or replace voi_top_group_change
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.voi_top_group_change_proc`()
 BEGIN
 

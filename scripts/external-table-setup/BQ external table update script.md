@@ -35,7 +35,7 @@ bq mk \
 --external_table_definition=report_submitters.def \
 variation_tracker.report_submitter
 ```
-this will create a table called `report_submitter` in the `clingen-stage.clinvar_ingest` dataset based on the google sheet link and range from the `report_submitters.def` file definition.
+this will create a table called `report_submitter` in the `variation_tracker` dataset based on the google sheet link and range from the `report_submitters.def` file definition.
 
 <h2>What's the best approach to managing the updates to external tables built on google sheets?</h2>
 I think there are 2 reasonable options
