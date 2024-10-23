@@ -11,7 +11,7 @@ BEGIN
           gks.id,
           STRUCT(
             "Document" as type,
-            IF(lower(cid.source) = 'pubmed', cid.id, null) as pmid,
+            IF(lower(cid.source) = 'pubmed', cid.id, null) as pmid, 
             IF(lower(cid.source) = 'doi', cid.id, null) as doi,
             CASE 
             WHEN c.url is not null THEN 

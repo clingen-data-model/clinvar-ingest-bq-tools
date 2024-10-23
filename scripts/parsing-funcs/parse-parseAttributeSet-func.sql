@@ -18,7 +18,6 @@ AS r"""
 
 -- test
 WITH x as (
-
   SELECT
     """
     {

@@ -286,7 +286,7 @@ function parseCitations(json: string): CitationOutput[] {
 //   "@Type": "MIM number",
 //   "@URL": "https://omim.org/entry/123456",
 //   "@Status": "current"
-// }]
+// }] 
 
 /**
  * Represents the input structure for a xref.
