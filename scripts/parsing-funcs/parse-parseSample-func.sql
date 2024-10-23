@@ -4,11 +4,11 @@ RETURNS STRUCT<
     description STRUCT<
       element_value STRING,
       type STRING,
-      citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >,
-    citation STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>
+    citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>
   >,
   origin STRING,
   ethnicity STRING,
@@ -38,14 +38,14 @@ RETURNS STRUCT<
       name ARRAY<STRUCT<
         element_value STRING,
         type STRING,
-        citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+        citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
         xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
         comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
       >>,
       symbol ARRAY<STRUCT<
         element_value STRING,
         type STRING,
-        citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+        citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
         xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
         comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
       >>,
@@ -56,7 +56,7 @@ RETURNS STRUCT<
           integer_value INT64,
           date_value DATE
         >,
-        citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+        citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
         xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
         comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
       >>,
@@ -64,14 +64,14 @@ RETURNS STRUCT<
         name ARRAY<STRUCT<
           element_value STRING,
           type STRING,
-          citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+          citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
           xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
           comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
         >>,
         symbol ARRAY<STRUCT<
           element_value STRING,
           type STRING,
-          citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+          citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
           xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
           comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
         >>,
@@ -82,16 +82,16 @@ RETURNS STRUCT<
             integer_value INT64,
             date_value DATE
           >,
-          citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+          citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
           xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
           comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
         >>,
-        citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+        citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
         xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
         source ARRAY<STRING>,
         type STRING
       >>,
-      citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>,
       type STRING,
@@ -101,14 +101,14 @@ RETURNS STRUCT<
     name ARRAY<STRUCT<
       element_value STRING,
       type STRING,
-      citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >>,
     symbol ARRAY<STRUCT<
       element_value STRING,
       type STRING,
-      citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >>,
@@ -119,17 +119,17 @@ RETURNS STRUCT<
         integer_value INT64,
         date_value DATE
       >,
-      citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >>,
-    citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+    citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
     xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
     comment STRUCT<text STRING, type STRING, source STRING>,
     type STRING,
     id STRING
   >,
-  citation ARRAY<STRUCT<id STRING, source STRING, url STRING, type STRING, abbrev STRING, text STRING, curie STRING>>,
+  citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
   xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
   comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>,
   source_type STRING>

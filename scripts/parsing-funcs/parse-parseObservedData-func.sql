@@ -4,7 +4,7 @@ RETURNS
     STRUCT<
       attribute STRUCT<type STRING, value STRING, integer_value INT64, date_value DATE>,
       severity STRING,
-      citation ARRAY<STRUCT<id STRING,source STRING,url STRING,type STRING,abbrev STRING, text STRING, curie STRING>>,
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >

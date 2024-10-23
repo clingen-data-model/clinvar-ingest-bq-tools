@@ -1,4 +1,6 @@
+const { type } = require('os');
 const rewire = require('rewire');
+const { text } = require('stream/consumers');
 const parseUtils = rewire('../dist/parse-utils.js');
 
 // Get the functions to test
@@ -28,6 +30,11 @@ const parseProteinExpression = parseUtils.__get__('parseProteinExpression');
 const buildHGVSOutput = parseUtils.__get__('buildHGVSOutput');
 const buildHGVSArrayOutput = parseUtils.__get__('buildHGVSArrayOutput');
 const parseHGVS = parseUtils.__get__('parseHGVS');
+const buildTraitOutput = parseUtils.__get__('buildTraitOutput');
+const buildTraitsOutput = parseUtils.__get__('buildTraitsOutput');
+const parseTraits = parseUtils.__get__('parseTraits');
+const buildTraitSetOutput = parseUtils.__get__('buildTraitSetOutput');
+const parseTraitSet = parseUtils.__get__('parseTraitSet');
 
 test('buildGeneListOutput should build GeneListOutput correctly', () => {
   const input = { Gene: { '@Symbol': 'Symbol1', 'Name': {'$':'HGNC1'},'@RelationshipType': 'asserted, not computed' } };
@@ -80,13 +87,11 @@ test('parseComments should parse JSON input correctly', () => {
 test('buildCitationOutput should build CitationOutput correctly', () => {
   const input = { ID: { $: '123', '@Source': 'Source1' }, URL: { $: 'http://example.com' }, CitationText: { $: 'Citation text' }, '@Type': 'Type1', '@Abbrev': 'Abbrev1' };
   const expectedOutput = {
-    id: '123',
-    source: 'Source1',
+    id: [{id:'123', source: 'Source1', curie: 'Source1:123'}],
     url: 'http://example.com',
     text: 'Citation text',
     type: 'Type1',
-    abbrev: 'Abbrev1',
-    curie: 'Source1:123'
+    abbrev: 'Abbrev1'
   };
   expect(buildCitationOutput(input)).toEqual(expectedOutput);
 });
@@ -97,13 +102,11 @@ test('buildCitationsOutput should build an array of CitationOutput correctly', (
   ];
   const expectedOutput = [
     {
-      id: '123',
-      source: 'Source1',
+      id: [{id: '123', source: 'Source1', curie: 'Source1:123'}],
       url: 'http://example.com',
       text: 'Citation text',
       type: 'Type1',
-      abbrev: 'Abbrev1',
-      curie: 'Source1:123'
+      abbrev: 'Abbrev1'
     }
   ];
   expect(buildCitationsOutput(input)).toEqual(expectedOutput);
@@ -113,13 +116,11 @@ test('parseCitations should parse JSON input correctly', () => {
   const json = '{"Citation":[{"ID":{"$":"123","@Source":"Source1"},"URL":{"$":"http://example.com"},"CitationText":{"$":"Citation text"},"@Type":"Type1","@Abbrev":"Abbrev1"}]}';
   const expectedOutput = [
     {
-      id: '123',
-      source: 'Source1',
+      id: [{id: '123', source: 'Source1', curie: 'Source1:123'}],
       url: 'http://example.com',
       text: 'Citation text',
       type: 'Type1',
-      abbrev: 'Abbrev1',
-      curie: 'Source1:123'
+      abbrev: 'Abbrev1'
     }
   ];
   expect(parseCitations(json)).toEqual(expectedOutput);
@@ -208,13 +209,11 @@ test('buildAttributeSetOutput should build AttributeSetOutput correctly', () => 
   const expectedOutput = {
     attribute: { type: 'type1', value: 'value1', integer_value: 123, date_value: new Date('2023-01-01T00:00:00Z') },
     citation: [{
-      id: '123',
-      source: 'Source1',
+      id: [{id: '123', source: 'Source1', curie: 'Source1:123'}], 
       url: 'http://example.com',
       text: 'Citation text',
       type: 'Type1',
-      abbrev: 'Abbrev1',
-      curie: 'Source1:123'
+      abbrev: 'Abbrev1'
     }],
     xref: [{ db: 'DB1', id: 'ID1', url: 'http://example.com', type: 'Type1', status: 'Status1' }],
     comment: [{ text: 'This is a comment', type: 'Type1', source: 'Source1' }]
@@ -233,13 +232,11 @@ test('buildAttributeSetsOutput should build an array of AttributeSetOutput corre
   const expectedOutput = [{
     attribute: { type: 'type1', value: 'value1', integer_value: 123, date_value: new Date('2023-01-01T00:00:00Z') },
     citation: [{
-      id: '123',
-      source: 'Source1',
+      id: [{id: '123', source: 'Source1', curie: 'Source1:123'}],
       url: 'http://example.com',
       text: 'Citation text',
       type: 'Type1',
-      abbrev: 'Abbrev1',
-      curie: 'Source1:123'
+      abbrev: 'Abbrev1'
     }],
     xref: [{ db: 'DB1', id: 'ID1', url: 'http://example.com', type: 'Type1', status: 'Status1' }],
     comment: [{ text: 'This is a comment', type: 'Type1', source: 'Source1' }]
@@ -249,17 +246,15 @@ test('buildAttributeSetsOutput should build an array of AttributeSetOutput corre
 
 // Tests for parseAttributeSet
 test('parseAttributeSet should parse JSON input correctly', () => {
-  const json = '{"AttributeSet":[{"Attribute":{"@Type":"type1","$":"value1","@integerValue":"123","@dateValue":"2023-01-01T00:00:00Z"},"Citation":[{"ID":{"$":"123","@Source":"Source1"},"URL":{"$":"http://example.com"},"CitationText":{"$":"Citation text"},"@Type":"Type1","@Abbrev":"Abbrev1"}],"XRef":[{"@DB":"DB1","@ID":"ID1","@URL":"http://example.com","@Type":"Type1","@Status":"Status1"}],"Comment":[{"$":"This is a comment","@Type":"Type1","@DataSource":"Source1"}]}]}';
+  const json = '{"AttributeSet":[{"Attribute":{"@Type":"type1","$":"value1","@integerValue":"123","@dateValue":"2023-01-01T00:00:00Z"}, "Citation":[{"ID":{"$":"123","@Source":"Source1"},"URL":{"$":"http://example.com"},"CitationText":{"$":"Citation text"},"@Type":"Type1","@Abbrev":"Abbrev1"}],"XRef":[{"@DB":"DB1","@ID":"ID1","@URL":"http://example.com","@Type":"Type1","@Status":"Status1"}],"Comment":[{"$":"This is a comment","@Type":"Type1","@DataSource":"Source1"}]}]}';
   const expectedOutput = [{
     attribute: { type: 'type1', value: 'value1', integer_value: 123, date_value: new Date('2023-01-01T00:00:00Z') },
     citation: [{
-      id: '123',
-      source: 'Source1',
+      id: [{id: '123', source: 'Source1', curie: 'Source1:123'}],
       url: 'http://example.com',
       text: 'Citation text',
       type: 'Type1',
-      abbrev: 'Abbrev1',
-      curie: 'Source1:123'
+      abbrev: 'Abbrev1'
     }],
     xref: [{ db: 'DB1', id: 'ID1', url: 'http://example.com', type: 'Type1', status: 'Status1' }],
     comment: [{ text: 'This is a comment', type: 'Type1', source: 'Source1' }]
@@ -451,3 +446,803 @@ test('parseHGVS should throw error for invalid JSON input', () => {
   const json = 'invalid json';
   expect(() => parseHGVS(json)).toThrow('Invalid JSON input');
 });
+
+// Example Trait json
+
+// Tests for buildTraitOutput
+test('buildTraitOutput should build TraitOutput correctly', () => {
+  const input = {
+    '@ID': '1053',
+    '@Type': 'Disease',
+    Name: {
+      ElementValue: {
+        '@Type': 'Preferred',
+        '$': 'Brachydactyly type B1'
+      },
+      XRef: [
+        {
+          '@ID': 'Brachydactyly+type+B1/7857',
+          '@DB': 'Genetic Alliance'
+        },
+        {
+          '@ID': 'MONDO:0007220',
+          '@DB': 'MONDO'
+        }
+      ]
+    },
+    Symbol: [
+      {
+        ElementValue: {
+          '@Type': 'Preferred',
+          '$': 'BDB1'
+        },
+        XRef: {
+          '@Type': 'MIM',
+          '@ID': '113000',
+          '@DB': 'OMIM'
+        }
+      },
+      {
+        ElementValue: {
+          '@Type': 'Alternate',
+          '$': 'BDB'
+        },
+        XRef: {
+          '@Type': 'MIM',
+          '@ID': '113000',
+          '@DB': 'OMIM'
+        }
+      }
+    ],
+    AttributeSet: [
+      {
+        Attribute: {
+          '@Type': 'keyword',
+          '$': 'ROR2-Related Disorders'
+        }
+      },
+      {
+        Attribute: {
+          '@Type': 'GARD id',
+          '@integerValue': '18009'
+        },
+        XRef: {
+          '@ID': '18009',
+          '@DB': 'Office of Rare Diseases'
+        }
+      }
+    ],
+    TraitRelationship: {
+      '@Type': 'co-occurring condition',
+      '@ID': '70'
+    },
+    XRef: [
+      {
+        '@ID': 'MONDO:0007220',
+        '@DB': 'MONDO'
+      },
+      {
+        '@ID': 'C1862112',
+        '@DB': 'MedGen'
+      },
+      {
+        '@ID': '93383',
+        '@DB': 'Orphanet'
+      },
+      {
+        '@Type': 'MIM',
+        '@ID': '113000',
+        '@DB': 'OMIM'
+      }
+    ]
+  };
+  const expectedOutput = {
+    id: '1053',
+    type: 'Disease',
+    name: [{
+      element_value: 'Brachydactyly type B1',
+      type: 'Preferred',
+      citation: null,
+      comment: null,
+      xref: [
+        { id: 'Brachydactyly+type+B1/7857', db: 'Genetic Alliance', status: null, type: null, url: null },
+        { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null }
+      ],
+    }],
+    symbol: [
+      { element_value: 'BDB1', type: 'Preferred', citation: null, comment: null, xref:[{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] },
+      { element_value: 'BDB', type: 'Alternate', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] }
+    ],
+    attribute_set: [
+      {attribute:{ type: 'keyword', value: 'ROR2-Related Disorders', date_value: null, integer_value: null }, citation: null, comment: null, xref: null},
+      {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value: null}, citation: null, comment: null, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }] }
+    ],
+    citation: null,
+    comment: null,
+    trait_relationship: { type: 'co-occurring condition', id: '70' },
+    xref: [
+      { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null},
+      { id: 'C1862112', db: 'MedGen', status: null, type: null, url: null },
+      { id: '93383', db: 'Orphanet', status: null, type: null, url: null },
+      { type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }
+    ]
+  };
+  expect(buildTraitOutput(input)).toEqual(expectedOutput);
+});
+
+// Tests for buildTraitsOutput
+test('buildTraitsOutput should build an array of TraitOutput correctly', () => {
+  const input = [
+    {
+      '@ID': '1053',
+      '@Type': 'Disease',
+      Name: {
+        ElementValue: {
+          '@Type': 'Preferred',
+          '$': 'Brachydactyly type B1'
+        },
+        XRef: [
+          {
+            '@ID': 'Brachydactyly+type+B1/7857',
+            '@DB': 'Genetic Alliance'
+          },
+          {
+            '@ID': 'MONDO:0007220',
+            '@DB': 'MONDO'
+          }
+        ]
+      },
+      Symbol: [
+        {
+          ElementValue: {
+            '@Type': 'Preferred',
+            '$': 'BDB1'
+          },
+          XRef: {
+            '@Type': 'MIM',
+            '@ID': '113000',
+            '@DB': 'OMIM'
+          }
+        },
+        {
+          ElementValue: {
+            '@Type': 'Alternate',
+            '$': 'BDB'
+          },
+          XRef: {
+            '@Type': 'MIM',
+            '@ID': '113000',
+            '@DB': 'OMIM'
+          }
+        }
+      ],
+      AttributeSet: [
+        {
+          Attribute: {
+            '@Type': 'keyword',
+            '$': 'ROR2-Related Disorders'
+          }
+        },
+        {
+          Attribute: {
+            '@Type': 'GARD id',
+            '@integerValue': '18009'
+          },
+          XRef: {
+            '@ID': '18009',
+            '@DB': 'Office of Rare Diseases'
+          }
+        }
+      ],
+      TraitRelationship: {
+        '@Type': 'co-occurring condition',
+        '@ID': '70'
+      },
+      XRef: [
+        {
+          '@ID': 'MONDO:0007220',
+          '@DB': 'MONDO'
+        },
+        {
+          '@ID': 'C1862112',
+          '@DB': 'MedGen'
+        },
+        {
+          '@ID': '93383',
+          '@DB': 'Orphanet'
+        },
+        {
+          '@Type': 'MIM',
+          '@ID': '113000',
+          '@DB': 'OMIM'
+        }
+      ]
+    },
+    {
+      '@ID': '5880',
+      '@Type': 'Disease',
+      Name: [
+        {
+          ElementValue
+          : {
+            '@Type': 'Preferred',
+            '$': 'Autosomal recessive Robinow syndrome'
+          },
+          XRef: {
+            '@ID': 'MONDO:0009999',
+            '@DB': 'MONDO'
+          }
+        },
+        {
+          ElementValue: {
+            '@Type': 'Alternate',
+            '$': 'COSTOVERTEBRAL SEGMENTATION DEFECT WITH MESOMELIA'
+          },
+          XRef: {
+            '@Type': 'MIM',
+            '@ID': '268310',
+            '@DB': 'OMIM'
+          }
+        },
+        {
+          ElementValue: {
+            '@Type': 'Alternate',
+            '$': 'COVESDEM SYNDROME'
+          },
+          XRef: {
+            '@Type': 'MIM',
+            '@ID': '268310',
+            '@DB': 'OMIM'
+          }
+        },
+        {
+          ElementValue: {
+            '@Type': 'Alternate',
+            '$': 'ROBINOW SYNDROME, AUTOSOMAL RECESSIVE 1'
+          },
+          XRef: [
+            {
+              '@Type': 'MIM',
+              '@ID': '268310',
+              '@DB': 'OMIM'
+            },
+            {
+              '@Type': 'Allelic variant',
+              '@ID': '602337.0010',
+              '@DB': 'OMIM'
+            },
+            {
+              '@Type': 'Allelic variant',
+              '@ID': '602337.0011',
+              '@DB': 'OMIM'
+            },
+            {
+              '@Type': 'Allelic variant',
+              '@ID': '602337.0012',
+              '@DB': 'OMIM'
+            },
+            {
+              '@Type': 'Allelic variant',
+              '@ID': '602337.0006',
+              '@DB': 'OMIM'
+            },
+            {
+              '@Type': 'Allelic variant',
+              '@ID': '602337.0004',
+              '@DB': 'OMIM'
+            },
+            {
+              '@Type': 'Allelic variant',
+              '@ID': '602337.0005',
+              '@DB': 'OMIM'
+            },
+            {
+              '@Type': 'Allelic variant',
+              '@ID': '602337.0007',
+              '@DB': 'OMIM'
+            }
+          ]
+        }
+      ],
+      Symbol: [
+        {
+          ElementValue: {
+            '@Type': 'Preferred',
+            '$': 'RRS1'
+          },
+          XRef: {
+            '@Type': 'MIM',
+            '@ID': '268310',
+            '@DB': 'OMIM'
+          }
+        },
+        {
+          ElementValue: {
+            '@Type': 'Alternate',
+            '$': 'RRS'
+          }
+        }
+      ],
+      AttributeSet: [
+        {
+          Attribute: {
+            '@Type': 'public definition',
+            '$': 'ROR2-related Robinow syndrome is characterized by distinctive craniofacial features, skeletal abnormalities, and other anomalies. Craniofacial features include macrocephaly, broad prominent forehead, low-set ears, ocular hypertelorism, prominent eyes, midface hypoplasia, short upturned nose with depressed nasal bridge and flared nostrils, large and triangular mouth with exposed incisors and upper gums, gum hypertrophy, misaligned teeth, ankyloglossia, and micrognathia. Skeletal abnormalities include short stature, mesomelic or acromesomelic limb shortening, hemivertebrae with fusion of thoracic vertebrae, and brachydactyly. Other common features include micropenis with or without cryptorchidism in males and reduced clitoral size and hypoplasia of the labia majora in females, renal tract abnormalities, and nail hypoplasia or dystrophy. The disorder is recognizable at birth or in early childhood.'
+          },
+          XRef: {
+            '@ID': 'NBK1240',
+            '@DB': 'GeneReviews'
+          }
+        },
+        {
+          Attribute: {
+            '@Type': 'GARD id',
+            '@integerValue': '16568'
+          },
+          XRef: {
+            '@ID': '16568',
+            '@DB': 'Office of Rare Diseases'
+          }
+        }
+      ],
+      TraitRelationship: {
+        '@Type': 'co-occurring condition',
+        '@ID': '70'
+      },
+      Citation: {
+        '@Type': 'review',
+        '@Abbrev': 'GeneReviews',
+        ID: [
+          {
+            '@Source': 'PubMed',
+            '$': '20301418'
+          },
+          {
+            '@Source': 'BookShelf',
+            '$': 'NBK1240'
+          }
+        ]
+      },
+      XRef: [
+        {
+          '@ID': 'MONDO:0009999',
+          '@DB': 'MONDO'
+        },
+        {
+          '@ID': 'C5399974',
+          '@DB': 'MedGen'
+        },
+        {
+          '@ID': '1507',
+          '@DB': 'Orphanet'
+        },
+        {
+          '@ID': '97360',
+          '@DB': 'Orphanet'
+        },
+        {
+          '@Type': 'MIM',
+          '@ID': '268310',
+          '@DB': 'OMIM'
+        }
+      ]
+    }
+  ];
+  const expectedOutput = [
+    {
+      id: '1053',
+      type: 'Disease',
+      name: [{
+        element_value: 'Brachydactyly type B1',
+        type: 'Preferred',
+        citation: null,
+        comment: null,
+        xref: [
+          { id: 'Brachydactyly+type+B1/7857', db: 'Genetic Alliance', status: null, type: null, url: null },
+          { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null } 
+        ]
+      }],
+      symbol: [
+        { element_value: 'BDB1', type: 'Preferred', citation: null, comment: null,  xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] },
+        { element_value: 'BDB', type: 'Alternate', citation: null, comment: null,xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] }
+      ],
+      attribute_set: [
+        {
+          attribute: { type: 'keyword', value: 'ROR2-Related Disorders',date_value: null, integer_value: null },
+          citation: null,
+          comment: null,
+          xref: null
+        },
+        {
+          attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value: null },
+          citation: null,
+          comment: null,
+          xref: [{ id: '18009', db: 'Office of Rare Diseases', url: null, type: null, status: null }]
+        }
+      ],
+      citation: null,
+      comment: null,
+      trait_relationship: { type: 'co-occurring condition', id: '70' },
+      xref: [
+        { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null },
+        { id: 'C1862112', db: 'MedGen', status: null, type: null, url: null },
+        { id: '93383', db: 'Orphanet', status: null, type: null, url: null },
+        { type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }
+      ]
+    },
+    {
+      id: '5880',
+      type: 'Disease',
+      name: [
+        {
+          element_value: 'Autosomal recessive Robinow syndrome',
+          type: 'Preferred',
+          citation: null,
+          comment: null,          
+          xref: [{ id: 'MONDO:0009999', db: 'MONDO', status: null, type: null, url: null }]
+        },
+        {
+          element_value: 'COSTOVERTEBRAL SEGMENTATION DEFECT WITH MESOMELIA',
+          type: 'Alternate',
+          citation: null,
+          comment: null,
+          xref: [{ type: 'MIM', id: '268310', db: 'OMIM', status: null, url: null }]
+        },
+        {
+          element_value: 'COVESDEM SYNDROME',
+          type: 'Alternate',
+          citation: null,
+          comment: null,
+          xref: [{ type: 'MIM', id: '268310', db: 'OMIM', status: null, url: null }]
+        },
+        {
+          element_value: 'ROBINOW SYNDROME, AUTOSOMAL RECESSIVE 1',
+          type: 'Alternate',
+          citation: null,
+          comment: null,
+          xref: [
+            { type: 'MIM', id: '268310', db: 'OMIM', status: null, url: null },
+            { type: 'Allelic variant', id: '602337.0010', db: 'OMIM', status: null, url: null },
+            { type: 'Allelic variant', id: '602337.0011', db: 'OMIM', status: null, url: null },
+            { type: 'Allelic variant', id: '602337.0012', db: 'OMIM', status: null, url: null },
+            { type: 'Allelic variant', id: '602337.0006', db: 'OMIM', status: null, url: null },
+            { type: 'Allelic variant', id: '602337.0004', db: 'OMIM', status: null, url: null },
+            { type: 'Allelic variant', id: '602337.0005', db: 'OMIM', status: null, url: null },
+            { type: 'Allelic variant', id: '602337.0007', db: 'OMIM', status: null, url: null }
+          ]
+        }
+      ],
+      symbol: [
+        { element_value: 'RRS1', type: 'Preferred', citation: null, comment: null, xref: [{ type: 'MIM', id: '268310', db: 'OMIM', status: null, url: null }]},
+        { element_value: 'RRS', type: 'Alternate', citation: null, comment: null, xref: null }
+      ],
+      attribute_set: [
+        {
+          attribute: {
+            type: 'public definition',
+            value: 'ROR2-related Robinow syndrome is characterized by distinctive craniofacial features, skeletal abnormalities, and other anomalies. Craniofacial features include macrocephaly, broad prominent forehead, low-set ears, ocular hypertelorism, prominent eyes, midface hypoplasia, short upturned nose with depressed nasal bridge and flared nostrils, large and triangular mouth with exposed incisors and upper gums, gum hypertrophy, misaligned teeth, ankyloglossia, and micrognathia. Skeletal abnormalities include short stature, mesomelic or acromesomelic limb shortening, hemivertebrae with fusion of thoracic vertebrae, and brachydactyly. Other common features include micropenis with or without cryptorchidism in males and reduced clitoral size and hypoplasia of the labia majora in females, renal tract abnormalities, and nail hypoplasia or dystrophy. The disorder is recognizable at birth or in early childhood.',
+            date_value: null,
+            integer_value: null
+          },
+          citation: null,
+          comment: null,
+          xref: [{ id: 'NBK1240', db: 'GeneReviews', status: null, type: null, url: null }]
+        },
+        {
+          attribute: { type: 'GARD id', integer_value: 16568, date_value: null, value: null },
+          citation: null,
+          comment: null,
+          xref: [{id: '16568', db: 'Office of Rare Diseases', status: null, type: null, url: null}]
+        }
+      ],
+      trait_relationship: { type: 'co-occurring condition', id: '70' },
+      citation: [{
+        type: 'review',
+        abbrev: 'GeneReviews',
+        id: [
+          { source: 'PubMed', id: '20301418', curie: 'PubMed:20301418' },
+          { source: 'BookShelf', id: 'NBK1240', curie: 'BookShelf:NBK1240' }
+        ],
+        url: null,
+        text: null
+      }],
+      comment: null,
+      xref: [
+        { id: 'MONDO:0009999', db: 'MONDO', status: null, type: null, url: null},
+        { id: 'C5399974', db: 'MedGen', status: null, type: null, url: null },
+        { id: '1507', db: 'Orphanet', status: null, type: null, url: null },
+        { id: '97360', db: 'Orphanet', status: null, type: null, url: null },
+        { type: 'MIM', id: '268310', db: 'OMIM', status: null, url: null }
+      ]
+    }
+  ];
+  expect(buildTraitsOutput(input)).toEqual(expectedOutput);
+});
+
+// // Tests for parseTrait
+test('parseTraits should parse JSON input correctly', () => {
+  const json = '{"Trait":[{"@ID":"1053","@Type":"Disease","Name":{"ElementValue":{"@Type":"Preferred","$":"Brachydactyly type B1"},"XRef":[{"@ID":"Brachydactyly+type+B1/7857","@DB":"Genetic Alliance"},{"@ID":"MONDO:0007220","@DB":"MONDO"}]},"Symbol":[{"ElementValue":{"@Type":"Preferred","$":"BDB1"},"XRef":{"@Type":"MIM","@ID":"113000","@DB":"OMIM"}},{"ElementValue":{"@Type":"Alternate","$":"BDB"},"XRef":{"@Type":"MIM","@ID":"113000","@DB":"OMIM"}}],"AttributeSet":[{"Attribute":{"@Type":"keyword","$":"ROR2-Related Disorders"}},{"Attribute":{"@Type":"GARD id","@integerValue":"18009"},"XRef":{"@ID":"18009","@DB":"Office of Rare Diseases"}}],"TraitRelationship":{"@Type":"co-occurring condition","@ID":"70"},"XRef":[{"@ID":"MONDO:0007220","@DB":"MONDO"},{"@ID":"C1862112","@DB":"MedGen"},{"@ID":"93383","@DB":"Orphanet"},{"@Type":"MIM","@ID":"113000","@DB":"OMIM"}]}]}';
+  const expectedOutput = [
+    {
+      id: '1053',
+      type: 'Disease',
+      name: [{
+        element_value: 'Brachydactyly type B1',
+        type: 'Preferred',
+        citation: null,
+        comment: null,
+        xref: [
+          { id: 'Brachydactyly+type+B1/7857', db: 'Genetic Alliance', status: null, type: null, url: null },
+          { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null }
+        ]
+      }],
+      symbol: [
+        { element_value: 'BDB1', type: 'Preferred', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] },
+        { element_value: 'BDB', type: 'Alternate', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] }
+      ],
+      attribute_set: [
+        {attribute: { type: 'keyword', value: 'ROR2-Related Disorders', date_value: null, integer_value: null }, citation: null, comment: null, xref: null},
+        {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value: null}, citation: null, comment: null, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }]}
+      ],
+      citation: null,
+      comment: null,
+      trait_relationship: { type: 'co-occurring condition', id: '70' },  
+      xref: [
+        { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null },
+        { id: 'C1862112', db: 'MedGen', status: null, type: null, url: null },
+        { id: '93383', db: 'Orphanet', status: null, type: null, url: null },
+        { type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }
+      ]
+    }
+  ];
+  expect(parseTraits(json)).toEqual(expectedOutput);
+});
+
+test('parseTraits should throw error for invalid JSON input', () => {
+  const json = 'invalid json';
+  expect(() => parseTraits(json)).toThrow('Invalid JSON input');
+});
+
+// // Test for buildTraitSetOutput
+test('buildTraitSetOutput should build TraitSetOutput correctly', () => {
+  const input = {
+    '@Type': 'Disease',
+    '@ID': '8827',
+    Trait: [
+      {
+        '@ID': '1053',
+        '@Type': 'Disease',
+        Name: {
+          ElementValue: {
+            '@Type': 'Preferred',
+            '$': 'Brachydactyly type B1'
+          },
+          XRef: [
+            {
+              '@ID': 'Brachydactyly+type+B1/7857',
+              '@DB': 'Genetic Alliance'
+            },
+            {
+              '@ID': 'MONDO:0007220',
+              '@DB': 'MONDO'
+            }
+          ]
+        },
+        Symbol: [
+          {
+            ElementValue: {
+              '@Type': 'Preferred',
+              '$': 'BDB1'
+            },
+            XRef: {
+              '@Type': 'MIM',
+              '@ID': '113000',
+              '@DB': 'OMIM'
+            }
+          },
+          {
+            ElementValue: {
+              '@Type': 'Alternate',
+              '$': 'BDB'
+            },
+            XRef: {
+              '@Type': 'MIM',
+              '@ID': '113000',
+              '@DB': 'OMIM'
+            }
+          }
+        ],
+        AttributeSet: [
+          {
+            Attribute: {
+              '@Type': 'keyword',
+              '$': 'ROR2-Related Disorders'
+            }
+          },
+          {
+            Attribute: {
+              '@Type': 'GARD id',
+              '@integerValue': '18009'
+            },
+            XRef: {
+              '@ID': '18009',
+              '@DB': 'Office of Rare Diseases'
+            }
+          }
+        ],
+        TraitRelationship: {
+          '@Type': 'co-occurring condition',
+          '@ID': '70'
+        },
+        XRef: [
+          {
+            '@ID': 'MONDO:0007220',
+            '@DB': 'MONDO'
+          },
+          {
+            '@ID': 'C1862112',
+            '@DB': 'MedGen'
+          },
+          {
+            '@ID': '93383',
+            '@DB': 'Orphanet'
+          },
+          {
+            '@Type': 'MIM',
+            '@ID': '113000',
+            '@DB': 'OMIM'
+          }
+        ]
+      }
+    ]
+  };
+  const expectedOutput = {
+    type: 'Disease',
+    id: '8827',
+    trait: [
+      {
+        id: '1053',
+        type: 'Disease',
+        name: [{
+          element_value: 'Brachydactyly type B1',
+          type: 'Preferred',
+          citation: null,
+          comment: null,
+          xref: [
+            { id: 'Brachydactyly+type+B1/7857', db: 'Genetic Alliance', status: null, type: null, url: null },
+            { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null }
+          ]
+        }],
+        symbol: [
+          { element_value: 'BDB1', type: 'Preferred', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] },
+          { element_value: 'BDB', type: 'Alternate', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] }  
+        ],
+        attribute_set: [
+          {attribute: { type: 'keyword', value: 'ROR2-Related Disorders', date_value: null, integer_value: null }, citation: null, comment: null, xref: null},  
+          {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value: null }, citation: null, comment: null, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }]} 
+        ],
+        trait_relationship: { type: 'co-occurring condition', id: '70' },  
+        citation: null,
+        comment: null,
+        xref: [
+          { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null },
+          { id: 'C1862112', db: 'MedGen', status: null, type: null, url: null },
+          { id: '93383', db: 'Orphanet', status: null, type: null, url: null },
+          { type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }
+        ]
+      }
+    ]
+  };
+  expect(buildTraitSetOutput(input)).toEqual(expectedOutput);
+});
+
+// Test for parseTraitSet
+test('parseTraitSet should parse JSON input correctly', () => {
+  const json = `{"TraitSet": {
+    "@Type":"Disease",
+    "@ID":"8827",
+    "Trait":[{
+      "@ID":"1053",
+      "@Type":"Disease",
+      "Name":{
+        "ElementValue":{
+          "@Type":"Preferred",
+          "$":"Brachydactyly type B1"
+        },
+        "XRef":[{
+          "@ID":"Brachydactyly+type+B1/7857","@DB":"Genetic Alliance"
+        },{
+          "@ID":"MONDO:0007220","@DB":"MONDO"
+        }]
+      },
+      "Symbol":[{
+        "ElementValue":{
+          "@Type":"Preferred","$":"BDB1"
+        },
+        "XRef":{
+          "@Type":"MIM","@ID":"113000","@DB":"OMIM"
+        }
+      },{
+        "ElementValue":{
+          "@Type":"Alternate","$":"BDB"
+        },
+        "XRef":{
+          "@Type":"MIM","@ID":"113000","@DB":"OMIM"
+        }
+      }],
+      "AttributeSet":[{
+        "Attribute":{
+          "@Type":"keyword","$":"ROR2-Related Disorders"
+        }
+      },{
+        "Attribute":{
+          "@Type":"GARD id","@integerValue":"18009"
+        },
+        "XRef":{"@ID":"18009","@DB":"Office of Rare Diseases"
+
+        }
+      }],
+      "TraitRelationship":{
+        "@Type":"co-occurring condition","@ID":"70"
+      },
+      "XRef":[{
+        "@ID":"MONDO:0007220","@DB":"MONDO"
+      },{
+        "@ID":"C1862112","@DB":"MedGen"
+      },{
+        "@ID":"93383","@DB":"Orphanet"
+      },{
+        "@Type":"MIM","@ID":"113000","@DB":"OMIM"
+      }]
+    }]
+}}`;
+  const expectedOutput = {
+    type: 'Disease',
+    id: '8827',
+    trait: [
+      {
+        id: '1053',
+        type: 'Disease',
+        name: [{
+          element_value: 'Brachydactyly type B1',
+          type: 'Preferred',
+          citation: null,
+          comment: null,
+          xref: [
+            { id: 'Brachydactyly+type+B1/7857', db: 'Genetic Alliance', status: null, type: null, url: null},
+            { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null }
+          ]
+        }],
+        symbol: [
+          {element_value: 'BDB1', type: 'Preferred', xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }], citation: null, comment: null },
+          {element_value: 'BDB', type: 'Alternate', xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }], citation: null, comment: null }
+        ],
+        attribute_set: [
+          {attribute: { type: 'keyword', value: 'ROR2-Related Disorders', date_value: null, integer_value: null}, xref: null, citation: null, comment: null },
+          {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value:null }, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }], citation: null, comment: null } 
+        ],
+        citation: null,
+        comment: null,
+        trait_relationship: { type: 'co-occurring condition', id: '70' },
+        xref: [
+          { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null },
+          { id: 'C1862112', db: 'MedGen', status: null, type: null, url: null },
+          { id: '93383', db: 'Orphanet', status: null, type: null, url: null },
+          { type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }
+        ]
+      }
+    ]
+  };
+  
+  expect(parseTraitSet(json)).toEqual(expectedOutput);
+});
+
+test('parseTraitSet should throw error for invalid JSON input', () => {
+  const json = 'invalid json';
+  expect(() => parseTraitSet(json)).toThrow('Invalid JSON input');
+});
+
+
+            
+
+

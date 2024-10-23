@@ -176,46 +176,51 @@ function parseComments(json: string): CommentOutput[] {
 // -- Citation interfaces and functions --
 
 //below is an example of a JSON object that represents a citation object
-// "Citation": [{
-//   "ID": {
-//     "$": "123456",
-//     "@Source": "OMIM"
-//   },
-//   "URL": {"$": "https://omim.org/entry/123456"},
+// "Citation": {
+//   "@Type": "review",
+//   "@Abbrev": "GeneReviews",
+//   "ID": [
+//     {
+//       "@Source": "PubMed",
+//       "$": "20301418"
+//     },
+//     {
+//       "@Source": "BookShelf",
+//       "$": "NBK1240"
+//     }
+//   ],
+//   "URL": {"$": "https://pubmed/entry/20301418"},
 //   "CitationText": { "$": "This is a citation." },
-//   "@Type": "MIM number",
-//   "@Abbrev": "OMIM"
-// }]
+// } 
+// a second example
+// "Citation": {
+//   "@Type": "review",
+//   "@Abbrev": "GeneReviews",
+//   "ID": { "@Source": "PubMed", "$": "20301418" },
+//   "URL": {"$": "https://pubmed/entry/20301418"},
+//   "CitationText": { "$": "This is a citation." },
+// }
 
 /**
  * Represents the input structure for a citation.
  */
 interface CitationInput {
-  ID?: {
-    $?: string;
-    '@Source'?: string;
-  };
-  URL?: {
-    $?: string;
-  };
-  CitationText?: {
-    $?: string;
-  };
   '@Type'?: string;
   '@Abbrev'?: string;
+  ID?: { '@Source': string; $: string } | { '@Source': string; $: string }[];
+  URL?: { $: string };
+  CitationText?: { $: string };
 }
 
 /**
  * Represents the output structure for a citation.
  */
 interface CitationOutput {
-  id: string | null;
-  source: string | null;
-  url: string | null;
-  text: string | null;
   type: string | null;
   abbrev: string | null;
-  curie: string | null;
+  id: { source: string; id: string, curie: string }[] | null;
+  url: string | null;
+  text: string | null;
 }
 
 interface CitationData {
@@ -228,19 +233,13 @@ interface CitationData {
  * @returns The corresponding CitationOutput object.
  */
 function buildCitationOutput(item: CitationInput): CitationOutput {
-  let id = item.ID && item.ID.$ ? item.ID.$ : null;
-  let source = item.ID && item.ID['@Source'] ? item.ID['@Source'] : null;
-  let curie = id && source ? `${source}:${id}` : null;
-
   return {
-    id: id,
-    source: source,
-    url: item.URL && item.URL.$ ? item.URL.$ : null,
-    text: item.CitationText && item.CitationText.$ ? item.CitationText.$ : null,
     type: item['@Type'] ? item['@Type'] : null,
     abbrev: item['@Abbrev'] ? item['@Abbrev'] : null,
-    curie: curie
-  };
+    id: item.ID ? (Array.isArray(item.ID) ? item.ID.map((id) => ({ source: id['@Source'], id: id.$, curie: `${id['@Source']}:${id.$}`})) : [{ source: item.ID['@Source'], id: item.ID.$, curie: `${item.ID['@Source']}:${item.ID.$}` }]) : null,
+    url: item.URL ? item.URL.$ : null,
+    text: item.CitationText ? item.CitationText.$ : null
+  };  
 }
 
 /**
@@ -276,6 +275,7 @@ function parseCitations(json: string): CitationOutput[] {
 
   return buildCitationsOutput(citations);
 }
+
 
 // -- XRef interfaces and functions --
 
@@ -2625,4 +2625,797 @@ function deriveHGVS( variation_type: string, seqLoc: SequenceLocationOutput  ): 
   }
 
   return hgvs;
+}
+
+
+// -- Trait interfaces and functions --
+
+// below is an example of a JSON object that represents a trait object
+// {
+//   "@ID": "5880",
+//   "@Type": "Disease",
+//   "Name": [
+//     {
+//       "ElementValue": {
+//         "@Type": "Preferred",
+//         "$": "Autosomal recessive Robinow syndrome"
+//       },
+//       "XRef": {
+//         "@ID": "MONDO:0009999",
+//         "@DB": "MONDO"
+//       }
+//     },
+//     {
+//       "ElementValue": {
+//         "@Type": "Alternate",
+//         "$": "COSTOVERTEBRAL SEGMENTATION DEFECT WITH MESOMELIA"
+//       },
+//       "XRef": {
+//         "@Type": "MIM",
+//         "@ID": "268310",
+//         "@DB": "OMIM"
+//       }
+//     },
+//     {
+//       "ElementValue": {
+//         "@Type": "Alternate",
+//         "$": "COVESDEM SYNDROME"
+//       },
+//       "XRef": {
+//         "@Type": "MIM",
+//         "@ID": "268310",
+//         "@DB": "OMIM"
+//       }
+//     },
+//     {
+//       "ElementValue": {
+//         "@Type": "Alternate",
+//         "$": "ROBINOW SYNDROME, AUTOSOMAL RECESSIVE 1"
+//       },
+//       "XRef": [
+//         {
+//           "@Type": "MIM",
+//           "@ID": "268310",
+//           "@DB": "OMIM"
+//         },
+//         {
+//           "@Type": "Allelic variant",
+//           "@ID": "602337.0010",
+//           "@DB": "OMIM"
+//         },
+//         {
+//           "@Type": "Allelic variant",
+//           "@ID": "602337.0011",
+//           "@DB": "OMIM"
+//         },
+//         {
+//           "@Type": "Allelic variant",
+//           "@ID": "602337.0012",
+//           "@DB": "OMIM"
+//         },
+//         {
+//           "@Type": "Allelic variant",
+//           "@ID": "602337.0006",
+//           "@DB": "OMIM"
+//         },
+//         {
+//           "@Type": "Allelic variant",
+//           "@ID": "602337.0004",
+//           "@DB": "OMIM"
+//         },
+//         {
+//           "@Type": "Allelic variant",
+//           "@ID": "602337.0005",
+//           "@DB": "OMIM"
+//         },
+//         {
+//           "@Type": "Allelic variant",
+//           "@ID": "602337.0007",
+//           "@DB": "OMIM"
+//         }
+//       ]
+//     }
+//   ],
+//   "Symbol": [
+//     {
+//       "ElementValue": {
+//         "@Type": "Preferred",
+//         "$": "RRS1"
+//       },
+//       "XRef": {
+//         "@Type": "MIM",
+//         "@ID": "268310",
+//         "@DB": "OMIM"
+//       }
+//     },
+//     {
+//       "ElementValue": {
+//         "@Type": "Alternate",
+//         "$": "RRS"
+//       }
+//     }
+//   ],
+//   "AttributeSet": [
+//     {
+//       "Attribute": {
+//         "@Type": "public definition",
+//         "$": "ROR2-related Robinow syndrome is characterized by distinctive craniofacial features, skeletal abnormalities, and other anomalies. Craniofacial features include macrocephaly, broad prominent forehead, low-set ears, ocular hypertelorism, prominent eyes, midface hypoplasia, short upturned nose with depressed nasal bridge and flared nostrils, large and triangular mouth with exposed incisors and upper gums, gum hypertrophy, misaligned teeth, ankyloglossia, and micrognathia. Skeletal abnormalities include short stature, mesomelic or acromesomelic limb shortening, hemivertebrae with fusion of thoracic vertebrae, and brachydactyly. Other common features include micropenis with or without cryptorchidism in males and reduced clitoral size and hypoplasia of the labia majora in females, renal tract abnormalities, and nail hypoplasia or dystrophy. The disorder is recognizable at birth or in early childhood."
+//       },
+//       "XRef": {
+//         "@ID": "NBK1240",
+//         "@DB": "GeneReviews"
+//       }
+//     },
+//     {
+//       "Attribute": {
+//         "@Type": "GARD id",
+//         "@integerValue": "16568"
+//       },
+//       "XRef": {
+//         "@ID": "16568",
+//         "@DB": "Office of Rare Diseases"
+//       }
+//     }
+//   ],
+//   "TraitRelationship": {
+//     "@Type": "co-occurring condition",
+//     "@ID": "70"
+//   },
+//   "Citation": {
+//     "@Type": "review",
+//     "@Abbrev": "GeneReviews",
+//     "ID": [
+//       {
+//         "@Source": "PubMed",
+//         "$": "20301418"
+//       },
+//       {
+//         "@Source": "BookShelf",
+//         "$": "NBK1240"
+//       }
+//     ]
+//   },
+//   "XRef": [
+//     {
+//       "@ID": "MONDO:0009999",
+//       "@DB": "MONDO"
+//     },
+//     {
+//       "@ID": "C5399974",
+//       "@DB": "MedGen"
+//     },
+//     {
+//       "@ID": "1507",
+//       "@DB": "Orphanet"
+//     },
+//     {
+//       "@ID": "97360",
+//       "@DB": "Orphanet"
+//     },
+//     {
+//       "@Type": "MIM",
+//       "@ID": "268310",
+//       "@DB": "OMIM"
+//     }
+//   ]
+// }
+//
+// a second example of a trait object
+// {
+//   "@ID": "9582",
+//   "@Type": "Disease",
+//   "Name": [
+//     {
+//       "ElementValue": {
+//         "@Type": "Preferred",
+//         "$": "Hemochromatosis type 1"
+//       },
+//       "XRef": {
+//         "@ID": "MONDO:0021001",
+//         "@DB": "MONDO"
+//       }
+//     },
+//     {
+//       "ElementValue": {
+//         "@Type": "Alternate",
+//         "$": "HFE-Associated Hereditary Hemochromatosis"
+//       }
+//     }
+//   ],
+//   "Symbol": [
+//     {
+//       "ElementValue": {
+//         "@Type": "Preferred",
+//         "$": "HFE1"
+//       },
+//       "XRef": {
+//         "@Type": "MIM",
+//         "@ID": "235200",
+//         "@DB": "OMIM"
+//       }
+//     },
+//     {
+//       "ElementValue": {
+//         "@Type": "Alternate",
+//         "$": "HFE-HH"
+//       }
+//     }
+//   ],
+//   "AttributeSet": [
+//     {
+//       "Attribute": {
+//         "@Type": "public definition",
+//         "$": "HFE hemochromatosis is characterized by inappropriately high absorption of iron by the small intestinal mucosa. The phenotypic spectrum of HFE hemochromatosis includes: Persons with clinical HFE hemochromatosis, in whom manifestations of end-organ damage secondary to iron overload are present; Individuals with biochemical HFE hemochromatosis, in whom transferrin-iron saturation is increased and the only evidence of iron overload is increased serum ferritin concentration; and Non-expressing p.Cys282Tyr homozygotes, in whom neither clinical manifestations of HFE hemochromatosis nor iron overload are present. Clinical HFE hemochromatosis is characterized by excessive storage of iron in the liver, skin, pancreas, heart, joints, and anterior pituitary gland. In untreated individuals, early symptoms include: abdominal pain, weakness, lethargy, weight loss, arthralgias, diabetes mellitus; and increased risk of cirrhosis when the serum ferritin is higher than 1,000 ng/mL. Other findings may include progressive increase in skin pigmentation, congestive heart failure, and/or arrhythmias, arthritis, and hypogonadism. Clinical HFE hemochromatosis is more common in men than women."
+//       },
+//       "XRef": {
+//         "@ID": "NBK1440",
+//         "@DB": "GeneReviews"
+//       }
+//     },
+//     {
+//       "Attribute": {
+//         "@Type": "disease mechanism",
+//         "@integerValue": "273",
+//         "$": "loss of function"
+//       },
+//       "XRef": [
+//         {
+//           "@ID": "GTR000260619",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000560323",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000508786",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000264968",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000271417",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000560567",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000500300",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000558915",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000028914",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000558542",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000521586",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         },
+//         {
+//           "@ID": "GTR000508970",
+//           "@DB": "Genetic Testing Registry (GTR)"
+//         }
+//       ]
+//     },
+//     {
+//       "Attribute": {
+//         "@Type": "GARD id",
+//         "@integerValue": "10417"
+//       },
+//       "XRef": {
+//         "@ID": "10417",
+//         "@DB": "Office of Rare Diseases"
+//       }
+//     }
+//   ],
+//   "Citation": [
+//     {
+//       "@Type": "review",
+//       "@Abbrev": "GeneReviews",
+//       "ID": [
+//         {
+//           "@Source": "PubMed",
+//           "$": "20301613"
+//         },
+//         {
+//           "@Source": "BookShelf",
+//           "$": "NBK1440"
+//         }
+//       ]
+//     },
+//     {
+//       "@Type": "Translational/Evidence-based",
+//       "@Abbrev": "EuroGenetest, 2010",
+//       "ID": {
+//         "@Source": "pmc",
+//         "$": "2987432"
+//       }
+//     },
+//     {
+//       "@Type": "general",
+//       "@Abbrev": "USPSTF, 2006",
+//       "ID": {
+//         "@Source": "PubMed",
+//         "$": "16880462"
+//       }
+//     },
+//     {
+//       "@Type": "general",
+//       "@Abbrev": "AASLD, 2011",
+//       "ID": {
+//         "@Source": "pmc",
+//         "$": "3149125"
+//       }
+//     },
+//     {
+//       "@Type": "general",
+//       "@Abbrev": "ACMG SF v3.0, 2021",
+//       "ID": [
+//         {
+//           "@Source": "PubMed",
+//           "$": "34012068"
+//         },
+//         {
+//           "@Source": "DOI",
+//           "$": "10.1038/s41436-021-01172-3"
+//         }
+//       ]
+//     },
+//     {
+//       "@Type": "general",
+//       "@Abbrev": "ACMG SF v3.1, 2022",
+//       "ID": [
+//         {
+//           "@Source": "PubMed",
+//           "$": "35802134"
+//         },
+//         {
+//           "@Source": "DOI",
+//           "$": "10.1016/j.gim.2022.04.006"
+//         }
+//       ]
+//     }
+//   ],
+//   "XRef": [
+//     {
+//       "@ID": "MONDO:0021001",
+//       "@DB": "MONDO"
+//     },
+//     {
+//       "@ID": "C3469186",
+//       "@DB": "MedGen"
+//     },
+//     {
+//       "@Type": "MIM",
+//       "@ID": "235200",
+//       "@DB": "OMIM"
+//     }
+//   ]
+// }
+
+/**
+ * Represents the input structure for a trait.
+ */
+interface TraitInput {
+  '@ID'?: string;
+  '@Type'?: string;
+  Name?: SetElementInput | SetElementInput[];
+  Symbol?: SetElementInput | SetElementInput[];
+  AttributeSet?: AttributeSetInput | AttributeSetInput[];
+  TraitRelationship?: {
+    '@Type'?: string;
+    '@ID'?: string;
+  };
+  Citation?: CitationInput | CitationInput[];
+  XRef?: XRefInput | XRefInput[];
+  Comment?: CommentInput | CommentInput[];
+}
+
+/**
+ * Represents the output structure for a trait.
+ */
+interface TraitOutput {
+  id: string | null;
+  type: string | null;
+  name: Array<SetElementOutput> | null;
+  symbol: Array<SetElementOutput> | null;
+  attribute_set: Array<AttributeSetOutput> | null;
+  trait_relationship: {
+    type: string | null;
+    id: string | null;
+  };
+  citation: Array<CitationOutput> | null;
+  xref: Array<XRefOutput> | null;
+  comment: Array<CommentOutput> | null;
+}
+
+interface TraitData {
+  Trait?: TraitInput | TraitInput[];
+}
+
+/**
+ * Builds a TraitOutput object based on the provided TraitInput.
+ * @param item - The TraitInput object.
+ * @returns The corresponding TraitOutput object.
+ */
+function buildTraitOutput(item: TraitInput): TraitOutput {
+  return {
+    id: item['@ID'] ? item['@ID'] : null,
+    type: item['@Type'] ? item['@Type'] : null,
+    name: item.Name ? buildSetElementsOutput(item.Name) : null,
+    symbol: item.Symbol ? buildSetElementsOutput(item.Symbol) : null,
+    attribute_set: item.AttributeSet ? buildAttributeSetsOutput(item.AttributeSet) : null,
+    trait_relationship: {
+      type: item.TraitRelationship && item.TraitRelationship['@Type'] ? item.TraitRelationship['@Type'] : null,
+      id: item.TraitRelationship && item.TraitRelationship['@ID'] ? item.TraitRelationship['@ID'] : null
+    },
+    citation: item.Citation ? buildCitationsOutput(item.Citation) : null,
+    xref: item.XRef ? buildXRefsOutput(item.XRef) : null,
+    comment: item.Comment ? buildCommentsOutput(item.Comment) : null
+  };
+}
+
+/**
+ * Builds an array of TraitOutput objects based on the provided TraitInput.
+ * If a single trait object is provided, the function will return an array with a single TraitOutput object.
+ * @param items - The TraitInput object or an array of TraitInput objects.
+ * @returns An array of TraitOutput objects.
+ */
+function buildTraitsOutput(items: TraitInput | TraitInput[]): TraitOutput[] {
+  if (!Array.isArray(items)) {
+    items = [items];
+  }
+
+  return items.map((item): TraitOutput => ({
+    ...buildTraitOutput(item)
+  }));
+}
+
+/**
+ * Parses the JSON input and returns an array of TraitOutput objects.
+ * @param json - The JSON input string.
+ * @returns An array of TraitOutput objects.
+ * @throws {Error} If the JSON input is invalid.
+ */
+function parseTraits(json: string): TraitOutput[] {
+  let data: TraitData;
+  try {
+    data = JSON.parse(json);
+  } catch (e) {
+    throw new Error('Invalid JSON input');
+  }
+
+  let traits = data && data.Trait ? data.Trait : [];
+
+  return buildTraitsOutput(traits);
+}
+
+// -- TraitSet interfaces and functions --
+
+// below is an example of a JSON object that represents a trait set object
+// {
+//   "@Type": "Disease",
+//   "@ID": "8827",
+//   "Trait": [
+//     {
+//       "@ID": "1053",
+//       "@Type": "Disease",
+//       "Name": {
+//         "ElementValue": {
+//           "@Type": "Preferred",
+//           "$": "Brachydactyly type B1"
+//         },
+//         "XRef": [
+//           {
+//             "@ID": "Brachydactyly+type+B1/7857",
+//             "@DB": "Genetic Alliance"
+//           },
+//           {
+//             "@ID": "MONDO:0007220",
+//             "@DB": "MONDO"
+//           }
+//         ]
+//       },
+//       "Symbol": [
+//         {
+//           "ElementValue": {
+//             "@Type": "Preferred",
+//             "$": "BDB1"
+//           },
+//           "XRef": {
+//             "@Type": "MIM",
+//             "@ID": "113000",
+//             "@DB": "OMIM"
+//           }
+//         },
+//         {
+//           "ElementValue": {
+//             "@Type": "Alternate",
+//             "$": "BDB"
+//           },
+//           "XRef": {
+//             "@Type": "MIM",
+//             "@ID": "113000",
+//             "@DB": "OMIM"
+//           }
+//         }
+//       ],
+//       "AttributeSet": [
+//         {
+//           "Attribute": {
+//             "@Type": "keyword",
+//             "$": "ROR2-Related Disorders"
+//           }
+//         },
+//         {
+//           "Attribute": {
+//             "@Type": "GARD id",
+//             "@integerValue": "18009"
+//           },
+//           "XRef": {
+//             "@ID": "18009",
+//             "@DB": "Office of Rare Diseases"
+//           }
+//         }
+//       ],
+//       "TraitRelationship": {
+//         "@Type": "co-occurring condition",
+//         "@ID": "70"
+//       },
+//       "XRef": [
+//         {
+//           "@ID": "MONDO:0007220",
+//           "@DB": "MONDO"
+//         },
+//         {
+//           "@ID": "C1862112",
+//           "@DB": "MedGen"
+//         },
+//         {
+//           "@ID": "93383",
+//           "@DB": "Orphanet"
+//         },
+//         {
+//           "@Type": "MIM",
+//           "@ID": "113000",
+//           "@DB": "OMIM"
+//         }
+//       ]
+//     },
+//     {
+//       "@ID": "5880",
+//       "@Type": "Disease",
+//       "Name": [
+//         {
+//           "ElementValue": {
+//             "@Type": "Preferred",
+//             "$": "Autosomal recessive Robinow syndrome"
+//           },
+//           "XRef": {
+//             "@ID": "MONDO:0009999",
+//             "@DB": "MONDO"
+//           }
+//         },
+//         {
+//           "ElementValue": {
+//             "@Type": "Alternate",
+//             "$": "COSTOVERTEBRAL SEGMENTATION DEFECT WITH MESOMELIA"
+//           },
+//           "XRef": {
+//             "@Type": "MIM",
+//             "@ID": "268310",
+//             "@DB": "OMIM"
+//           }
+//         },
+//         {
+//           "ElementValue": {
+//             "@Type": "Alternate",
+//             "$": "COVESDEM SYNDROME"
+//           },
+//           "XRef": {
+//             "@Type": "MIM",
+//             "@ID": "268310",
+//             "@DB": "OMIM"
+//           }
+//         },
+//         {
+//           "ElementValue": {
+//             "@Type": "Alternate",
+//             "$": "ROBINOW SYNDROME, AUTOSOMAL RECESSIVE 1"
+//           },
+//           "XRef": [
+//             {
+//               "@Type": "MIM",
+//               "@ID": "268310",
+//               "@DB": "OMIM"
+//             },
+//             {
+//               "@Type": "Allelic variant",
+//               "@ID": "602337.0010",
+//               "@DB": "OMIM"
+//             },
+//             {
+//               "@Type": "Allelic variant",
+//               "@ID": "602337.0011",
+//               "@DB": "OMIM"
+//             },
+//             {
+//               "@Type": "Allelic variant",
+//               "@ID": "602337.0012",
+//               "@DB": "OMIM"
+//             },
+//             {
+//               "@Type": "Allelic variant",
+//               "@ID": "602337.0006",
+//               "@DB": "OMIM"
+//             },
+//             {
+//               "@Type": "Allelic variant",
+//               "@ID": "602337.0004",
+//               "@DB": "OMIM"
+//             },
+//             {
+//               "@Type": "Allelic variant",
+//               "@ID": "602337.0005",
+//               "@DB": "OMIM"
+//             },
+//             {
+//               "@Type": "Allelic variant",
+//               "@ID": "602337.0007",
+//               "@DB": "OMIM"
+//             }
+//           ]
+//         }
+//       ],
+//       "Symbol": [
+//         {
+//           "ElementValue": {
+//             "@Type": "Preferred",
+//             "$": "RRS1"
+//           },
+//           "XRef": {
+//             "@Type": "MIM",
+//             "@ID": "268310",
+//             "@DB": "OMIM"
+//           }
+//         },
+//         {
+//           "ElementValue": {
+//             "@Type": "Alternate",
+//             "$": "RRS"
+//           }
+//         }
+//       ],
+//       "AttributeSet": [
+//         {
+//           "Attribute": {
+//             "@Type": "public definition",
+//             "$": "ROR2-related Robinow syndrome is characterized by distinctive craniofacial features, skeletal abnormalities, and other anomalies. Craniofacial features include macrocephaly, broad prominent forehead, low-set ears, ocular hypertelorism, prominent eyes, midface hypoplasia, short upturned nose with depressed nasal bridge and flared nostrils, large and triangular mouth with exposed incisors and upper gums, gum hypertrophy, misaligned teeth, ankyloglossia, and micrognathia. Skeletal abnormalities include short stature, mesomelic or acromesomelic limb shortening, hemivertebrae with fusion of thoracic vertebrae, and brachydactyly. Other common features include micropenis with or without cryptorchidism in males and reduced clitoral size and hypoplasia of the labia majora in females, renal tract abnormalities, and nail hypoplasia or dystrophy. The disorder is recognizable at birth or in early childhood."
+//           },
+//           "XRef": {
+//             "@ID": "NBK1240",
+//             "@DB": "GeneReviews"
+//           }
+//         },
+//         {
+//           "Attribute": {
+//             "@Type": "GARD id",
+//             "@integerValue": "16568"
+//           },
+//           "XRef": {
+//             "@ID": "16568",
+//             "@DB": "Office of Rare Diseases"
+//           }
+//         }
+//       ],
+//       "TraitRelationship": {
+//         "@Type": "co-occurring condition",
+//         "@ID": "70"
+//       },
+//       "Citation": {
+//         "@Type": "review",
+//         "@Abbrev": "GeneReviews",
+//         "ID": [
+//           {
+//             "@Source": "PubMed",
+//             "$": "20301418"
+//           },
+//           {
+//             "@Source": "BookShelf",
+//             "$": "NBK1240"
+//           }
+//         ]
+//       },
+//       "XRef": [
+//         {
+//           "@ID": "MONDO:0009999",
+//           "@DB": "MONDO"
+//         },
+//         {
+//           "@ID": "C5399974",
+//           "@DB": "MedGen"
+//         },
+//         {
+//           "@ID": "1507",
+//           "@DB": "Orphanet"
+//         },
+//         {
+//           "@ID": "97360",
+//           "@DB": "Orphanet"
+//         },
+//         {
+//           "@Type": "MIM",
+//           "@ID": "268310",
+//           "@DB": "OMIM"
+//         }
+//       ]
+//     }
+//   ]
+// }
+
+
+/**
+ * Represents the input structure for a trait set.
+ */ 
+interface TraitSetInput {
+  '@Type'?: string;
+  '@ID'?: string;
+  Trait?: TraitInput | TraitInput[]; 
+}
+
+/**
+ * Represents the output structure for a trait set.
+ */
+interface TraitSetOutput {
+  type: string | null;
+  id: string | null;
+  trait: Array<TraitOutput> | null; 
+}
+
+interface TraitSetData {
+  TraitSet?: TraitSetInput;
+}
+
+/**
+ * Builds a TraitSetOutput object based on the provided TraitSetInput.
+ * @param item - The TraitSetInput object.
+ * @returns The corresponding TraitSetOutput object.
+ */
+function buildTraitSetOutput(item: TraitSetInput): TraitSetOutput {
+  return {
+    type: item['@Type'] ? item['@Type'] : null,
+    id: item['@ID'] ? item['@ID'] : null,
+    trait: item.Trait ? buildTraitsOutput(item.Trait) : null
+  };
+}
+
+/**
+ * Parses the JSON input and returns a TraitSetOutput object.
+ * @param json - The JSON input string.
+ * @returns A TraitSetOutput object.
+ * @throws {Error} If the JSON input is invalid.
+ */
+function parseTraitSet(json: string): TraitSetOutput {
+  let data: TraitSetData;
+  try {
+    data = JSON.parse(json);
+  } catch (e) {
+    throw new Error('Invalid JSON input');
+  }
+
+  let traitSet = data && data.TraitSet ? data.TraitSet : {};
+
+  return buildTraitSetOutput(traitSet); 
 }

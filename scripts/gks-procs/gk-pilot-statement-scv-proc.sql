@@ -11,51 +11,53 @@ BEGIN
           gks.id,
           STRUCT(
             "Document" as type,
-            IF(lower(c.source) = 'pubmed', c.id, null) as pmid,
-            IF(lower(c.source) = 'doi', c.id, null) as doi,
+            IF(lower(cid.source) = 'pubmed', cid.id, null) as pmid,
+            IF(lower(cid.source) = 'doi', cid.id, null) as doi,
             CASE 
             WHEN c.url is not null THEN 
               c.url
-            WHEN lower(c.source) = "pubmed" THEN 
-              FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',c.id)
-            WHEN lower(c.source) = "pmc" THEN 
-              FORMAT('https://europepmc.org/article/PMC/%%s',c.id)
-            WHEN lower(c.source) = "doi" THEN 
-              FORMAT('https://doi.org/%%s',c.id)
-            WHEN lower(c.source) = "bookshelf" THEN 
-              FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',c.id)
+            WHEN lower(cid.source) = "pubmed" THEN 
+              FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',cid.id)
+            WHEN lower(cid.source) = "pmc" THEN 
+              FORMAT('https://europepmc.org/article/PMC/%%s',cid.id)
+            WHEN lower(cid.source) = "doi" THEN 
+              FORMAT('https://doi.org/%%s',cid.id)
+            WHEN lower(cid.source) = "bookshelf" THEN 
+              FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',cid.id)
             ELSE
-              FORMAT('%%s:%%s', c.source, c.id)
+              cid.curie
             END as url
           ) as doc
         from `%s.gk_pilot_scv` gks
         cross join unnest(gks.interpCitations) as c
-        where c.source is not null
+        cross join unnest(c.id) as cid
+        where cid.source is not null
         UNION ALL
         select
           gks.id,
           STRUCT(
             "Document" as type,
-            IF(lower(c.source) = 'pubmed', c.id, null) as pmid,
-            IF(lower(c.source) = 'doi', c.id, null) as doi,
+            IF(lower(cid.source) = 'pubmed', cid.id, null) as pmid,
+            IF(lower(cid.source) = 'doi', cid.id, null) as doi,
             CASE 
             WHEN c.url is not null THEN 
               c.url
-            WHEN lower(c.source) = "pubmed" THEN 
-              FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',c.id)
-            WHEN lower(c.source) = "pmc" THEN 
-              FORMAT('https://europepmc.org/article/PMC/%%s',c.id)
-            WHEN lower(c.source) = "doi" THEN 
+            WHEN lower(cid.source) = "pubmed" THEN 
+              FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',cid.id)
+            WHEN lower(cid.source) = "pmc" THEN 
+              FORMAT('https://europepmc.org/article/PMC/%%s',cid.id)
+            WHEN lower(cid.source) = "doi" THEN 
               FORMAT('https://doi.org/%%s',c.id)
-            WHEN lower(c.source) = "bookshelf" THEN 
-              FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',c.id)
+            WHEN lower(cid.source) = "bookshelf" THEN 
+              FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',cid.id)
             ELSE
-              FORMAT('%%s:%%s', c.source, c.id)
+              cid.curie
             END as url
           ) as doc
         from `%s.gk_pilot_scv` gks
         cross join unnest(gks.interpCitations) as c
-        where c.source is null and c.url is not null
+        cross join unnest(c.id) as cid
+        where cid.source is null and c.url is not null
       ),
       scv_citations as (
         SELECT
@@ -115,24 +117,24 @@ BEGIN
             "Method" as type,
             a.attribute.value as label,
             IF(
-              (c.source is not null OR c.url is not null),
+              (cid.source is not null OR c.url is not null),
               STRUCT(
                 "Document" as type,
-                IF(lower(c.source) = 'pubmed', STRING_AGG(c.id), null) as pmid,
-                IF(lower(c.source) = 'doi', STRING_AGG(c.id), null) as doi,
+                IF(lower(cid.source) = 'pubmed', STRING_AGG(cid.id), null) as pmid,
+                IF(lower(cid.source) = 'doi', STRING_AGG(cid.id), null) as doi,
                 CASE 
                 WHEN c.url is not null THEN 
                   c.url
-                WHEN lower(c.source) = "pubmed" THEN 
-                  FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',STRING_AGG(c.id))
-                WHEN lower(c.source) = "pmc" THEN 
-                  FORMAT('https://europepmc.org/article/PMC/%%s',STRING_AGG(c.id))
-                WHEN lower(c.source) = "doi" THEN 
-                  FORMAT('https://doi.org/%%s',STRING_AGG(c.id))
-                WHEN lower(c.source) = "bookshelf" THEN 
-                  FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',STRING_AGG(c.id))
+                WHEN lower(ccid.source) = "pubmed" THEN 
+                  FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',STRING_AGG(cid.id))
+                WHEN lower(cidsource) = "pmc" THEN 
+                  FORMAT('https://europepmc.org/article/PMC/%%s',STRING_AGG(cid.id))
+                WHEN lower(cid.source) = "doi" THEN 
+                  FORMAT('https://doi.org/%%s',STRING_AGG(cid.id))
+                WHEN lower(cid.source) = "bookshelf" THEN 
+                  FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',STRING_AGG(cid.id))
                 ELSE
-                  FORMAT('%%s:%%s', c.source, STRING_AGG(c.id))
+                  FORMAT('%%s:%%s', cid.source, STRING_AGG(cid.id))
                 END as url
               ),
               null
@@ -141,11 +143,12 @@ BEGIN
         from `%s.gk_pilot_scv` gks
         cross join unnest(gks.attribs) as a
         left join unnest(a.citation) as c
+        left join unnest(c.id) as cid
         where a.attribute.type = "AssertionMethod"
         group by 
           gks.id,
           a.attribute.value,
-          c.source,
+          cid.source,
           c.url
       ),
       scv_moi as (
