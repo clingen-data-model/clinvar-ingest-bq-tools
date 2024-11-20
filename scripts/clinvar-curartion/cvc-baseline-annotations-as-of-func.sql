@@ -19,7 +19,8 @@ WITH
       av.vcv_id,
       av.vcv_ver,
       av.is_latest,
-      av.annotation_label
+      av.annotation_label,
+      av
     FROM `clinvar_curator.cvc_annotations_view` av,
       `clinvar_ingest.schema_on`(as_of_date) rel
     WHERE 
@@ -107,6 +108,7 @@ WITH
     -- scv
     a.scv_id,
     a.scv_ver,
+    a.review_status,
     -- annotation assessment record
     a.curator,
     a.annotated_on,

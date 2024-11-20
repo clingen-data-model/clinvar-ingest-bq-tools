@@ -23,7 +23,17 @@ WITH
         (a.is_latest_annotation AND NOT a.is_deleted_scv) AND
         a.action="no change" AND 
         a.is_outdated_scv
-      ) AS outdated_nochange_count
+      ) AS outdated_nochange_count,
+      COUNTIF(
+        (a.is_latest_annotation AND NOT a.is_deleted_scv) AND
+        (a.action="remove flagged submission" )
+      ) AS remove_flagged_submission_count,
+      COUNTIF(
+        (a.is_latest_annotation AND NOT a.is_deleted_scv) AND
+        (
+          a.action="remove flagged submission") AND 
+        a.is_outdated_scv
+      ) AS outdated_remove_flagged_submission_count
     FROM `clinvar_curator.cvc_annotations_as_of`(as_of_date, true, true) a
     GROUP BY
       a.release_date,
@@ -40,6 +50,8 @@ WITH
     x.outdated_flagging_candidate_count,
     x.nochange_count,
     x.outdated_nochange_count,
+    x.remove_flagged_submission_count,
+    x.outdated_remove_flagged_submission_count,
     MAX(scv.submission_date) as latest_submission_date,
     x.release_date,
     as_of_date
@@ -64,6 +76,8 @@ WITH
     x.outdated_flagging_candidate_count,
     x.nochange_count,
     x.outdated_nochange_count,
+    x.remove_flagged_submission_count,
+    x.outdated_remove_flagged_submission_count,
     x.release_date,
     as_of_date
 );

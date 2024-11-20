@@ -13,6 +13,7 @@ WITH anno AS
       -- scv
       scv_id, 
       scv_ver, 
+      review_status,
       -- annotation assessment record
       curator,
       annotated_on,
@@ -111,6 +112,7 @@ WITH anno AS
     -- scv   
     a.scv_id, 
     a.scv_ver, 
+    a.review_status,
     -- annotation assessment record
     a.curator,
     a.annotated_on,
