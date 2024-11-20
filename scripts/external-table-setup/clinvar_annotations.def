@@ -1,7 +1,7 @@
 {
   "googleSheetsOptions": {
     "skipLeadingRows": 1,
-    "range": "'SCV Records'!A:Q"
+    "range": "'SCV Records'!A:R"
   },
   "schema": {
     "fields": [
@@ -51,6 +51,10 @@
       },
       {
         "name": "curator_email",
+        "type": "STRING"
+      },
+      {
+        "name": "review_status",
         "type": "STRING"
       },
       {

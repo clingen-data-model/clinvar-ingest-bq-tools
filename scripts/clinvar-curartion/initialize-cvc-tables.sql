@@ -86,6 +86,7 @@ AS
 -- - `vcv_ver`: The second part of the `vcv_id` field, cast to an INT64.
 -- - `is_latest`: A boolean indicating if the annotation is the latest for the given `scv_id`.
 -- - `annotation_label`: A formatted string combining the annotation date, curator, action, and a truncated reason.
+-- - `review_status`: The `review_status` field from the source table.
 -- 
 -- The view is designed to facilitate querying and analysis of ClinVar annotations with additional metadata and transformations.
 CREATE OR REPLACE VIEW clinvar_curator.cvc_annotations_view
@@ -121,7 +122,8 @@ AS
           IFNULL(SPLIT(a.curator_email,'@')[OFFSET(0)],'n/a'), 
           IF(LOWER(a.action) ='flagging candidate','flag',IF(LOWER(a.action) = 'no change', 'no chg', 'n/a or unk' )), 
           LEFT(IFNULL(a.reason,'n/a'), 25)||IF(LENGTH(a.reason) > 25,'...','')
-      ) as annotation_label
+      ) as annotation_label,
+      a.review_status
       FROM `clinvar_curator.clinvar_annotations` a
 ;
 
@@ -205,7 +207,8 @@ AS
     av.notes,
     av.curator,
     av.annotation_id,
-    av.annotated_date
+    av.annotated_date,
+    av.review_status
   FROM `clinvar_curator.cvc_clinvar_submissions` ccs
   JOIN `clinvar_curator.cvc_batch_window_view` br
   ON
