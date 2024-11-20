@@ -264,6 +264,7 @@ AS
 --   - `curator`
 --   - `annotation_id`
 --   - `annotated_date`
+--   - `review_status`
 CREATE OR REPLACE VIEW clinvar_curator.cvc_submitted_outcomes_view
 AS
   SELECT
@@ -298,7 +299,8 @@ AS
     sa.notes,
     sa.curator,
     sa.annotation_id,
-    sa.annotated_date
+    sa.annotated_date,
+    sa.review_status
   FROM `clinvar_curator.cvc_submitted_annotations_view` sa
   JOIN `clinvar_ingest.release_date_as_of`(CURRENT_DATE()) latest_release ON TRUE
   LEFT JOIN `clinvar_ingest.voi_scv` cur_vs
@@ -311,5 +313,4 @@ AS
     anno_vs.id = sa.scv_id
     AND
     sa.annotated_date between anno_vs.start_release_date and anno_vs.end_release_date
-  WHERE 
   ;
