@@ -20,7 +20,7 @@ WITH
       av.vcv_ver,
       av.is_latest,
       av.annotation_label,
-      av
+      av.review_status
     FROM `clinvar_curator.cvc_annotations_view` av,
       `clinvar_ingest.schema_on`(as_of_date) rel
     WHERE 
