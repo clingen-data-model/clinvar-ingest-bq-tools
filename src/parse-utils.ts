@@ -3556,10 +3556,6 @@ interface AggDescriptionOutput {
   description: Array<DescriptionItemOutput> | null;
 }
 
-interface AggDescriptionData {
-  Description?: AggDescriptionInput;
-}
-
 /**
  * Builds a AggDescriptionOutput object based on the provided AggDescriptionInput.
  * @param item - The AggDescriptionInput object.
@@ -3578,15 +3574,13 @@ function buildAggDescriptionOutput(item: AggDescriptionInput): AggDescriptionOut
  * @throws {Error} If the JSON input is invalid.
  */
 function parseAggDescription(json: string): AggDescriptionOutput {
-  let data: AggDescriptionData;
+  let data: AggDescriptionInput;
   try {
     data = JSON.parse(json);
   } catch (e) {
     throw new Error('Invalid JSON input');
   }
 
-  let AggDescription = data && data.Description ? data.Description : {};
-
-  return buildAggDescriptionOutput(AggDescription);
+  return buildAggDescriptionOutput(data);
 }
 

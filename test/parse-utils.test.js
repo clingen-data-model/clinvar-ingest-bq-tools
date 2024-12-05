@@ -1312,3 +1312,31 @@ test('buildAggDescriptionOutput should build AggDescriptionOutput correctly', ()
   expect(buildAggDescriptionOutput(json)).toEqual(expectedOutput);
 });
 
+
+test('parseAggDescription should parse JSON input correctly', () => {
+  const json = '{"Description":[{"@ClinicalImpactAssertionType":"diagnostic","@ClinicalImpactClinicalSignificance":"supports diagnosis","@DateLastEvaluated":"2024-01-24","@SubmissionCount":"1","$":"Tier I - Strong"},{"@ClinicalImpactAssertionType":"prognostic","@ClinicalImpactClinicalSignificance":"better outcome","@DateLastEvaluated":"2024-01-23","@SubmissionCount":"1","$":"Tier I - Strong"}]}';
+  const expectedOutput = {
+    description: [
+      {
+        clinical_impact_assertion_type: 'diagnostic',
+        clinical_impact_clinical_significance: 'supports diagnosis',
+        date_last_evaluated: new Date('2024-01-24T00:00:00.000Z'),
+        num_submissions: 1,
+        interp_description: 'Tier I - Strong'
+      },
+      {
+        clinical_impact_assertion_type: 'prognostic',
+        clinical_impact_clinical_significance: 'better outcome',
+        date_last_evaluated: new Date('2024-01-23T00:00:00.000Z'),
+        num_submissions: 1,
+        interp_description: 'Tier I - Strong'
+      }
+    ]
+  };
+  expect(parseAggDescription(json)).toEqual(expectedOutput);
+});
+
+test('parseAggDescription should throw error for invalid JSON input', () => {
+  const json = 'invalid json';
+  expect(() => parseAggDescription(json)).toThrow('Invalid JSON input');
+});

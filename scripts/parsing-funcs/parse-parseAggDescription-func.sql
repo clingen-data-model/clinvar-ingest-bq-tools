@@ -39,7 +39,7 @@ WITH x as (
   """ as content  
 ),
 aggDescriptions as (
-  select `clinvar_ingest.parseAggDescription`(x.content)) as aggDescription from x
+  select `clinvar_ingest.parseAggDescription`(x.content) as aggDescription from x
 )
 select ad.* from aggDescriptions as ad
 ;
