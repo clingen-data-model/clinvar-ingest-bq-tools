@@ -35,6 +35,10 @@ const buildTraitsOutput = parseUtils.__get__('buildTraitsOutput');
 const parseTraits = parseUtils.__get__('parseTraits');
 const buildTraitSetOutput = parseUtils.__get__('buildTraitSetOutput');
 const parseTraitSet = parseUtils.__get__('parseTraitSet');
+const buildDescriptionItemsOutput = parseUtils.__get__('buildDescriptionItemsOutput');
+const buildAggDescriptionOutput = parseUtils.__get__('buildAggDescriptionOutput');
+const parseAggDescription = parseUtils.__get__('parseAggDescription');
+
 
 test('buildGeneListOutput should build GeneListOutput correctly', () => {
   const input = { Gene: { '@Symbol': 'Symbol1', 'Name': {'$':'HGNC1'},'@RelationshipType': 'asserted, not computed' } };
@@ -1195,7 +1199,7 @@ test('parseTraitSet should parse JSON input correctly', () => {
         "@Type":"MIM","@ID":"113000","@DB":"OMIM"
       }]
     }]
-}}`;
+  }}`;
   const expectedOutput = {
     type: 'Disease',
     id: '8827',
@@ -1243,6 +1247,68 @@ test('parseTraitSet should throw error for invalid JSON input', () => {
 });
 
 
-            
+//    {
+//       "@ClinicalImpactAssertionType": "diagnostic", 
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
+//       "@DateLastEvaluated": "2024-01-24", 
+//       "@SubmissionCount": "1", 
+//       "$": "Tier I - Strong"
+//     }
+test('buildDescriptionItemsOutput should build DescriptionItemsOutput correctly', () => {
+  const json = {
+    '@ClinicalImpactAssertionType': 'diagnostic', 
+    '@ClinicalImpactClinicalSignificance': 'supports diagnosis', 
+    '@DateLastEvaluated': '2024-01-24', 
+    '@SubmissionCount': '1', 
+    '$': 'Tier I - Strong'
+  };
+  const expectedOutput = [{
+    clinical_impact_assertion_type: 'diagnostic',
+    clinical_impact_clinical_significance: 'supports diagnosis',
+    date_last_evaluated: new Date('2024-01-24T00:00:00.000Z'),
+    num_submissions: 1,
+    interp_description: 'Tier I - Strong'
+  }];
+  expect(buildDescriptionItemsOutput(json)).toEqual(expectedOutput);
+});
 
+
+test('buildAggDescriptionOutput should build AggDescriptionOutput correctly', () => {
+  const json = {
+    "Description": [
+    {
+      "@ClinicalImpactAssertionType": "diagnostic", 
+      "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
+      "@DateLastEvaluated": "2024-01-24", 
+      "@SubmissionCount": "1", 
+      "$": "Tier I - Strong"
+    }, 
+    {
+      "@ClinicalImpactAssertionType": "prognostic", 
+      "@ClinicalImpactClinicalSignificance": "better outcome", 
+      "@DateLastEvaluated": "2024-01-23", 
+      "@SubmissionCount": "1", 
+      "$": "Tier I - Strong"
+    }
+  ]};
+  const expectedOutput = {
+    description: [
+      {
+        clinical_impact_assertion_type: 'diagnostic',
+        clinical_impact_clinical_significance: 'supports diagnosis',
+        date_last_evaluated: new Date('2024-01-24T00:00:00.000Z'),
+        num_submissions: 1,
+        interp_description: 'Tier I - Strong'
+      },
+      {
+        clinical_impact_assertion_type: 'prognostic',
+        clinical_impact_clinical_significance: 'better outcome',
+        date_last_evaluated: new Date('2024-01-23T00:00:00.000Z'),
+        num_submissions: 1,
+        interp_description: 'Tier I - Strong'
+      }
+    ]
+  };
+  expect(buildAggDescriptionOutput(json)).toEqual(expectedOutput);
+});
 

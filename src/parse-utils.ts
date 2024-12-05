@@ -3419,3 +3419,174 @@ function parseTraitSet(json: string): TraitSetOutput {
 
   return buildTraitSetOutput(traitSet); 
 }
+
+
+
+// -- Classification Description interfaces and functions --
+
+//    {
+//       "@ClinicalImpactAssertionType": "diagnostic", 
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
+//       "@DateLastEvaluated": "2024-01-24", 
+//       "@SubmissionCount": "1", 
+//       "$": "Tier I - Strong"
+//     }
+// }
+
+/**
+ * Represents the input structure for a classification description Item.
+ */
+interface DescriptionItemInput {
+  '@ClinicalImpactAssertionType'?: string;
+  '@ClinicalImpactClinicalSignificance'?: string;
+  '@DateLastEvaluated'?: string;
+  '@SubmissionCount'?: string;
+  '$'?: string;
+}
+
+/**
+ * Represents the output structure for a classification description item.
+ */
+interface DescriptionItemOutput {
+  clinical_impact_assertion_type: string | null;
+  clinical_impact_clinical_significance: string | null;
+  date_last_evaluated: Date | null;
+  num_submissions: number | null;
+  interp_description: string | null;
+}
+
+interface DescriptionItemData {
+  Description?: DescriptionItemInput | DescriptionItemInput[];
+}
+
+/**
+ * Builds an DescriptionItemOutput object based on the provided DescriptionItemInput.
+ * @param item - The DescriptionItemInput object.
+ * @returns The corresponding DescriptionItemOutput object.
+ */
+function buildDescriptionItemOutput(item: DescriptionItemInput): DescriptionItemOutput {
+  return {
+    clinical_impact_assertion_type: item['@ClinicalImpactAssertionType'] ? item['@ClinicalImpactAssertionType'] : null,
+    clinical_impact_clinical_significance: item['@ClinicalImpactClinicalSignificance'] ? item['@ClinicalImpactClinicalSignificance'] : null,
+    date_last_evaluated: item['@DateLastEvaluated'] ? new Date(item['@DateLastEvaluated']) : null,
+    num_submissions: item['@SubmissionCount'] ? parseInt(item['@SubmissionCount'], 10) : null,
+    interp_description: item['$'] ? item['$'] : null
+  };
+}
+
+/**
+ * Builds an array of DescriptionItemOutput objects based on the provided DescriptionItemInput.
+ * If a single aggregate description object is provided, the function will return an array with a single DescriptionItemOutput object.
+ * @param items - The DescriptionItemInput object or an array of DescriptionItemInput objects.
+ * @returns An array of DescriptionItemOutput objects.
+ */
+function buildDescriptionItemsOutput(items: DescriptionItemInput | DescriptionItemInput[]): DescriptionItemOutput[] {
+  if (!Array.isArray(items)) {
+    items = [items];
+  }
+
+  return items.map((item): DescriptionItemOutput => ({
+    ...buildDescriptionItemOutput(item)
+  }));
+}
+
+/**
+ * Parses the JSON input and returns an array of DescriptionItemOutput objects.
+ * @param json - The JSON input string.
+ * @returns An array of DescriptionItemOutput objects.
+ * @throws {Error} If the JSON input is invalid.
+ */
+function parseDescriptionItems(json: string): DescriptionItemOutput[] {
+  let data: DescriptionItemData;
+  try {
+    data = JSON.parse(json);
+  } catch (e) {
+    throw new Error('Invalid JSON input');
+  }
+
+  let DescriptionItems = data && data.Description ? data.Description : [];
+
+  return buildDescriptionItemsOutput(DescriptionItems);
+}
+
+// below is an example of a JSON object that an rcv_accessionclassification description object
+// {
+//   "Description":
+//    {
+//       "@ClinicalImpactAssertionType": "diagnostic", 
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
+//       "@DateLastEvaluated": "2024-01-24", 
+//       "@SubmissionCount": "1", 
+//       "$": "Tier I - Strong"
+//     }
+// }
+//
+// a second example of an aggregate classification description object as an array input
+//
+// {"Description": 
+//   [
+//     {
+//       "@ClinicalImpactAssertionType": "diagnostic", 
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
+//       "@DateLastEvaluated": "2024-01-24", 
+//       "@SubmissionCount": "1", 
+//       "$": "Tier I - Strong"
+//     }, 
+//     {
+//       "@ClinicalImpactAssertionType": "prognostic", 
+//       "@ClinicalImpactClinicalSignificance": "better outcome", 
+//       "@DateLastEvaluated": "2024-01-24", 
+//       "@SubmissionCount": "1", 
+//       "$": "Tier I - Strong"
+//     }
+//   ]
+// }
+
+/**
+ * Represents the input structure for a classification description.
+ */
+interface AggDescriptionInput {
+  Description?: DescriptionItemInput | DescriptionItemInput[];
+}
+
+/**
+ * Represents the output structure for a classification description.
+ */
+interface AggDescriptionOutput {
+  description: Array<DescriptionItemOutput> | null;
+}
+
+interface AggDescriptionData {
+  Description?: AggDescriptionInput;
+}
+
+/**
+ * Builds a AggDescriptionOutput object based on the provided AggDescriptionInput.
+ * @param item - The AggDescriptionInput object.
+ * @returns The corresponding AggDescriptionOutput object.
+ */
+function buildAggDescriptionOutput(item: AggDescriptionInput): AggDescriptionOutput {
+  return {
+    description: item.Description ? buildDescriptionItemsOutput(item.Description) : null
+  };
+}
+
+/**
+ * Parses the JSON input and returns a AggDescriptionOutput object.
+ * @param json - The JSON input string.
+ * @returns A AggDescriptionOutput object.
+ * @throws {Error} If the JSON input is invalid.
+ */
+function parseAggDescription(json: string): AggDescriptionOutput {
+  let data: AggDescriptionData;
+  try {
+    data = JSON.parse(json);
+  } catch (e) {
+    throw new Error('Invalid JSON input');
+  }
+
+  let AggDescription = data && data.Description ? data.Description : {};
+
+  return buildAggDescriptionOutput(AggDescription);
+}
+
