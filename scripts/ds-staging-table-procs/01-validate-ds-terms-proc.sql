@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.validate_dataset_terms_v1`(
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.validate_dataset_terms`(
   schema_name STRING
 )
 BEGIN

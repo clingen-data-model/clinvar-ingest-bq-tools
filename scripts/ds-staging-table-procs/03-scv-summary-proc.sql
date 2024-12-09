@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.scv_summary_v1_proc`(
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.scv_summary`(
   schema_name STRING
 )
 BEGIN

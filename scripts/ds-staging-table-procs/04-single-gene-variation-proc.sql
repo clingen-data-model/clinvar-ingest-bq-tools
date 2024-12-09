@@ -1,5 +1,5 @@
 -- see below for helper / setup scripts
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.single_gene_variation_v1`(
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.single_gene_variation`(
   schema_name STRING,
   release_date DATE
 )
