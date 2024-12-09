@@ -14,4 +14,4 @@ AS (
   ORDER BY 2
 );
 
--- select * from `clinvar_ingest.schemas_on_or_after`(DATE('2020-06-01'));
+-- select * from `clinvar_ingest.schemas_on_or_after_v2`(DATE('2020-06-01'));
