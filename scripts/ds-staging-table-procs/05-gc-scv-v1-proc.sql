@@ -1,8 +1,7 @@
-CREATE OR REPLACE PROCEDURE
-  `clinvar_ingest.gc_scv_proc`(start_with DATE)
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.gc_scv_v1`(
+  schema_name STRING
+)
 BEGIN
-  FOR rec IN (SELECT s.schema_name, s.release_date, s.prev_release_date, s.next_release_date FROM clinvar_ingest.schemas_on_or_after(start_with) AS s)
-  DO
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gc_scv`
       AS
@@ -29,13 +28,15 @@ BEGIN
             SELECT 
               od.attribute.value
             FROM UNNEST(`clinvar_ingest.parseObservedData`(cao.content)) od 
-            WHERE od.attribute.type = 'SampleLocalID'
+            WHERE 
+              od.attribute.type = 'SampleLocalID'
           ) as sample_id,
           (
             SELECT 
               od.attribute.value
             FROM UNNEST(`clinvar_ingest.parseObservedData`(cao.content)) od 
-            WHERE od.attribute.type = 'SampleVariantID'
+            WHERE 
+              od.attribute.type = 'SampleVariantID'
           ) as sample_variant_id,
           cao.id as scv_obs_id
         FROM `variation_tracker.report_submitter` rs
@@ -73,6 +74,5 @@ BEGIN
         lower(cct.label) = lower(tc.lab.classification)
       WHERE 
         IFNULL(tc.lab.name, IFNULL(tc.lab.id,tc.lab.classification)) IS NOT NULL
-      """, rec.schema_name, rec.schema_name, rec.schema_name);
-  END FOR;
+      """, schema_name, schema_name, schema_name);
 END;
