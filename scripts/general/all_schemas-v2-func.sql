@@ -14,9 +14,9 @@ AS (
     FROM INFORMATION_SCHEMA.SCHEMATA iss
     WHERE 
       (
-        REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v2_\d+_\d+$')
+        REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
       OR
-        REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v2_\d+_\d+_(alpha|beta)\d*$') 
+        REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+_alpha\d*$') 
       )
   ) r
   ORDER BY 2

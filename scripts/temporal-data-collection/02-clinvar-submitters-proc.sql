@@ -3,69 +3,67 @@
 -- verify where the last update of this table was and only process releases beyond that
 -- select release_date from `clinvar_ingest.clinvar_submitters` group by release_date order by 1 desc;
 
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_submitters_proc`(start_with DATE)
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_submitters`(
+  schema_name STRING, 
+  release_date DATE
+)
 BEGIN
-
-  FOR rec IN (select s.schema_name, s.release_date, s.prev_release_date, s.next_release_date FROM clinvar_ingest.schemas_on_or_after(start_with) as s)
-  DO
-
-    -- deleted submitters (where it exists in clinvar_submitters (for deleted_release_date is null), but doesn't exist in current data set )
-    EXECUTE IMMEDIATE FORMAT("""
-      UPDATE `clinvar_ingest.clinvar_submitters` cs
-        SET deleted_release_date = %T,
-          deleted_count = deleted_count + 1
-      WHERE cs.deleted_release_date is NULL
-        AND NOT EXISTS (
-          SELECT s.id 
-          FROM `%s.submitter` s
-          WHERE s.id = cs.id
-        )
-    """, rec.release_date, rec.schema_name);
-
-    -- updated submitters
-    EXECUTE IMMEDIATE FORMAT("""
-      UPDATE `clinvar_ingest.clinvar_submitters` cs
-        SET 
-          current_name = s.current_name, 
-          all_names = s.all_names, 
-          all_abbrevs = s.all_abbrevs, 
-          current_abbrev = s.current_abbrev, 
-          org_category = s.org_category,
-          end_release_date = s.release_date,
-          deleted_release_date = NULL
-      FROM `%s.submitter` s
-      WHERE s.id = cs.id
-    """, rec.schema_name);
-
-    -- new variations
-    EXECUTE IMMEDIATE FORMAT("""
-      INSERT INTO `clinvar_ingest.clinvar_submitters` (
-        id, current_name, current_abbrev, cvc_abbrev, org_category, 
-        all_names, all_abbrevs, start_release_date, end_release_date
+  
+  -- deleted submitters (where it exists in clinvar_submitters (for deleted_release_date is null), but doesn't exist in current data set )
+  EXECUTE IMMEDIATE FORMAT("""
+    UPDATE `clinvar_ingest.clinvar_submitters` cs
+      SET deleted_release_date = %T,
+        deleted_count = deleted_count + 1
+    WHERE cs.deleted_release_date is NULL
+      AND NOT EXISTS (
+        SELECT s.id 
+        FROM `%s.submitter` s
+        WHERE s.id = cs.id
       )
-      SELECT 
-        s.id, 
-        s.current_name,
-        s.current_abbrev,
-        IFNULL(s.current_abbrev, csa.current_abbrev) as cvc_abbrev,
-        s.org_category,  
-        s.all_names, 
-        s.all_abbrevs, 
-        s.release_date as start_release_date, 
-        s.release_date as end_release_date
-      FROM `%s.submitter` s
-      LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa 
-      on 
-        csa.submitter_id = s.id
-      WHERE 
-        NOT EXISTS (
-        SELECT cs.id 
-        FROM `clinvar_ingest.clinvar_submitters` cs
-        WHERE cs.id = s.id 
-      )
-    """, rec.schema_name);
+  """, release_date, schema_name);
 
-  END FOR;
+  -- updated submitters
+  EXECUTE IMMEDIATE FORMAT("""
+    UPDATE `clinvar_ingest.clinvar_submitters` cs
+      SET 
+        current_name = s.current_name, 
+        all_names = s.all_names, 
+        all_abbrevs = s.all_abbrevs, 
+        current_abbrev = s.current_abbrev, 
+        org_category = s.org_category,
+        end_release_date = s.release_date,
+        deleted_release_date = NULL
+    FROM `%s.submitter` s
+    WHERE s.id = cs.id
+  """, schema_name);
+
+  -- new variations
+  EXECUTE IMMEDIATE FORMAT("""
+    INSERT INTO `clinvar_ingest.clinvar_submitters` (
+      id, current_name, current_abbrev, cvc_abbrev, org_category, 
+      all_names, all_abbrevs, start_release_date, end_release_date
+    )
+    SELECT 
+      s.id, 
+      s.current_name,
+      s.current_abbrev,
+      IFNULL(s.current_abbrev, csa.current_abbrev) as cvc_abbrev,
+      s.org_category,  
+      s.all_names, 
+      s.all_abbrevs, 
+      s.release_date as start_release_date, 
+      s.release_date as end_release_date
+    FROM `%s.submitter` s
+    LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa 
+    on 
+      csa.submitter_id = s.id
+    WHERE 
+      NOT EXISTS (
+      SELECT cs.id 
+      FROM `clinvar_ingest.clinvar_submitters` cs
+      WHERE cs.id = s.id 
+    )
+  """, schema_name);
 
 END;
 

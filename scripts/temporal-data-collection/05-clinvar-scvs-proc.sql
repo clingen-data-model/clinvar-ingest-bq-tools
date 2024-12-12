@@ -1,8 +1,8 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_scvs_proc`(start_with DATE)
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_scvs`(
+  schema_name STRING,
+  release_date DATE
+)
 BEGIN
-
-  FOR rec IN (select s.schema_name, s.release_date, s.prev_release_date, s.next_release_date FROM clinvar_ingest.schemas_on_or_after(start_with) as s)
-  DO
 
     -- deletes
     EXECUTE IMMEDIATE FORMAT("""
@@ -18,12 +18,12 @@ BEGIN
             scv.variation_id = cs.variation_id AND
             scv.id = cs.id AND 
             scv.version = cs.version AND 
-            scv.rank = cs.rank AND
-            IF(scv.cvc_stmt_type NOT IN ('path','dr'), 'oth', scv.cvc_stmt_type) = cs.rpt_stmt_type AND
-            IFNULL(scv.last_evaluated,DATE'1900-01-01') = IFNULL(cs.last_evaluated,DATE'1900-01-01') AND
-            IFNULL(scv.significance,-999) = IFNULL(cs.clinsig_type,-999)
+            scv.rank IS NOT DISTINCT FROM cs.rank AND
+            IF(scv.cvc_stmt_type NOT IN ('path','dr'), 'oth', scv.cvc_stmt_type) IS NOT DISTINCT FROM cs.rpt_stmt_type AND
+            last_evaluated IS NOT DISTINCT FROM cs.last_evaluated AND
+            significance IS NOT DISTINCT FROM cs.clinsig_type
         )
-    """, rec.release_date, rec.schema_name);
+    """, release_date, schema_name);
 
     -- updated scv id+ver
     -- NOTE: Further investigation of handling cvc_actions is needed for collating the scv id+ver updates, 
@@ -32,7 +32,6 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       UPDATE `clinvar_ingest.clinvar_scvs` cs
       SET 
-        cs.variation_id = scv.variation_id,
         cs.local_key = scv.local_key,
         cs.classif_type = scv.classif_type,
         cs.submitted_classification = scv.submitted_classification,
@@ -48,11 +47,11 @@ BEGIN
         scv.variation_id = cs.variation_id AND
         scv.id = cs.id AND 
         scv.version=cs.version AND
-        scv.rank=cs.rank AND
-        IF(scv.cvc_stmt_type NOT IN ('path','dr'), 'oth', scv.cvc_stmt_type) = cs.rpt_stmt_type AND
-        IFNULL(scv.last_evaluated,DATE'1900-01-01') = IFNULL(cs.last_evaluated,DATE'1900-01-01') AND
-        IFNULL(scv.significance,-999) = IFNULL(cs.clinsig_type,-999)
-    """, rec.schema_name);
+        scv.rank IS NOT DISTINCT FROM cs.rank AND
+        IF(scv.cvc_stmt_type NOT IN ('path','dr'), 'oth', scv.cvc_stmt_type) IS NOT DISTINCT FROM cs.rpt_stmt_type AND
+        last_evaluated IS NOT DISTINCT FROM cs.last_evaluated AND
+        significance IS NOT DISTINCT FROM cs.clinsig_type
+    """, schema_name);
 
     -- new scv variation+id+version
     EXECUTE IMMEDIATE FORMAT("""
@@ -89,12 +88,12 @@ BEGIN
           scv.variation_id = cs.variation_id and 
           scv.id = cs.id and 
           scv.version = cs.version AND
-          scv.rank = cs.rank AND
-          IF(scv.cvc_stmt_type NOT IN ('path','dr'), 'oth', scv.cvc_stmt_type) = cs.rpt_stmt_type AND
-          IFNULL(scv.last_evaluated,DATE'1900-01-01') = IFNULL(cs.last_evaluated,DATE'1900-01-01') AND
-          IFNULL(scv.significance,-999) = IFNULL(cs.clinsig_type,-999)
+          scv.rank IS NOT DISTINCT FROM cs.rank AND
+          IF(scv.cvc_stmt_type NOT IN ('path','dr'), 'oth', scv.cvc_stmt_type) IS NOT DISTINCT FROM cs.rpt_stmt_type AND
+          last_evaluated IS NOT DISTINCT FROM cs.last_evaluated AND
+          significance IS NOT DISTINCT FROM cs.clinsig_type
         )
-    """, rec.schema_name);
+    """, schema_name);
 
   END FOR;
 

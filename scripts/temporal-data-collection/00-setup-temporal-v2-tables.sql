@@ -10,7 +10,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_single_gene_variations`
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
+  deleted_count INT64 DEFAULT 0
 );
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_genes`
@@ -21,7 +21,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_genes`
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
+  deleted_count INT64 DEFAULT 0
 );
 
 -- *****************  clinvar_submitters *****************
@@ -37,7 +37,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_submitters`
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
+  deleted_count INT64 DEFAULT 0
 );
 
 
@@ -276,7 +276,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations`
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
+  deleted_count INT64 DEFAULT 0
 );
 
 -- housekeeping issue!
@@ -327,24 +327,42 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
 (
   variation_id STRING NOT NULL,
   id STRING NOT NULL, 
-  version INT NOT NULL, 
-  rank INT NOT NULL, 
-  last_evaluated DATE,
-  agg_classification STRING,
+  version INT64 NOT NULL, 
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
+  deleted_count INT64 DEFAULT 0
 );
+
+-- *****************  clinvar_vcv_classifications *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcv_classifications`
+(
+  vcv_id STRING NOT NULL,
+  statement_type STRING NOT NULL,
+  rank INT64 NOT NULL, 
+  last_evaluated DATE,
+  agg_classification_description STRING,
+  num_submitters INT64,
+  num_submissions INT64,
+  most_recent_submission DATE,
+  clinical_impact_assertion_type STRING,
+  clinical_impact_clinical_significance STRING,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT64 DEFAULT 0
+);
+
 
 -- *****************  clinvar_scvs *****************
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 (
   variation_id STRING NOT NULL,
   id STRING NOT NULL, 
-  version INT NOT NULL, 
+  version INT64 NOT NULL,
+  statement_type STRING NOT NULL, 
   rpt_stmt_type STRING NOT NULL,
-  rank INT NOT NULL, 
+  rank INT64 NOT NULL, 
   last_evaluated DATE,
   local_key STRING,
   classif_type STRING,
@@ -358,7 +376,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
+  deleted_count INT64 DEFAULT 0
 );
 
 
@@ -400,7 +418,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_gc_scvs`
 (
   variation_id STRING NOT NULL,
   id STRING NOT NULL, 
-  version INT NOT NULL, 
+  version INT64 NOT NULL, 
   submitter_id STRING,
   method_desc STRING,
   method_type STRING,
@@ -414,7 +432,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_gc_scvs`
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
+  deleted_count INT64 DEFAULT 0
 );
 
 
@@ -427,13 +445,12 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_var_scv_change`
 );
 
 
-
-
 CREATE OR REPLACE TABLE `clinvar_ingest.voi_group`
 (
   start_release_date	DATE,
   end_release_date	DATE,
   variation_id	STRING,
+  statement_type  STRING,
   rpt_stmt_type	STRING,
   rank	INT64,
   unique_clinsig_type_count	INT64,
@@ -454,6 +471,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.voi_scv`
   id	STRING,
   version	INT64,
   full_scv_id	STRING,
+  statement_type	STRING,
   rpt_stmt_type	STRING,
   rank	INT64,
   last_evaluated	DATE,
@@ -478,6 +496,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.voi_scv`
 CREATE OR REPLACE TABLE `clinvar_ingest.voi_top_group_change`
 (
   variation_id	STRING,
+  statement_type	STRING,
   rpt_stmt_type	STRING,
   top_rank	INT64,
   start_release_date	DATE,

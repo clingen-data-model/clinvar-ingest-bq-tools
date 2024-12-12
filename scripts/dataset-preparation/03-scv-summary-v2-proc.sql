@@ -73,8 +73,10 @@ BEGIN
       ca.statement_type,
       cvs.rank,
       ca.review_status, 
-      cst.clinvar_prop_type as clinvar_stmt_type,
-      cst.cvc_prop_type as cvc_stmt_type,
+      cst.original_proposition_type,
+      cst.gks_proposition_type,
+      ca.clinical_impact_assertion_type,
+      ca.clinical_impact_clinical_significance,
       ca.interpretation_description as submitted_classification,
       IFNULL(map.cv_clinsig_type, '-') as classif_type,
       cst.significance,
@@ -101,7 +103,8 @@ BEGIN
       map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
     LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
     ON 
-      cst.code = map.cv_clinsig_type
+      cst.code = map.cv_clinsig_type AND
+      cst.statement_type = ca.statement_type
     LEFT JOIN `clinvar_ingest.clinvar_status` cvs
     ON
       cvs.label = ca.review_status
