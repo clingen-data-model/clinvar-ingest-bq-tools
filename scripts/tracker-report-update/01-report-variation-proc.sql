@@ -1,5 +1,5 @@
 -- report_variations (run when you want to update the variants of inteterest driven by the reporting tables for vceps, etc...)
-CREATE OR REPLACE PROCEDURE `variation_tracker.report_variation_proc`()
+CREATE OR REPLACE PROCEDURE `variation_tracker.report_variation`()
 BEGIN
 
   CREATE OR REPLACE TABLE `variation_tracker.report_variation`

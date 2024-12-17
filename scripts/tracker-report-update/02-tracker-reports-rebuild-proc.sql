@@ -1,10 +1,13 @@
-CREATE OR REPLACE PROCEDURE `variation_tracker.variation_track_proc`()
+CREATE OR REPLACE PROCEDURE `variation_tracker.tracker_reports_rebuild`()
 BEGIN
   DECLARE disable_out_of_date_alerts BOOLEAN DEFAULT FALSE;
   FOR rec IN
     (
       select 
-        r.id, r.name, r.abbrev, lower(format("%s_%s", r.id, r.abbrev)) as tname, 
+        r.id, 
+        r.name, 
+        r.abbrev, 
+        lower(format("%s_%s", r.id, r.abbrev)) as tname, 
         ARRAY_AGG( STRUCT(ro.name, ro.value) ) as opts
       from `variation_tracker.report` r
       join `variation_tracker.report_submitter` rs 
@@ -14,31 +17,49 @@ BEGIN
       on 
         ro.report_id = r.id
       group by 
-        r.id, r.name, r.abbrev
+        r.id, 
+        r.name, 
+        r.abbrev
     )
   DO
-    SET disable_out_of_date_alerts = (SELECT CAST(IFNULL((SELECT opt.value FROM UNNEST(rec.opts) as opt WHERE opt.name = "DISABLE_OUT_OF_DATE_ALERTS"), "FALSE") AS BOOL));
+    SET disable_out_of_date_alerts = 
+      (
+        SELECT 
+          CAST(
+            IFNULL(
+              (
+                SELECT 
+                  opt.value 
+                FROM UNNEST(rec.opts) as opt 
+                WHERE opt.name = "DISABLE_OUT_OF_DATE_ALERTS"
+              ), 
+              "FALSE"
+            ) AS BOOL
+          )
+      );
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `variation_tracker.%s_variation` AS
-      select  
+      SELECT  
         rv.report_id,
         cv.release_date as report_release_date,
         rv.variation_id, 
         vg.rpt_stmt_type, 
         vg.rank,
         FALSE as report_submitter_variation
-
-      from `variation_tracker.report_variation` rv
-      join `clinvar_ingest.voi_group` vg on vg.variation_id = rv.variation_id
-      join `clinvar_ingest.all_schemas`() cv on 
+      FROM `variation_tracker.report_variation` rv
+      JOIN `clinvar_ingest.voi_group` vg 
+      ON 
+        vg.variation_id = rv.variation_id
+      JOIN `clinvar_ingest.all_schemas`() cv 
+      ON 
         cv.release_date between vg.start_release_date and vg.end_release_date
-      where rv.report_id = "%s"
+      WHERE rv.report_id = "%s"
     """, rec.tname, rec.id);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `variation_tracker.%s_scv` AS
-      select  
+      SELECT  
         rv.report_id,
         rv.report_release_date,
         rv.variation_id, 
@@ -50,20 +71,23 @@ BEGIN
         DATE_DIFF(rv.report_release_date, vs.start_release_date, DAY) as released_age,
         DATE_DIFF(rv.report_release_date, vs.submission_date, DAY) as submission_age,
         (rs.submitter_id is not NULL) as report_submitter_submission,
-      from `variation_tracker.%s_variation` rv
-      join `clinvar_ingest.voi_scv_group` vsg on 
+      FROM `variation_tracker.%s_variation` rv
+      JOIN `clinvar_ingest.voi_scv_group` vsg 
+      ON 
         vsg.variation_id = rv.variation_id AND
         vsg.rpt_stmt_type = rv.rpt_stmt_type AND
         vsg.rank = rv.rank AND
         rv.report_release_date between vsg.start_release_date AND vsg.end_release_date
-      join `clinvar_ingest.voi_scv` vs on 
+      JOIN `clinvar_ingest.voi_scv` vs 
+      ON 
         vs.variation_id = vsg.variation_id AND
         vs.id = vsg.id AND 
         vs.version = vsg.version AND
         vs.rpt_stmt_type = vsg.rpt_stmt_type AND
         vs.rank = vsg.rank AND
         rv.report_release_date between vs.start_release_date and vs.end_release_date
-      left join `variation_tracker.report_submitter` rs on 
+      LEFT JOIN `variation_tracker.report_submitter` rs 
+      ON 
         rs.report_id = rv.report_id AND 
         vs.submitter_id = rs.submitter_id
     """, rec.tname, rec.tname);
@@ -110,18 +134,21 @@ BEGIN
           vs.submitter_abbrev,
           scv.report_submitter_submission
         FROM `variation_tracker.%s_scv`  scv
-        JOIN `variation_tracker.%s_variation` var on 
+        JOIN `variation_tracker.%s_variation` var 
+        ON 
           scv.variation_id = var.variation_id and
           scv.report_release_date = var.report_release_date and
           scv.rpt_stmt_type = var.rpt_stmt_type and
           scv.rank = var.rank
-        JOIN `clinvar_ingest.clinvar_status` revstat on 
+        JOIN `clinvar_ingest.clinvar_status` revstat 
+        ON 
           revstat.rank = scv.rank and revstat.scv
-        JOIN `clinvar_ingest.voi` v on
+        JOIN `clinvar_ingest.voi` v 
+        ON
           v.variation_id = scv.variation_id AND
           scv.report_release_date between v.start_release_date and v.end_release_date
-        left join `clinvar_ingest.voi_vcv` vv
-        on
+        LEFT JOIN `clinvar_ingest.voi_vcv` vv
+        ON
           scv.variation_id =vv.variation_id and
           scv.report_release_date between vv.start_release_date and vv.end_release_date
         JOIN `clinvar_ingest.voi_scv` vs on
@@ -129,7 +156,7 @@ BEGIN
           vs.id = scv.id AND
           vs.version = scv.version AND
           scv.report_release_date between vs.start_release_date and vs.end_release_date
-        where var.report_submitter_variation
+        WHERE var.report_submitter_variation
       )
       SELECT 
         vcep.gene_symbol,
@@ -186,7 +213,8 @@ BEGIN
         (vcep.last_eval_age - other.last_eval_age) as newer_last_eval_age,
         (vcep.released_age - other.released_age) as newer_released_age
       FROM x as vcep
-      JOIN x as other on 
+      JOIN x as other 
+      ON
         other.variation_id = vcep.variation_id AND 
         other.rpt_stmt_type = vcep.rpt_stmt_type AND
         NOT other.report_submitter_submission AND
@@ -252,7 +280,7 @@ BEGIN
       CREATE OR REPLACE TABLE `variation_tracker.%s_var_priorities` AS
       WITH x AS 
       (
-        select 
+        SELECT 
           v.variation_id,
           v.rpt_stmt_type,
           v.report_release_date,
@@ -278,8 +306,9 @@ BEGIN
             0
           END as agg_sig_type,
           max(vg.rank) as max_rank
-        from `variation_tracker.%s_variation` v
-        join `clinvar_ingest.voi_group` vg on 
+        FROM `variation_tracker.%s_variation` v
+        JOIN `clinvar_ingest.voi_group` vg 
+        ON 
           v.variation_id = vg.variation_id and
           v.rpt_stmt_type = vg.rpt_stmt_type and
           v.rank = vg.rank and
@@ -291,7 +320,7 @@ BEGIN
           v.rpt_stmt_type,
           v.report_release_date
       )
-      select 
+      SELECT 
         x.variation_id,
         x.rpt_stmt_type,
         x.report_release_date,
@@ -303,8 +332,8 @@ BEGIN
           select IF(x.agg_sig_type IN ( 3, 7 ), 'VUS vs LBB', NULL) UNION ALL
           select IF(x.agg_sig_type > 4, 'PLP vs VUSLBB', NULL) UNION ALL
           select IF(x.max_rank = 0 and x.agg_sig_type >= 4, 'No criteria PLP', NULL)),','),',') as priority_type
-      from x
-      where (
+      FROM x
+      WHERE (
         (x.agg_sig_type = 2 AND x.unc_sig_cnt > 2) OR
         (x.agg_sig_type IN ( 3, 7 )) OR
         (x.agg_sig_type > 4) OR
@@ -313,7 +342,7 @@ BEGIN
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `variation_tracker.%s_scv_priorities` AS
-      select  
+      SELECT  
         vp.report_release_date,
         vp.variation_id,
         vp.rpt_stmt_type,
@@ -333,35 +362,35 @@ BEGIN
         vv.rank as vcv_rank,
         vv.agg_classification as vcv_classification,
         rel.next_release_date
-      from `variation_tracker.%s_var_priorities` vp
-      cross join unnest(vp.priority_type) as p_type
-      join `variation_tracker.%s_scv` scv 
-      on 
+      FROM `variation_tracker.%s_var_priorities` vp
+      CROSS JOIN UNNEST(vp.priority_type) as p_type
+      JOIN `variation_tracker.%s_scv` scv 
+      ON 
         vp.variation_id = scv.variation_id and 
         vp.report_release_date = scv.report_release_date 
-      join `clinvar_ingest.voi_scv_group` sgrp 
-      on
+      JOIN `clinvar_ingest.voi_scv_group` sgrp 
+      ON
         scv.id = sgrp.id and
         scv.version = sgrp.version and
         scv.rpt_stmt_type = sgrp.rpt_stmt_type and
         scv.rank = sgrp.rank and
         scv.report_release_date between sgrp.start_release_date and sgrp.end_release_date
-      join `clinvar_ingest.voi` v
-      on
+      JOIN `clinvar_ingest.voi` v
+      ON
         vp.variation_id = v.variation_id and
         vp.report_release_date between v.start_release_date and v.end_release_date
-      left join `clinvar_ingest.voi_vcv` vv
-      on
+      LEFT JOIN `clinvar_ingest.voi_vcv` vv
+      ON
         vp.variation_id =vv.variation_id and
         vp.report_release_date between vv.start_release_date and vv.end_release_date
-      join 
+      JOIN 
       (
         select 
           release_date,
           IF(next_release_date = DATE'9999-12-31', CURRENT_DATE(), next_release_date) next_release_date
         FROM `clinvar_ingest.schemas_on_or_after`(clinvar_ingest.cvc_project_start_date())
       ) rel
-      on
+      ON  
         vp.report_release_date = rel.release_date
     """, rec.tname, rec.tname, rec.tname);
     
