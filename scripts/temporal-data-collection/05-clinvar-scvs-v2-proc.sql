@@ -24,7 +24,7 @@ BEGIN
           scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type AND
           scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance AND
           scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated AND
-          significance IS NOT DISTINCT FROM cs.clinsig_type
+          scv.significance IS NOT DISTINCT FROM cs.clinsig_type
       )
   """, release_date, schema_name);
 
@@ -57,7 +57,7 @@ BEGIN
       scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type AND
       scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance AND
       scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated AND
-      significance IS NOT DISTINCT FROM cs.clinsig_type
+      scv.significance IS NOT DISTINCT FROM cs.clinsig_type
   """, schema_name);
 
   -- new scv variation+id+version
@@ -122,7 +122,7 @@ BEGIN
         scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type AND
         scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance AND
         scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated AND
-        significance IS NOT DISTINCT FROM cs.clinsig_type
+        scv.significance IS NOT DISTINCT FROM cs.clinsig_type
       )
   """, schema_name);
 

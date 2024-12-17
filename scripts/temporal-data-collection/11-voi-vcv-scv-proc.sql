@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.voi_vcv_scv_proc`()
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.voi_vcv_scv`()
 BEGIN
 
   CREATE OR REPLACE TABLE `clinvar_ingest.voi`

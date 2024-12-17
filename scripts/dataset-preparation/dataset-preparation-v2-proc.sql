@@ -11,7 +11,7 @@ BEGIN
     FROM clinvar_ingest.schema_on_v2(on_date) as s
   )
   DO
-    CALL `clinvar_ingest.validate_dataset_terms`(rec.schema_name);
+    CALL `clinvar_ingest.validate_dataset_terms_v2`(rec.schema_name);
     CALL `clinvar_ingest.normalize_dataset_v2`(rec.schema_name);
     CALL `clinvar_ingest.scv_summary_v2`(rec.schema_name);
     CALL `clinvar_ingest.single_gene_variation`(rec.schema_name, rec.release_date);

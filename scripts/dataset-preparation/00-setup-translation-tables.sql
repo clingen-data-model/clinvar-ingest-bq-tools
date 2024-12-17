@@ -8,6 +8,7 @@
 --     ('ot','Other',            40);
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types` (
+    statement_type STRING,
     code STRING, 
     label STRING, 
     significance INT64,      
