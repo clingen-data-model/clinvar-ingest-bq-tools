@@ -40,6 +40,159 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_submitters`
   deleted_count INT DEFAULT 0
 );
 
+-- *****************  clinvar_variations *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations`
+( 
+  id STRING NOT NULL,
+  name STRING,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT DEFAULT 0
+);
+
+-- drop the non-GERMLINE rows from the clinsig_types table (on stage only)
+BEGIN
+  DECLARE project_id STRING;
+
+  SET project_id = 
+  (
+    SELECT 
+      catalog_name as paroject_id
+    FROM `INFORMATION_SCHEMA.SCHEMATA`
+    WHERE 
+      schema_name = 'clinvar_ingest'
+  );
+
+  IF (project_id = 'clingen_stage') THEN
+    -- original tables before the new clinvar XML was introduced
+
+    -- *****************  clinvar_vcvs *****************
+    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
+    (
+      variation_id STRING NOT NULL,
+      id STRING NOT NULL, 
+      version INT NOT NULL, 
+      rank INT NOT NULL, 
+      last_evaluated DATE,
+      agg_classification STRING,
+      start_release_date DATE,
+      end_release_date DATE,
+      deleted_release_date DATE,
+      deleted_count INT DEFAULT 0
+    );
+
+    -- *****************  clinvar_scvs *****************
+    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
+    (
+      variation_id STRING NOT NULL,
+      id STRING NOT NULL, 
+      version INT NOT NULL, 
+      rpt_stmt_type STRING NOT NULL,
+      rank INT NOT NULL, 
+      last_evaluated DATE,
+      local_key STRING,
+      classif_type STRING,
+      clinsig_type INT,
+      submitted_classification STRING,
+      submitter_id STRING,
+      submission_date DATE,
+      origin STRING,
+      affected_status STRING,
+      method_type STRING,
+      start_release_date DATE,
+      end_release_date DATE,
+      deleted_release_date DATE,
+      deleted_count INT DEFAULT 0
+    );
+
+  ELSE 
+
+    -- *****************  clinvar_vcvs *****************
+    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
+    (
+      variation_id STRING NOT NULL,
+      id STRING NOT NULL, 
+      version INT64 NOT NULL, 
+      start_release_date DATE,
+      end_release_date DATE,
+      deleted_release_date DATE,
+      deleted_count INT64 DEFAULT 0
+    );
+
+    -- *****************  clinvar_vcv_classifications *****************
+    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcv_classifications`
+    (
+      vcv_id STRING NOT NULL,
+      statement_type STRING NOT NULL,
+      rank INT64 NOT NULL, 
+      last_evaluated DATE,
+      agg_classification_description STRING,
+      num_submitters INT64,
+      num_submissions INT64,
+      most_recent_submission DATE,
+      clinical_impact_assertion_type STRING,
+      clinical_impact_clinical_significance STRING,
+      start_release_date DATE,
+      end_release_date DATE,
+      deleted_release_date DATE,
+      deleted_count INT64 DEFAULT 0
+    );
+
+    -- *****************  clinvar_scvs *****************
+    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
+    (
+      variation_id STRING NOT NULL,
+      id STRING NOT NULL, 
+      version INT NOT NULL, 
+      statement_type STRING NOT NULL,
+      original_proposition_type STRING,
+      gks_proposition_type STRING,
+      clinical_impact_assertion_type STRING,
+      clinical_impact_clinical_significance STRING,
+      rank INT NOT NULL, 
+      last_evaluated DATE,
+      local_key STRING,
+      classif_type STRING,
+      clinsig_type INT,
+      submitted_classification STRING,
+      submitter_id STRING,
+      submission_date DATE,
+      origin STRING,
+      affected_status STRING,
+      method_type STRING,
+      start_release_date DATE,
+      end_release_date DATE,
+      deleted_release_date DATE,
+      deleted_count INT DEFAULT 0
+    );
+
+  END IF;
+
+END;
+
+-- *****************  clinvar_gc_scvs *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_gc_scvs`
+(
+  variation_id STRING NOT NULL,
+  id STRING NOT NULL, 
+  version INT NOT NULL, 
+  submitter_id STRING,
+  method_desc STRING,
+  method_type STRING,
+  lab_name STRING,
+  lab_date_reported DATE,
+  lab_id STRING,
+  lab_classification STRING,
+  lab_classif_type STRING,
+  lab_type STRING,
+  sample_id STRING,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT DEFAULT 0
+);
+
 
 -- -- initialize submitter info by release based on clinical_assertion release info,
 -- --  36 very old submitter ids existed before 2019-07-01 which need to be manually 
@@ -268,16 +421,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_submitters`
 -- VALUES ("505239", "ISCA site 13", "other")
 
 
--- *****************  clinvar_variations *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations`
-( 
-  id STRING NOT NULL,
-  name STRING,
-  start_release_date DATE,
-  end_release_date DATE,
-  deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
-);
+
 
 -- housekeeping issue!
 -- -- remove duplicate variation records by replacing variation view with a table from 2022_07_24 dataset
@@ -322,50 +466,6 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations`
 --   WHERE v2.release_date = v.release_date AND v2.id = v.id AND v2.first_name <> v.name
 -- );
 
--- *****************  clinvar_vcvs *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
-(
-  variation_id STRING NOT NULL,
-  id STRING NOT NULL, 
-  version INT NOT NULL, 
-  rank INT NOT NULL, 
-  last_evaluated DATE,
-  agg_classification STRING,
-  start_release_date DATE,
-  end_release_date DATE,
-  deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
-);
-
--- *****************  clinvar_scvs *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
-(
-  variation_id STRING NOT NULL,
-  id STRING NOT NULL, 
-  version INT NOT NULL, 
-  statement_type STRING NOT NULL,
-  original_proposition_type STRING,
-  gks_proposition_type STRING,
-  clinical_impact_assertion_type STRING,
-  clinical_impact_clinical_significance STRING,
-  rank INT NOT NULL, 
-  last_evaluated DATE,
-  local_key STRING,
-  classif_type STRING,
-  clinsig_type INT,
-  submitted_classification STRING,
-  submitter_id STRING,
-  submission_date DATE,
-  origin STRING,
-  affected_status STRING,
-  method_type STRING,
-  start_release_date DATE,
-  end_release_date DATE,
-  deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
-);
-
-
 -- one variant processing of SCVs per release
 
 -- -- housekeeping, remove any duplicate rows in scv.summary for the snapshot dbs clinvar_2019_06_01_v0, 
@@ -398,92 +498,3 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 -- )
 -- WHERE row_number = 1
 -- ;
-
--- *****************  clinvar_gc_scvs *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_gc_scvs`
-(
-  variation_id STRING NOT NULL,
-  id STRING NOT NULL, 
-  version INT NOT NULL, 
-  submitter_id STRING,
-  method_desc STRING,
-  method_type STRING,
-  lab_name STRING,
-  lab_date_reported DATE,
-  lab_id STRING,
-  lab_classification STRING,
-  lab_classif_type STRING,
-  lab_type STRING,
-  sample_id STRING,
-  start_release_date DATE,
-  end_release_date DATE,
-  deleted_release_date DATE,
-  deleted_count INT DEFAULT 0
-);
-
-
--- *****************  clinvar_var_scv_change *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_var_scv_change`
-(
-  variation_id STRING NOT NULL,
-  start_release_date DATE,
-  end_release_date DATE
-);
-
-
-
-
-CREATE OR REPLACE TABLE `clinvar_ingest.voi_group`
-(
-  start_release_date	DATE,
-  end_release_date	DATE,
-  variation_id	STRING,
-  rpt_stmt_type	STRING,
-  rank	INT64,
-  unique_clinsig_type_count	INT64,
-  agg_sig_type	INT64,
-  sig_type	ARRAY<STRUCT<count INT64, percent NUMERIC>>,
-  max_last_evaluated	DATE,
-  max_submission_date	DATE,
-  submission_count	INT64,
-  submitter_count	INT64,
-  agg_classif	STRING,
-  agg_classif_w_count	STRING
-);
-
-
-CREATE OR REPLACE TABLE `clinvar_ingest.voi_scv`
-(
-  variation_id	STRING,
-  id	STRING,
-  version	INT64,
-  full_scv_id	STRING,
-  rpt_stmt_type	STRING,
-  rank	INT64,
-  last_evaluated	DATE,
-  classif_type	STRING,
-  submitted_classification	STRING,
-  clinsig_type	INT64,
-  classification_label	STRING,
-  classification_abbrev	STRING,
-  submitter_id	STRING,
-  submitter_name	STRING,
-  submitter_abbrev	STRING,
-  submission_date	DATE,
-  origin	STRING,
-  affected_status	STRING,
-  method_type	STRING,
-  start_release_date	DATE,
-  end_release_date	DATE,
-  deleted_release_date	DATE,
-  deleted_count	INT64
-);
-
-CREATE OR REPLACE TABLE `clinvar_ingest.voi_top_group_change`
-(
-  variation_id	STRING,
-  rpt_stmt_type	STRING,
-  top_rank	INT64,
-  start_release_date	DATE,
-  end_release_date	DATE
-);

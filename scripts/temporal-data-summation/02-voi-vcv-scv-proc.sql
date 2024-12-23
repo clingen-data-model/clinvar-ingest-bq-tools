@@ -72,10 +72,10 @@ BEGIN
     cs.deleted_count
   FROM `clinvar_ingest.clinvar_scvs` cs 
   LEFT JOIN `clinvar_ingest.clinvar_submitters` s 
-  on 
+  ON 
     cs.submitter_id = s.id
   LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cct 
-  on 
+  ON 
     cct.code = cs.classif_type
   ;
 

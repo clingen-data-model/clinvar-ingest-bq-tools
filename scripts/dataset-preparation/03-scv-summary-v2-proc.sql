@@ -3,7 +3,8 @@ CREATE OR REPLACE PROCEDURE `clinvar_ingest.scv_summary_v2`(
 )
 BEGIN
   EXECUTE IMMEDIATE FORMAT("""
-    CREATE OR REPLACE TABLE `%s.scv_summary` AS
+    CREATE OR REPLACE TABLE `%s.scv_summary` 
+    AS
     WITH obs_sample AS (
       SELECT
         REGEXP_EXTRACT(id, r'^SCV[0-9]+') as id, 
@@ -47,8 +48,12 @@ BEGIN
         STRING_AGG(DISTINCT om.method_type, ", " ORDER BY om.method_type) as method_type
       FROM 
         `%s.clinical_assertion` ca
-      LEFT JOIN obs_sample os ON os.id = ca.id
-      LEFT JOIN obs_method om ON om.id = ca.id
+      LEFT JOIN obs_sample os 
+      ON 
+        os.id = ca.id
+      LEFT JOIN obs_method om 
+      ON 
+        om.id = ca.id
       GROUP BY
         ca.id
     ),
@@ -59,7 +64,8 @@ BEGIN
       FROM
         `%s.clinical_assertion` ca
       LEFT JOIN UNNEST(ca.interpretation_comments) as c
-      WHERE ARRAY_LENGTH(ca.interpretation_comments) > 0
+      WHERE 
+        ARRAY_LENGTH(ca.interpretation_comments) > 0
       GROUP BY
         id
     )
