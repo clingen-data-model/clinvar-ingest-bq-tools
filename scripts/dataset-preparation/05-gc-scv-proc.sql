@@ -43,7 +43,7 @@ BEGIN
       JOIN `%s.scv_summary` scv
       ON
         rs.submitter_id = scv.submitter_id 
-        and
+        AND
         rs.type = 'GC'
       CROSS JOIN UNNEST(scv.clinical_assertion_observation_ids) as cao_id
       JOIN `%s.clinical_assertion_observation` cao 

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `variation_tracker.tracker_reports_rebuild`()
+CREATE OR REPLACE PROCEDURE `variation_tracker.tracker_reports_rebuild_v2`()
 BEGIN
   DECLARE disable_out_of_date_alerts BOOLEAN DEFAULT FALSE;
   FOR rec IN
@@ -44,7 +44,10 @@ BEGIN
         rv.report_id,
         cv.release_date as report_release_date,
         rv.variation_id, 
-        vg.rpt_stmt_type, 
+        vg.statement_type,
+        vg.gks_proposition_type,
+        vg.clinical_impact_assertion_type,
+        vg.clinical_impact_clinical_significance, 
         vg.rank,
         FALSE as report_submitter_variation
       FROM `variation_tracker.report_variation` rv
@@ -65,7 +68,10 @@ BEGIN
         rv.report_id,
         rv.report_release_date,
         rv.variation_id, 
-        rv.rpt_stmt_type, 
+        rv.statement_type,
+        rv.gks_proposition_type,
+        rv.clinical_impact_assertion_type,
+        rv.clinical_impact_clinical_significance,
         rv.rank,
         vsg.id,
         vsg.version,
@@ -78,9 +84,15 @@ BEGIN
       ON 
         vsg.variation_id = rv.variation_id 
         AND
-        vsg.rpt_stmt_type = rv.rpt_stmt_type 
+        vsg.statement_type IS NOT DISTINCT FROM rv.statement_type
         AND
-        vsg.rank = rv.rank 
+        vsg.gks_proposition_type IS NOT DISTINCT FROM rv.gks_proposition_type
+        AND
+        vsg.clinical_impact_assertion_type IS NOT DISTINCT FROM rv.clinical_impact_assertion_type
+        AND
+        vsg.clinical_impact_clinical_significance IS NOT DISTINCT FROM rv.clinical_impact_clinical_significance
+        AND
+        vsg.rank IS NOT DISTINCT FROM rv.rank 
         AND
         rv.report_release_date BETWEEN vsg.start_release_date AND vsg.end_release_date
       JOIN `clinvar_ingest.voi_scv` vs 
@@ -91,7 +103,13 @@ BEGIN
         AND 
         vs.version = vsg.version 
         AND
-        vs.rpt_stmt_type IS NOT DISTINCT FROM vsg.rpt_stmt_type 
+        vs.statement_type IS NOT DISTINCT FROM vsg.statement_type
+        AND
+        vs.gks_proposition_type IS NOT DISTINCT FROM vsg.gks_proposition_type
+        AND
+        vs.clinical_impact_assertion_type IS NOT DISTINCT FROM vsg.clinical_impact_assertion_type
+        AND
+        vs.clinical_impact_clinical_significance IS NOT DISTINCT FROM vsg.clinical_impact_clinical_significance
         AND
         vs.rank IS NOT DISTINCT FROM vsg.rank 
         AND
@@ -113,7 +131,7 @@ BEGIN
         WHERE 
           scv.report_submitter_submission 
           AND 
-          scv.report_release_date = v.report_release_date
+          scv.report_release_date IS NOT DISTINCT FROM v.report_release_date
           AND 
           v.variation_id = scv.variation_id
       )
@@ -122,13 +140,17 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `variation_tracker.%s_alerts` 
       AS
-      WITH x AS (
+      WITH x AS 
+      (
         SELECT 
           v.symbol as gene_symbol,
           v.name,
           scv.variation_id,
           vv.id||'.'||vv.version as full_vcv_id,
-          scv.rpt_stmt_type, 
+          scv.statement_type,
+          scv.gks_proposition_type,
+          scv.clinical_impact_assertion_type,
+          scv.clinical_impact_clinical_significance, 
           scv.rank, 
           scv.report_release_date,
           scv.id, scv.version, 
@@ -152,9 +174,15 @@ BEGIN
         ON 
           scv.variation_id = var.variation_id
           AND
-          scv.report_release_date = var.report_release_date
+          scv.report_release_date IS NOT DISTINCT FROM var.report_release_date
           AND
-          scv.rpt_stmt_type IS NOT DISTINCT FROM var.rpt_stmt_type
+          scv.statement_type IS NOT DISTINCT FROM var.statement_type
+          AND
+          scv.gks_proposition_type IS NOT DISTINCT FROM var.gks_proposition_type
+          AND
+          scv.clinical_impact_assertion_type IS NOT DISTINCT FROM var.clinical_impact_assertion_type
+          AND
+          scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM var.clinical_impact_clinical_significance
           AND
           scv.rank IS NOT DISTINCT FROM var.rank
         JOIN `clinvar_ingest.clinvar_status` revstat 
@@ -167,7 +195,7 @@ BEGIN
           scv.report_release_date BETWEEN v.start_release_date AND v.end_release_date
         LEFT JOIN `clinvar_ingest.voi_vcv` vv
         ON
-          scv.variation_id =vv.variation_id
+          scv.variation_id = vv.variation_id
           AND
           scv.report_release_date BETWEEN vv.start_release_date AND vv.end_release_date
         JOIN `clinvar_ingest.voi_scv` vs 
@@ -188,7 +216,10 @@ BEGIN
         vcep.variation_id, 
         vcep.full_vcv_id,
         vcep.report_release_date,
-        vcep.rpt_stmt_type, 
+        vcep.statement_type,
+        vcep.gks_proposition_type,
+        vcep.clinical_impact_assertion_type,
+        vcep.clinical_impact_clinical_significance, 
         vcep.id as submitted_scv_id, 
         vcep.version as submitted_scv_version,
         vcep.full_scv_id as submitted_full_scv_id,
@@ -241,13 +272,19 @@ BEGIN
       ON
         other.variation_id = vcep.variation_id 
         AND 
-        other.rpt_stmt_type = vcep.rpt_stmt_type 
+        other.statement_type IS NOT DISTINCT FROM vcep.statement_type
+        AND
+        other.gks_proposition_type IS NOT DISTINCT FROM vcep.gks_proposition_type
+        AND
+        other.clinical_impact_assertion_type IS NOT DISTINCT FROM vcep.clinical_impact_assertion_type
+        AND
+        other.clinical_impact_clinical_significance IS NOT DISTINCT FROM vcep.clinical_impact_clinical_significance
         AND
         NOT other.report_submitter_submission 
         AND
-        other.report_release_date = vcep.report_release_date 
+        other.report_release_date IS NOT DISTINCT FROM vcep.report_release_date 
         AND
-        other.clinsig_type <> vcep.clinsig_type
+        other.clinsig_type IS DISTINCT FROM vcep.clinsig_type
       -- -- find all other submissions that have a last eval that is newer than 1 year prior to the EPs submission's last eval date 
       WHERE
         vcep.report_submitter_submission 
@@ -417,9 +454,9 @@ BEGIN
         AND
         scv.version = sgrp.version
         AND
-        scv.rpt_stmt_type = sgrp.rpt_stmt_type
+        scv.rpt_stmt_type IS NOT DISTINCT FROM sgrp.rpt_stmt_type
         AND
-        scv.rank = sgrp.rank
+        scv.rank IS NOT DISTINCT FROM sgrp.rank
         AND
         scv.report_release_date BETWEEN sgrp.start_release_date AND sgrp.end_release_date
       JOIN `clinvar_ingest.voi` v

@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.voi_and_voi_scv_group`()
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.voi_and_voi_scv_group_v2`()
 BEGIN
 
   CREATE OR REPLACE TABLE `clinvar_ingest.voi_group`
@@ -9,22 +9,30 @@ BEGIN
       vs.variation_id, 
       vsc.start_release_date,
       vsc.end_release_date,
-      vs.rpt_stmt_type, 
+      vs.statement_type,
+      vs.gks_proposition_type,
+      vs.clinical_impact_assertion_type,
+      vs.clinical_impact_clinical_significance,
       vs.rank,
       vs.clinsig_type,
       vs.classif_type,
-      (vs.classif_type||'('||count(DISTINCT vs.id)||')') AS classif_type_w_count
+      (vs.classif_type||'('||COUNT(DISTINCT vs.id)||')') AS classif_type_w_count
     FROM `clinvar_ingest.voi_scv` vs
     JOIN `clinvar_ingest.clinvar_var_scv_change` vsc
     ON
-        vs.variation_id = vsc.variation_id AND
-        (vs.start_release_date <= vsc.end_release_date) AND 
-        (vs.end_release_date >= vsc.start_release_date)
+        vs.variation_id = vsc.variation_id 
+        AND
+        vs.start_release_date <= vsc.end_release_date
+        AND 
+        vs.end_release_date >= vsc.start_release_date
     GROUP BY
       vs.variation_id, 
       vsc.start_release_date,
       vsc.end_release_date,
-      vs.rpt_stmt_type, 
+      vs.statement_type,
+      vs.gks_proposition_type,
+      vs.clinical_impact_assertion_type,
+      vs.clinical_impact_clinical_significance,
       vs.rank,
       vs.classif_type,
       vs.clinsig_type
@@ -33,7 +41,10 @@ BEGIN
     x.start_release_date,
     x.end_release_date,
     x.variation_id,
-    x.rpt_stmt_type, 
+    x.statement_type,
+    x.gks_proposition_type,
+    x.clinical_impact_assertion_type,
+    x.clinical_impact_clinical_significance, 
     x.rank,
     COUNT(DISTINCT vs.clinsig_type) as unique_clinsig_type_count,
     SUM(DISTINCT IF(vs.clinsig_type=2,4,IF(vs.clinsig_type=1,2,1))) as agg_sig_type,
@@ -44,23 +55,36 @@ BEGIN
     ) as sig_type,
     MAX(vs.last_evaluated) as max_last_evaluated,
     MAX(vs.submission_date) as max_submission_date,
-    count(DISTINCT vs.id) as submission_count,
-    count(DISTINCT vs.submitter_id) as submitter_count,
-    string_agg(distinct x.classif_type, '/' order by x.classif_type) AS agg_classif,
-    string_agg(distinct x.classif_type_w_count, '/' order by x.classif_type_w_count) AS agg_classif_w_count
+    COUNT(DISTINCT vs.id) as submission_count,
+    COUNT(DISTINCT vs.submitter_id) as submitter_count,
+    STRING_AGG(DISTINCT x.classif_type, '/' ORDER BY x.classif_type) AS agg_classif,
+    STRING_AGG(DISTINCT x.classif_type_w_count, '/' ORDER BY x.classif_type_w_count) AS agg_classif_w_count
   from x
   JOIN `clinvar_ingest.voi_scv` vs
   ON
-    vs.variation_id = x.variation_id AND
-    vs.rpt_stmt_type = x.rpt_stmt_type AND
-    vs.rank = x.rank AND
-    (vs.start_release_date <= x.end_release_date) AND 
-    (vs.end_release_date >= x.start_release_date)
-  group by
+    vs.variation_id = x.variation_id 
+    AND
+    vs.statement_type IS NOT DISTINCT FROM x.statement_type 
+    AND
+    vs.gks_proposition_type IS NOT DISTINCT FROM x.gks_proposition_type 
+    AND
+    vs.clinical_impact_assertion_type IS NOT DISTINCT FROM x.clinical_impact_assertion_type 
+    AND
+    vs.clinical_impact_clinical_significance IS NOT DISTINCT FROM x.clinical_impact_clinical_significance 
+    AND
+    vs.rank IS NOT DISTINCT FROM x.rank 
+    AND
+    vs.start_release_date <= x.end_release_date)
+    AND 
+    vs.end_release_date >= x.start_release_date
+  GROUP BY
     x.variation_id, 
     x.start_release_date,
     x.end_release_date,
-    x.rpt_stmt_type, 
+    x.statement_type,
+    x.gks_proposition_type,
+    x.clinical_impact_assertion_type,
+    x.clinical_impact_clinical_significance, 
     x.rank
   ;
 
@@ -73,7 +97,10 @@ BEGIN
     vs.variation_id, 
     vs.id, 
     vs.version, 
-    vg.rpt_stmt_type, 
+    vs.statement_type,
+    vs.gks_proposition_type,
+    vs.clinical_impact_assertion_type,
+    vs.clinical_impact_clinical_significance,
     vg.rank, 
     vg.sig_type[OFFSET(vs.clinsig_type)].percent as outlier_pct,
     -- vg.cvc_sig_type[OFFSET(vs.clinsig_type)].percent as cvc_outlier_pct,
@@ -92,12 +119,23 @@ BEGIN
     WHEN 'dr' THEN "4-ADDT'L"
     ELSE "4-ADDT'L" END as scv_group_type
   FROM `clinvar_ingest.voi_group` vg
-  JOIN `clinvar_ingest.voi_scv` vs on 
-    vg.variation_id = vs.variation_id AND 
-    vg.rpt_stmt_type=vs.rpt_stmt_type AND 
-    vg.rank = vs.rank AND 
-    (vg.start_release_date <= vs.end_release_date) AND 
-    (vg.end_release_date >= vs.start_release_date)
+  JOIN `clinvar_ingest.voi_scv` vs 
+  ON 
+    vg.variation_id = vs.variation_id 
+    AND 
+    vg.statement_type IS NOT DISTINCT FROM vs.statement_type 
+    AND
+    vg.gks_proposition_type IS NOT DISTINCT FROM vs.gks_proposition_type 
+    AND
+    vg.clinical_impact_assertion_type IS NOT DISTINCT FROM vs.clinical_impact_assertion_type 
+    AND
+    vg.clinical_impact_clinical_significance IS NOT DISTINCT FROM vs.clinical_impact_clinical_significance 
+    AND
+    vg.rank IS NOT DISTINCT FROM vs.rank 
+    AND 
+    vg.start_release_date <= vs.end_release_date
+    AND 
+    vg.end_release_date >= vs.start_release_date
   ;
 
 END;

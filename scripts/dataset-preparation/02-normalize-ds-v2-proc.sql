@@ -14,14 +14,18 @@ BEGIN
   IF NOT column_exists THEN
     -- backup the original clinical_assertion table
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE TABLE `%s.backup_clinical_assertion` AS 
-      SELECT * FROM `%s.clinical_assertion`
+      CREATE TABLE `%s.backup_clinical_assertion` 
+      AS 
+      SELECT 
+        * 
+      FROM `%s.clinical_assertion`
     """, schema_name, schema_name);
 
     
     -- create or replace the clinical_assertion table from the backup
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `%s.clinical_assertion` AS
+      CREATE OR REPLACE TABLE `%s.clinical_assertion` 
+      AS
       SELECT 
         *,
         'GermlineClassification' as statement_type,
@@ -39,13 +43,17 @@ BEGIN
   IF NOT table_exists THEN
     -- backup the original rcv_accession table
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE TABLE `%s.backup_rcv_accession` AS 
-      SELECT * FROM `%s.rcv_accession`
+      CREATE TABLE `%s.backup_rcv_accession` 
+      AS 
+      SELECT 
+        * 
+      FROM `%s.rcv_accession`
     """, schema_name, schema_name);
 
     -- create the rcv_accession_classification table from the backup
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE TABLE %s.rcv_accession_classification AS
+      CREATE TABLE %s.rcv_accession_classification 
+      AS
       SELECT
         release_date,
         id as rcv_id,
@@ -65,7 +73,8 @@ BEGIN
 
     -- create or replace the rcv_accession_classification table from the backup
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `%s.rcv_accession` AS
+      CREATE OR REPLACE TABLE `%s.rcv_accession` 
+      AS
       SELECT 
         release_date,
         id,
@@ -87,13 +96,17 @@ BEGIN
     IF NOT column_exists THEN
       -- backup the original rcv_accession_classification table
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE TABLE `%s.backup_rcv_accession_classification` AS 
-        SELECT * FROM `%s.rcv_accession_classification`
+        CREATE TABLE `%s.backup_rcv_accession_classification` 
+        AS 
+        SELECT 
+          * 
+        FROM `%s.rcv_accession_classification`
       """, schema_name, schema_name);
 
       -- create or replace the rcv_accession_classification table from the backup
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE OR REPLACE TABLE `%s.rcv_accession_classification` AS
+        CREATE OR REPLACE TABLE `%s.rcv_accession_classification` 
+        AS
         SELECT
           release_date,
           rcv_id,
@@ -106,25 +119,27 @@ BEGIN
             REGEXP_REPLACE(content, r'"Description"\\s*\\:\\s*"[^"]+"\\s*,*\\s*', "")
         ) as content
         FROM `%s.rcv_accession_classification`
-        WHERE content is not null
+        WHERE 
+          content is not null
         UNION ALL
         SELECT 
-        release_date,
-        rcv_id,
-        statement_type,
-        review_status,
-        [
-          STRUCT(
-            clinical_impact_assertion_type,
-            clinical_impact_clinical_significance,
-            date_last_evaluated,
-            num_submissions,
-            interp_description
-          )
-        ] as agg_classification,
-        content
+          release_date,
+          rcv_id,
+          statement_type,
+          review_status,
+          [
+            STRUCT(
+              clinical_impact_assertion_type,
+              clinical_impact_clinical_significance,
+              date_last_evaluated,
+              num_submissions,
+              interp_description
+            )
+          ] as agg_classification,
+          content
         FROM `%s.rcv_accession_classification`
-        WHERE content is null
+        WHERE 
+          content is null
       """, schema_name, schema_name, schema_name);
     END IF;    
   END IF;
@@ -137,13 +152,17 @@ BEGIN
   IF NOT table_exists THEN
     -- backup the original variation_archive table
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE TABLE `%s.backup_variation_archive` AS 
-      SELECT * FROM `%s.variation_archive`
+      CREATE TABLE `%s.backup_variation_archive` 
+      AS 
+      SELECT 
+        * 
+      FROM `%s.variation_archive`
     """, schema_name, schema_name);
 
     -- create the variation_archive_classification table from the backup
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE TABLE %s.variation_archive_classification AS
+      CREATE TABLE %s.variation_archive_classification 
+      AS
       SELECT
         id as vcv_id,
         'GermlineClassification' AS statement_type,
@@ -163,7 +182,8 @@ BEGIN
 
     -- create or replace the variation_archive table from the backup
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `%s.variation_archive` AS
+      CREATE OR REPLACE TABLE `%s.variation_archive` 
+      AS
       SELECT 
         date_created,
         record_status,

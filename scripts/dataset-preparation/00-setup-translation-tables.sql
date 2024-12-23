@@ -81,6 +81,39 @@ VALUES
     ('SomaticClinicalImpact',    't3', 'Tier III - Unknown',                     1, 'somatic', 20, 20, 'somatic', 20, 20,  'none',      'cg000103', 'inconclusive',  'cg000025', null),
     ('SomaticClinicalImpact',    't4', 'Tier IV - Benign/Likely benign',         0, 'somatic', 32, 32, 'somatic', 32, 32,  'refutes',   'cg000102', 'likely',        'cg000026', null);
 
+-- drop the non-GERMLINE rows from the clinsig_types table (on stage only)
+BEGIN
+    DECLARE project_id STRING;
+
+    SET project_id = (SELECT 
+        catalog_name as paroject_id
+    FROM `INFORMATION_SCHEMA.SCHEMATA`
+    WHERE schema_name = 'clinvar_ingest');
+
+    IF (project_id = 'clingen_stage') THEN
+        CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types` 
+        AS
+        SELECT 
+            code, 
+            label, 
+            significance, 
+            original_proposition_type, 
+            original_code_order, 
+            original_description_order, 
+            gks_proposition_type, 
+            gks_code_order, 
+            gks_description_order, 
+            direction, 
+            strength_code, 
+            strength_label, 
+            classification_code, 
+            penetrance_level
+        FROM `clinvar_ingest.clinvar_clinsig_types`
+        WHERE statement_type = 'GermlineClassification';
+
+    END IF;
+
+END;
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_proposition_types` (
     code STRING, 
