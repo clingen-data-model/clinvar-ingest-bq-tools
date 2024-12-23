@@ -15,5 +15,11 @@ BEGIN
     CALL `clinvar_ingest.clinvar_vcvs_v2`(rec.schema_name, rec.release_date, rec.prev_release_date);
     CALL `clinvar_ingest.clinvar_scvs_v2`(rec.schema_name, rec.release_date, rec.prev_release_date);
     CALL `clinvar_ingest.clinvar_gc_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date);
+    CALL `clinvar_ingest.clinvar_genes`(rec.schema_name, rec.release_date, rec.prev_release_date);
+    CALL `clinvar_ingest.clinvar_submitters`(rec.schema_name, rec.release_date, rec.prev_release_date);
+    CALL `clinvar_ingest.clinvar_variations`(rec.schema_name, rec.release_date, rec.prev_release_date);
+    CALL `clinvar_ingest.clinvar_vcvs_v2`(rec.schema_name, rec.release_date, rec.prev_release_date);
+    CALL `clinvar_ingest.clinvar_scvs_v2`(rec.schema_name, rec.release_date, rec.prev_release_date);
+    CALL `clinvar_ingest.clinvar_gc_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date);
   END FOR;
 END;
