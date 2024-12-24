@@ -45,7 +45,7 @@ BEGIN
       WHERE
         cst.code IS NULL
     """, schema_name) INTO scv_classification_statement_combo_terms;
-  END IF
+  END IF;
 
   -- Check for new review_status terms in clinical_assertion
   EXECUTE IMMEDIATE FORMAT("""
