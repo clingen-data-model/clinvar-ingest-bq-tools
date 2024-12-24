@@ -1,9 +1,12 @@
 
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_variations`(
   schema_name STRING,
-  release_date DATE
+  release_date DATE,
+  previous_release_date DATE
 )
-BEGIN
+BEGIN  
+  -- validate the last release date clinvar_variations
+  CALL `clinvar_ingest.validate_last_release`('clinvar_variations',previous_release_date);
 
   -- deleted variations (where it exists in clinvar_variations (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
@@ -11,9 +14,12 @@ BEGIN
       SET 
         deleted_release_date = %T,
         deleted_count = deleted_count + 1
-    WHERE cv.deleted_release_date is NULL
-      AND NOT EXISTS (
-        SELECT v.id 
+    WHERE 
+      cv.deleted_release_date is NULL
+      AND 
+      NOT EXISTS (
+        SELECT 
+          v.id 
         FROM `%s.variation` v
         WHERE  
           v.id = cv.id
@@ -48,12 +54,12 @@ BEGIN
     FROM `%s.variation` v
     WHERE 
       NOT EXISTS (
-      SELECT 
-        cv.id 
-      FROM `clinvar_ingest.clinvar_variations` cv
-      WHERE 
-        cv.id = v.id 
-    )
+        SELECT 
+          cv.id 
+        FROM `clinvar_ingest.clinvar_variations` cv
+        WHERE 
+          cv.id = v.id 
+      )
   """, schema_name);
 
 END;

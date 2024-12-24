@@ -90,7 +90,7 @@ BEGIN
     FROM `INFORMATION_SCHEMA.SCHEMATA`
     WHERE schema_name = 'clinvar_ingest');
 
-    IF (project_id = 'clingen_stage') THEN
+    IF (project_id = 'clingen-stage') THEN
         CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types` 
         AS
         SELECT 

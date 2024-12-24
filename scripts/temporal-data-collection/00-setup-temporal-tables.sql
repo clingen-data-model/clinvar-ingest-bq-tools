@@ -64,7 +64,7 @@ BEGIN
       schema_name = 'clinvar_ingest'
   );
 
-  IF (project_id = 'clingen_stage') THEN
+  IF (project_id = 'clingen-stage') THEN
     -- original tables before the new clinvar XML was introduced
 
     -- *****************  clinvar_vcvs *****************

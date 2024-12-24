@@ -5,20 +5,28 @@
 
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_submitters`(
   schema_name STRING, 
-  release_date DATE
+  release_date DATE,
+  previous_release_date DATE
 )
 BEGIN
+  -- validate the last release date clinvar_submitters
+  CALL `clinvar_ingest.validate_last_release`('clinvar_submitters',previous_release_date);
   
   -- deleted submitters (where it exists in clinvar_submitters (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_submitters` cs
-      SET deleted_release_date = %T,
+      SET 
+        deleted_release_date = %T,
         deleted_count = deleted_count + 1
-    WHERE cs.deleted_release_date is NULL
-      AND NOT EXISTS (
-        SELECT s.id 
+    WHERE 
+      cs.deleted_release_date is NULL
+      AND 
+      NOT EXISTS (
+        SELECT 
+          s.id 
         FROM `%s.submitter` s
-        WHERE s.id = cs.id
+        WHERE 
+          s.id = cs.id
       )
   """, release_date, schema_name);
 
@@ -34,14 +42,22 @@ BEGIN
         end_release_date = s.release_date,
         deleted_release_date = NULL
     FROM `%s.submitter` s
-    WHERE s.id = cs.id
+    WHERE 
+      s.id = cs.id
   """, schema_name);
 
   -- new variations
   EXECUTE IMMEDIATE FORMAT("""
     INSERT INTO `clinvar_ingest.clinvar_submitters` (
-      id, current_name, current_abbrev, cvc_abbrev, org_category, 
-      all_names, all_abbrevs, start_release_date, end_release_date
+      id, 
+      current_name, 
+      current_abbrev, 
+      cvc_abbrev, 
+      org_category, 
+      all_names, 
+      all_abbrevs, 
+      start_release_date, 
+      end_release_date
     )
     SELECT 
       s.id, 
@@ -55,14 +71,16 @@ BEGIN
       s.release_date as end_release_date
     FROM `%s.submitter` s
     LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa 
-    on 
+    ON 
       csa.submitter_id = s.id
     WHERE 
       NOT EXISTS (
-      SELECT cs.id 
-      FROM `clinvar_ingest.clinvar_submitters` cs
-      WHERE cs.id = s.id 
-    )
+        SELECT 
+          cs.id 
+        FROM `clinvar_ingest.clinvar_submitters` cs
+        WHERE 
+          cs.id = s.id
+      )
   """, schema_name);
 
 END;

@@ -1,73 +1,88 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_genes`(
   schema_name STRING, 
-  release_date DATE
+  release_date DATE,
+  previous_release_date DATE
 )
 BEGIN  
+  -- validate the last release date for the 2 tables processed in this procedure
+  CALL `clinvar_ingest.validate_last_release`('clinvar_genes',previous_release_date);
+  CALL `clinvar_ingest.validate_last_release`('clinvar_single_gene_variations',previous_release_date);
 
   -- deleted genes (where it exists in clinvar_genes (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_genes` cg
-      SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+    SET 
+      deleted_release_date = %T,
+      deleted_count = deleted_count + 1
     WHERE 
-      cg.deleted_release_date is NULL AND 
+      cg.deleted_release_date is NULL 
+      AND 
       NOT EXISTS 
       (
-        SELECT g.id 
+        SELECT 
+          g.id 
         FROM `%s.gene` g
-        WHERE g.id = cg.id
+        WHERE 
+          g.id = cg.id
       )
   """, release_date, schema_name);
 
   -- deleted single gene vars (where it exists in clinvar_single_gene_variations(for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_single_gene_variations` csgv
-      SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+    SET 
+      deleted_release_date = %T,
+      deleted_count = deleted_count + 1
     WHERE 
-      csgv.deleted_release_date is NULL AND
+      csgv.deleted_release_date is NULL 
+      AND
       NOT EXISTS 
       (
-        SELECT sgv.variation_id 
+        SELECT 
+          sgv.variation_id 
         FROM `%s.single_gene_variation` sgv
-        WHERE sgv.variation_id = csgv.variation_id 
+        WHERE 
+          sgv.variation_id = csgv.variation_id 
       )
   """, release_date, schema_name);
 
   -- updated genes
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_genes` cg
-      SET 
-        hgnc_id = g.hgnc_id,
-        symbol = g.symbol,
-        end_release_date = g.release_date,
-        deleted_release_date = NULL
+    SET 
+      hgnc_id = g.hgnc_id,
+      symbol = g.symbol,
+      end_release_date = g.release_date,
+      deleted_release_date = NULL
     FROM `%s.gene` g
-    WHERE g.id = cg.id
+    WHERE 
+      g.id = cg.id
   """, schema_name);
 
-    -- updated single gene variations
+  -- updated single gene variations
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_single_gene_variations` csgv
-      SET 
-        gene_id = sgv.gene_id,
-        mane_select = sgv.mane_select,
-        somatic = sgv.somatic,
-        relationship_type = sgv.relationship_type,
-        source = sgv.source,
-        end_release_date = sgv.release_date,
-        deleted_release_date = NULL
+    SET 
+      gene_id = sgv.gene_id,
+      mane_select = sgv.mane_select,
+      somatic = sgv.somatic,
+      relationship_type = sgv.relationship_type,
+      source = sgv.source,
+      end_release_date = sgv.release_date,
+      deleted_release_date = NULL
     FROM `%s.single_gene_variation` sgv
-    WHERE sgv.variation_id = csgv.variation_id 
+    WHERE 
+      sgv.variation_id = csgv.variation_id 
   """, schema_name);
 
   -- new genes
   EXECUTE IMMEDIATE FORMAT("""
-    INSERT `clinvar_ingest.clinvar_genes` 
-    (
-      id, symbol, hgnc_id, start_release_date, end_release_date
+    INSERT `clinvar_ingest.clinvar_genes` (
+      id, 
+      symbol, 
+      hgnc_id, 
+      start_release_date, 
+      end_release_date
     )
     SELECT 
       g.id, 
@@ -79,16 +94,17 @@ BEGIN
     WHERE 
       NOT EXISTS 
       (
-        SELECT cg.id 
+        SELECT 
+          cg.id 
         FROM `clinvar_ingest.clinvar_genes` cg
-        WHERE cg.id = g.id 
+        WHERE 
+          cg.id = g.id 
       )
   """, schema_name);
 
   -- new single gene variations
   EXECUTE IMMEDIATE FORMAT("""
-    INSERT `clinvar_ingest.clinvar_single_gene_variations` 
-    (
+    INSERT `clinvar_ingest.clinvar_single_gene_variations` (
       gene_id, 
       variation_id, 
       relationship_type, 
@@ -111,9 +127,11 @@ BEGIN
     WHERE 
       NOT EXISTS 
       (
-        SELECT csgv.variation_id 
+        SELECT 
+          csgv.variation_id 
         FROM `clinvar_ingest.clinvar_single_gene_variations` csgv
-        WHERE sgv.variation_id = csgv.variation_id
+        WHERE 
+          sgv.variation_id = csgv.variation_id
       )
   """, schema_name);
 

@@ -1,13 +1,16 @@
 CREATE OR REPLACE PROCEDURE `variation_tracker.gc_tracker_report_rebuild`()
 BEGIN
   DECLARE release_date DATE;
-  DECLARE
+  DECLARE schema_name STRING;
+  
   SET release_date = (
-    SELECT max(end_release_date)
+    SELECT 
+      MAX(end_release_date)
     FROM `clinvar_ingest.voi_scv_group`
   );
   SET schema_name = (
-    SELECT schema_name
+    SELECT 
+      schema_name
     FROM `clinvar_ingest.schema_on`(release_date)
   );
 

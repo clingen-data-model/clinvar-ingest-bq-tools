@@ -1,25 +1,37 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_gc_scvs`(
   schema_name STRING,
-  release_date DATE
+  release_date DATE,
+  previous_release_date DATE
 )
 BEGIN
+
+  -- validate the last release date clinvar_gc_scvs
+  CALL `clinvar_ingest.validate_last_release`('clinvar_gc_scvs',previous_release_date);
 
   -- deletes
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_gc_scvs` cgs
-      SET deleted_release_date = %T,
+      SET 
+        deleted_release_date = %T,
         deleted_count = deleted_count + 1
     WHERE 
-      cgs.deleted_release_date is NULL AND 
+      cgs.deleted_release_date is NULL 
+      AND 
       NOT EXISTS (
-        SELECT gscv.id 
+        SELECT 
+          gscv.id 
         FROM `%s.gc_scv` gscv
         WHERE 
-          gscv.variation_id = cgs.variation_id AND
-          gscv.id = cgs.id AND 
-          gscv.version = cgs.version AND
-          gscv.lab_date_reported IS NOT DISTINCT FROM cgs.lab_date_reported AND
-          gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id AND
+          gscv.variation_id = cgs.variation_id 
+          AND
+          gscv.id = cgs.id 
+          AND 
+          gscv.version = cgs.version 
+          AND
+          gscv.lab_date_reported IS NOT DISTINCT FROM cgs.lab_date_reported 
+          AND
+          gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id 
+          AND
           gscv.sample_id IS NOT DISTINCT FROM cgs.sample_id
       )
   """, release_date, schema_name);
@@ -39,34 +51,38 @@ BEGIN
       cgs.deleted_release_date = NULL
     FROM `%s.gc_scv` gscv
     WHERE 
-      gscv.variation_id = cgs.variation_id AND
-      gscv.id = cgs.id AND 
-      gscv.version = cgs.version AND
-      gscv.lab_date_reported IS NOT DISTINCT FROM cgs.lab_date_reported AND
-      gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id AND
+      gscv.variation_id = cgs.variation_id 
+      AND
+      gscv.id = cgs.id 
+      AND 
+      gscv.version = cgs.version 
+      AND
+      gscv.lab_date_reported IS NOT DISTINCT FROM cgs.lab_date_reported 
+      AND
+      gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id 
+      AND
       gscv.sample_id IS NOT DISTINCT FROM cgs.sample_id
   """, release_date, schema_name);
 
   -- new gscv variation+id+version
   EXECUTE IMMEDIATE FORMAT("""
-    INSERT INTO `clinvar_ingest.clinvar_gc_scvs` 
-      (
-        variation_id, 
-        id, 
-        version, 
-        submitter_id, 
-        method_desc,
-        method_type,
-        lab_name,
-        lab_date_reported,
-        lab_id,
-        lab_classification,
-        lab_classif_type,
-        lab_type,
-        sample_id,
-        start_release_date, 
-        end_release_date
-      )
+    INSERT INTO `clinvar_ingest.clinvar_gc_scvs` (
+      variation_id, 
+      id, 
+      version, 
+      submitter_id, 
+      method_desc,
+      method_type,
+      lab_name,
+      lab_date_reported,
+      lab_id,
+      lab_classification,
+      lab_classif_type,
+      lab_type,
+      sample_id,
+      start_release_date, 
+      end_release_date
+    )
     SELECT 
       gscv.variation_id,
       gscv.id, 
@@ -86,14 +102,21 @@ BEGIN
     FROM `%s.gc_scv` gscv
     WHERE 
       NOT EXISTS (
-      SELECT cgs.id FROM `clinvar_ingest.clinvar_gc_scvs` cgs
-      WHERE 
-        gscv.variation_id = cgs.variation_id AND
-        gscv.id = cgs.id AND 
-        gscv.version = cgs.version AND
-        gscv.lab_date_reported IS NOT DISTINCT FROM cgs.lab_date_reported AND
-        gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id AND
-        gscv.sample_id IS NOT DISTINCT FROM cgs.sample_id
+        SELECT 
+          cgs.id 
+        FROM `clinvar_ingest.clinvar_gc_scvs` cgs
+        WHERE 
+          gscv.variation_id = cgs.variation_id 
+          AND
+          gscv.id = cgs.id 
+          AND 
+          gscv.version = cgs.version 
+          AND
+          gscv.lab_date_reported IS NOT DISTINCT FROM cgs.lab_date_reported 
+          AND
+          gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id 
+          AND
+          gscv.sample_id IS NOT DISTINCT FROM cgs.sample_id
       )
   """, release_date, release_date, schema_name);
 

@@ -2,6 +2,65 @@ CREATE OR REPLACE PROCEDURE `clinvar_ingest.scv_summary`(
   schema_name STRING
 )
 BEGIN
+
+  DECLARE scv_summary_output_sql STRING;
+  DECLARE project_id STRING;
+
+  SET project_id = (
+    SELECT 
+      catalog_name as paroject_id
+    FROM `INFORMATION_SCHEMA.SCHEMATA`
+    WHERE 
+      schema_name = 'clinvar_ingest'
+  );
+
+  -- deteremine if the final output is for clingen-stage (original XML) or not (new XML)
+  SET scv_summary_output_sql = IF(
+    project_id = 'clingen-stage',
+    FORMAT("""
+      SELECT
+        cst.original_proposition_type as clinvar_stmt_type,
+        cst.gks_proposition_type as cvc_stmt_type,
+        IFNULL(map.cv_clinsig_type, '-') as classif_type,
+        cst.significance,
+        scv.*
+      FROM scv
+      JOIN `%s.clinical_assertion` ca
+      ON
+        ca.id = scv.id
+      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
+      ON 
+        map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
+      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
+      ON 
+        cst.code = map.cv_clinsig_type 
+    """, schema_name),
+    FORMAT("""
+      SELECT
+        ca.statement_type,
+        cst.original_proposition_type,
+        cst.gks_proposition_type,
+        ca.clinical_impact_assertion_type,
+        ca.clinical_impact_clinical_significance,
+        IFNULL(map.cv_clinsig_type, '-') as classif_type,
+        cst.significance,
+        scv.*
+      FROM scv
+      JOIN `%s.clinical_assertion` ca
+      ON
+        ca.id = scv.id
+      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
+      ON 
+        map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
+      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
+      ON 
+        cst.code = map.cv_clinsig_type 
+        AND
+        cst.statement_type = ca.statement_type                          
+    """, schema_name)
+  );
+
+
   EXECUTE IMMEDIATE FORMAT("""
     CREATE OR REPLACE TABLE `%s.scv_summary` 
     AS
@@ -19,8 +78,7 @@ BEGIN
         m.method_type
       FROM 
         `%s.clinical_assertion_observation` obs,
-        UNNEST(`clinvar_ingest.parseMethods`(obs.content)) as m          
-      
+        UNNEST(`clinvar_ingest.parseMethods`(obs.content)) as m
     ),
     assertion_method AS (
       SELECT 
@@ -65,13 +123,14 @@ BEGIN
       FROM
         `%s.clinical_assertion` ca
       LEFT JOIN UNNEST(ca.interpretation_comments) as c
-      WHERE ARRAY_LENGTH(ca.interpretation_comments) > 0
+      WHERE 
+        ARRAY_LENGTH(ca.interpretation_comments) > 0
       GROUP BY
         id
     ),
     scv AS (
       SELECT 
-        ca.release_date as release_date,
+        ca.release_date,
         ca.id, 
         ca.version, 
         ca.variation_id,
@@ -79,71 +138,41 @@ BEGIN
         ca.interpretation_date_last_evaluated as last_evaluated, 
         cvs.rank,
         ca.review_status, 
-        cst.original_proposition_type as clinvar_stmt_type,
-        cst.gks_proposition_type as cvc_stmt_type,
         ca.interpretation_description as submitted_classification,
-        IFNULL(map.cv_clinsig_type, '-') as classif_type,
-        cst.significance,
-        ca.submitter_id,
-        ca.submission_id,
-        ca.clinical_assertion_observation_ids,
         `clinvar_ingest.parseComments`(ca.content) as comments,
         scc.text as classification_comment,
         ca.date_created,
-        ca.date_last_updated
+        ca.date_last_updated,
+        ca.clinical_assertion_observation_ids,
+        ca.submitter_id,
+        subm.submission_date, 
+        obs.origin,
+        obs.affected_status,
+        obs.method_desc,
+        obs.method_type,
+        am.value as assertion_method,
+        am.url as assertion_method_url
       FROM
         `%s.clinical_assertion` ca
       LEFT JOIN scv_classification_comment scc 
       ON
         scc.id = ca.id
-      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-      ON 
-        map.scv_term = lower(IF(ca.id IS NULL, NULL, IFNULL(ca.interpretation_description,'not provided')))
-      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
-      ON 
-        cst.code = map.cv_clinsig_type
       LEFT JOIN `clinvar_ingest.clinvar_status` cvs
       ON
         cvs.label = ca.review_status
+      LEFT JOIN obs
+      ON
+        obs.id = ca.id
+      LEFT JOIN assertion_method am
+      ON
+        am.id = ca.id
+      LEFT JOIN `%s.submission` subm 
+      ON 
+      subm.id = ca.submission_id
     )
-    SELECT
-      scv.release_date,
-      scv.id, 
-      scv.version, 
-      scv.variation_id,
-      scv.local_key,
-      scv.last_evaluated, 
-      scv.rank,
-      scv.review_status, 
-      scv.clinvar_stmt_type,
-      scv.cvc_stmt_type,
-      scv.submitted_classification,
-      scv.classif_type,
-      scv.significance,
-      scv.comments,
-      scv.classification_comment,
-      scv.date_created,
-      scv.date_last_updated,
-      scv.clinical_assertion_observation_ids,
-      scv.submitter_id,
-      subm.submission_date, 
-      obs.origin,
-      obs.affected_status,
-      obs.method_desc,
-      obs.method_type,
-      am.value as assertion_method,
-      am.url as assertion_method_url
-    FROM scv
-    LEFT JOIN obs
-    ON
-      obs.id = scv.id
-    LEFT JOIN assertion_method am
-    ON
-      am.id = scv.id
-    LEFT JOIN `%s.submission` subm 
-    ON 
-      subm.id = scv.submission_id
-  """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name);
+    %s
+
+  """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, scv_summary_output_sql);
 END;
 
 
