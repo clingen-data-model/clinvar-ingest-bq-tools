@@ -11,21 +11,6 @@ BEGIN
     WHERE 
       schema_name = 'clinvar_ingest'
   );
-
-  SET disable_out_of_date_alerts = (
-    SELECT 
-      CAST(
-        IFNULL(
-          (
-            SELECT 
-              opt.value 
-            FROM UNNEST(rec.opts) as opt 
-            WHERE opt.name = "DISABLE_OUT_OF_DATE_ALERTS"
-          ), 
-          "FALSE"
-        ) AS BOOL
-      )
-  );
   
   FOR rec IN
     (
@@ -48,6 +33,21 @@ BEGIN
         r.abbrev
     )
   DO
+
+    SET disable_out_of_date_alerts = (
+      SELECT 
+        CAST(
+          IFNULL(
+            (
+              SELECT 
+                opt.value 
+              FROM UNNEST(rec.opts) as opt 
+              WHERE opt.name = "DISABLE_OUT_OF_DATE_ALERTS"
+            ), 
+            "FALSE"
+          ) AS BOOL
+        )
+    );
 
     IF (project_id = 'clingen-stage') THEN
 
