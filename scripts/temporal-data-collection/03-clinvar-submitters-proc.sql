@@ -6,12 +6,21 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_submitters`(
   schema_name STRING, 
   release_date DATE,
-  previous_release_date DATE
+  previous_release_date DATE,
+  OUT validation_message STRING
 )
 BEGIN
-  -- validate the last release date clinvar_submitters
-  CALL `clinvar_ingest.validate_last_release`('clinvar_submitters',previous_release_date);
-  
+  DECLARE is_valid BOOL DEFAULT TRUE;
+  DECLARE error_message STRING DEFAULT '';
+
+  -- validate the last release date for clinvar_submitters
+  CALL `clinvar_ingest.validate_last_release`('clinvar_submitters', previous_release_date, is_valid, validation_message);
+
+  IF NOT is_valid THEN
+    SET result_message = "Skipping clinvar_submitters processing. " + validation_message;
+    RETURN;
+  END IF;
+
   -- deleted submitters (where it exists in clinvar_submitters (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_submitters` cs
@@ -83,8 +92,9 @@ BEGIN
       )
   """, schema_name);
 
-END;
+  SET result_message = "clinvar_submitters processed successfully";
 
+END;
 
 
 -- -- initialize submitter info by release based on clinical_assertion release info,

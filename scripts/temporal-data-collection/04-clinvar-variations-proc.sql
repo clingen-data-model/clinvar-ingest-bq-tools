@@ -2,11 +2,20 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_variations`(
   schema_name STRING,
   release_date DATE,
-  previous_release_date DATE
+  previous_release_date DATE,
+  OUT result_message STRING
 )
-BEGIN  
-  -- validate the last release date clinvar_variations
-  CALL `clinvar_ingest.validate_last_release`('clinvar_variations',previous_release_date);
+BEGIN
+  DECLARE is_valid BOOL DEFAULT TRUE;
+  DECLARE validation_message STRING DEFAULT '';
+
+  -- validate the last release date for clinvar_variations
+  CALL `clinvar_ingest.validate_last_release`('clinvar_variations', previous_release_date, is_valid, validation_message);
+
+  IF NOT is_valid THEN
+    SET result_message = "Skipping clinvar_variations processing. " + validation_message;
+    RETURN;
+  END IF;
 
   -- deleted variations (where it exists in clinvar_variations (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
@@ -61,5 +70,7 @@ BEGIN
           cv.id = v.id 
       )
   """, schema_name);
+
+  SET result_message = "clinvar_variations processed successfully";
 
 END;

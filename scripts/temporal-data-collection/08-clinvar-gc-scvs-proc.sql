@@ -1,12 +1,20 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_gc_scvs`(
   schema_name STRING,
   release_date DATE,
-  previous_release_date DATE
+  previous_release_date DATE,
+  OUT result_message STRING
 )
 BEGIN
+  DECLARE is_valid BOOL DEFAULT TRUE;
+  DECLARE validation_message STRING DEFAULT '';
 
   -- validate the last release date clinvar_gc_scvs
-  CALL `clinvar_ingest.validate_last_release`('clinvar_gc_scvs',previous_release_date);
+  CALL `clinvar_ingest.validate_last_release`('clinvar_gc_scvs', previous_release_date, is_valid, validation_message);
+
+  IF NOT is_valid THEN
+    SET result_message = "Skipping clinvar_gc_scvs processing. " + validation_message;
+    RETURN;
+  END IF;
 
   -- deletes
   EXECUTE IMMEDIATE FORMAT("""
@@ -119,5 +127,7 @@ BEGIN
           gscv.sample_id IS NOT DISTINCT FROM cgs.sample_id
       )
   """, release_date, release_date, schema_name);
+
+  SET result_message = "clinvar_gc_scvs processed successfully."; 
 
 END;

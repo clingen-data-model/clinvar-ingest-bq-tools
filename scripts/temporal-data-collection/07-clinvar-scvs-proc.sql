@@ -1,10 +1,13 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_scvs`(
   schema_name STRING,
   release_date DATE,
-  previous_release_date DATE
+  previous_release_date DATE,
+  OUT result_message STRING
 )
 BEGIN
   DECLARE project_id STRING;
+  DECLARE is_valid BOOL DEFAULT TRUE;
+  DECLARE validation_message STRING DEFAULT '';
 
   SET project_id = 
   (
@@ -15,10 +18,15 @@ BEGIN
       schema_name = 'clinvar_ingest'
   );
 
-  IF (project_id = 'clingen-stage') THEN
+  -- validate the last release date clinvar_scvs
+  CALL `clinvar_ingest.validate_last_release`('clinvar_scvs', previous_release_date, is_valid, validation_message);
 
-    -- validate the last release date clinvar_scvs
-    CALL `clinvar_ingest.validate_last_release`('clinvar_scvs',previous_release_date);
+  IF NOT is_valid THEN
+    SET result_message = "Skipping clinvar_scvs processing. " + validation_message;
+    RETURN;
+  END IF;
+
+  IF (project_id = 'clingen-stage') THEN
 
     -- deletes
     EXECUTE IMMEDIATE FORMAT("""
@@ -148,9 +156,6 @@ BEGIN
 
   ELSE
 
-    -- validate the last release date clinvar_scvs
-    CALL `clinvar_ingest.validate_last_release`('clinvar_scvs',previous_release_date);
-    
     -- deletes
     EXECUTE IMMEDIATE FORMAT("""
       UPDATE `clinvar_ingest.clinvar_scvs` cs
@@ -305,5 +310,7 @@ BEGIN
     """, schema_name);
 
   END IF;
+
+  SET result_message = "clinvar_scvs processed successfully."; 
 
 END;

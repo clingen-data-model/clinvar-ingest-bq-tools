@@ -31,7 +31,9 @@ END;
 
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.validate_last_release`(
     table_name STRING,
-    previous_release_date DATE
+    previous_release_date DATE,
+    OUT is_valid BOOL,
+    OUT validation_message STRING
 )
 BEGIN
   DECLARE last_processed_release_date DATE;
@@ -43,16 +45,15 @@ BEGIN
   """, table_name) INTO last_processed_release_date;
 
   -- validate that the max end_release_date is the previous release date otherwise throw an error
-  IF last_processed_release_date != previous_release_date THEN
-    BEGIN
-      DECLARE error_message STRING;
-      SET error_message = FORMAT("""
-        The last processed release date (%t) in clinvar_genes
-        is not equal to the expected previous release date (%t).
-        Processing of clinvar_genes will not continue.
-      """, last_processed_release_date, previous_release_date);
-      RAISE USING message = error_message;
-    END;
+  SET is_valid = (last_processed_release_date != previous_release_date);
+  IF NOT is_valid THEN
+      SET validation_message = FORMAT("""
+        %s was last processed for release date %t but the expected date is %t.
+      """, table_name, last_processed_release_date, previous_release_date);
+  ELSE
+      SET validation_message = FORMAT("""
+        %s was last processed for release date %t as expected.
+      """, table_name, last_processed_release_date, previous_release_date);
   END IF;
   
 END;
