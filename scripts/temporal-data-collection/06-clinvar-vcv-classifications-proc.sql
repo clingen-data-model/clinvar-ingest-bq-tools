@@ -27,7 +27,7 @@ BEGIN
   CALL `clinvar_ingest.validate_last_release`('clinvar_vcv_classifications', previous_release_date, is_valid, validation_message);
 
   IF NOT is_valid THEN
-    SET result_message = "Skipping clinvar_vcv_classifications processing. " + validation_message;
+    SET result_message = FORMAT("Skipping processing. %s", validation_message);
     RETURN;
   END IF;
 

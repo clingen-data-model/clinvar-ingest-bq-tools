@@ -17,7 +17,7 @@ BEGIN
   );
 
   CALL `clinvar_ingest.clinvar_genes`(rec.schema_name, rec.release_date, rec.prev_release_date, result_message);
-  SET all_result_messages = CONCAT(all_result_messages, '\n', result_message);
+  SET all_result_messages = result_message;
 
   CALL `clinvar_ingest.clinvar_single_gene_variations`(rec.schema_name, rec.release_date, rec.prev_release_date, result_message);
   SET all_result_messages = CONCAT(all_result_messages, '\n', result_message);
