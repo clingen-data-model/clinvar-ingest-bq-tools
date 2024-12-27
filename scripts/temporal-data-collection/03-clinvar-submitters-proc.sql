@@ -7,11 +7,11 @@ CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_submitters`(
   schema_name STRING, 
   release_date DATE,
   previous_release_date DATE,
-  OUT validation_message STRING
+  OUT result_message STRING
 )
 BEGIN
   DECLARE is_valid BOOL DEFAULT TRUE;
-  DECLARE error_message STRING DEFAULT '';
+  DECLARE validation_message STRING DEFAULT '';
 
   -- validate the last release date for clinvar_submitters
   CALL `clinvar_ingest.validate_last_release`('clinvar_submitters', previous_release_date, is_valid, validation_message);

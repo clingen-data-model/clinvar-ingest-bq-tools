@@ -53,7 +53,7 @@ BEGIN
   ELSE
       SET validation_message = FORMAT("""
         %s was last processed for release date %t as expected.
-      """, table_name, last_processed_release_date, previous_release_date);
+      """, table_name, last_processed_release_date);
   END IF;
   
 END;
