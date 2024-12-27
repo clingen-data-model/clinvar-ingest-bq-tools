@@ -45,7 +45,7 @@ BEGIN
   """, table_name) INTO last_processed_release_date;
 
   -- validate that the max end_release_date is the previous release date otherwise throw an error
-  SET is_valid = (last_processed_release_date != previous_release_date);
+  SET is_valid = (last_processed_release_date = previous_release_date);
   IF NOT is_valid THEN
       SET validation_message = FORMAT("""
         %s was last processed for release date %t but the expected date is %t.
