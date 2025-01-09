@@ -189,6 +189,10 @@ BEGIN
             scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated 
             AND
             scv.significance IS NOT DISTINCT FROM cs.clinsig_type
+            AND
+            scv.rcv_accession_id IS NOT DISTINCT FROM cs.rcv_accession_id
+            AND
+            scv.trait_set_id IS NOT DISTINCT FROM cs.trait_set_id
         )
     """, release_date, schema_name);
 
@@ -231,6 +235,10 @@ BEGIN
         scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated 
         AND
         scv.significance IS NOT DISTINCT FROM cs.clinsig_type
+        AND
+        scv.rcv_accession_id IS NOT DISTINCT FROM cs.rcv_accession_id
+        AND
+        scv.trait_set_id IS NOT DISTINCT FROM cs.trait_set_id
     """, schema_name);
 
     -- new scv variation+id+version
@@ -255,6 +263,8 @@ BEGIN
         origin, 
         affected_status, 
         method_type, 
+        rcv_accession_id,
+        trait_set_id,
         start_release_date, 
         end_release_date
       )
@@ -278,6 +288,8 @@ BEGIN
         scv.origin,
         scv.affected_status,
         scv.method_type,
+        scv.rcv_accession_id,
+        scv.trait_set_id,
         scv.release_date as start_release_date,
         scv.release_date as end_release_date
       FROM `%s.scv_summary` scv
@@ -306,6 +318,10 @@ BEGIN
             scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated 
             AND
             scv.significance IS NOT DISTINCT FROM cs.clinsig_type
+            AND
+            scv.rcv_accession_id IS NOT DISTINCT FROM cs.rcv_accession_id
+            AND
+            scv.trait_set_id IS NOT DISTINCT FROM cs.trait_set_id
         )
     """, schema_name);
 

@@ -141,6 +141,8 @@ BEGIN
         ca.interpretation_description as submitted_classification,
         `clinvar_ingest.parseComments`(ca.content) as comments,
         scc.text as classification_comment,
+        ca.rcv_accession_id,
+        rcv.trait_set_id,
         ca.date_created,
         ca.date_last_updated,
         ca.clinical_assertion_observation_ids,
@@ -169,10 +171,13 @@ BEGIN
       LEFT JOIN `%s.submission` subm 
       ON 
       subm.id = ca.submission_id
+      LEFT JOIN `%s.rcv_accession` rcv
+      ON
+        rcv.id = ca.rcv_accession_id
     )
     %s
 
-  """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, scv_summary_output_sql);
+  """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, scv_summary_output_sql);
 END;
 
 

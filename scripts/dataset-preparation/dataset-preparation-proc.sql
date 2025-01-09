@@ -15,7 +15,7 @@ BEGIN
   );
 
   CALL `clinvar_ingest.normalize_dataset`(rec.schema_name);
-  CALL `clinvar_ingest.validate_dataset_terms`(rec.schema_name);
+  CALL `clinvar_ingest.validate_dataset`(rec.schema_name);
   CALL `clinvar_ingest.scv_summary`(rec.schema_name);
   CALL `clinvar_ingest.single_gene_variation`(rec.schema_name, rec.release_date);
   CALL `clinvar_ingest.gc_scv`(rec.schema_name);

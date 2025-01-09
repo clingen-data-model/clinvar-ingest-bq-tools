@@ -161,6 +161,8 @@ BEGIN
       origin STRING,
       affected_status STRING,
       method_type STRING,
+      rcv_accession_id STRING,
+      trait_set_id STRING,
       start_release_date DATE,
       end_release_date DATE,
       deleted_release_date DATE,
