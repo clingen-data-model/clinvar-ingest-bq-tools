@@ -47,7 +47,7 @@ BEGIN
   CALL `clinvar_ingest.clinvar_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
   SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_processed_results]);
 
-  CALL `clinvar_ingest.clinvar_gc_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_processed_results);
+  CALL `clinvar_ingest.clinvar_gc_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
   SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_result]);
   
   -- output the list of all processed results for auditing purposes.
