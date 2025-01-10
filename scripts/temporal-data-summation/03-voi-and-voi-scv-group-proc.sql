@@ -236,7 +236,7 @@ BEGIN
           vs.classification_abbrev, 
           vg.sig_type[OFFSET(vs.clinsig_type)].percent*100, 
           vs.full_scv_id) as scv_label,
-        CASE vs.rpt_stmt_type
+        CASE vs.gks_proposition_type
         WHEN 'path' THEN
           CASE vs.clinsig_type
               WHEN 2 THEN '1-PLP'

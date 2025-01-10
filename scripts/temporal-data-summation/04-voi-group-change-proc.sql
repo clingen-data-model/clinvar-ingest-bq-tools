@@ -127,7 +127,10 @@ BEGIN
         row_number () OVER (
           ORDER BY 
             st.variation_id, 
-            st.rpt_stmt_type, 
+            st.statement_type,
+            st.gks_proposition_type, 
+            st.clinical_impact_assertion_type,
+            st.clinical_impact_clinical_significance,
             st.rank, 
             st.start_release_date ASC NULLS FIRST
         ) as rownum
@@ -144,9 +147,12 @@ BEGIN
         UNION DISTINCT
         SELECT 
           MIN(r.release_date) as start_release_date,
-          variation_id,
-          rpt_stmt_type,
-          rank
+          vg.variation_id,
+          vg.statement_type,
+          vg.gks_proposition_type,
+          vg.clinical_impact_assertion_type,
+          vg.clinical_impact_clinical_significance,
+          vg.rank
         FROM `clinvar_ingest.voi_group` vg
         LEFT JOIN `clinvar_ingest.clinvar_releases` r 
         ON 
@@ -185,23 +191,23 @@ BEGIN
         ) as rownum
       FROM (
         SELECT 
-          end_release_date, 
-          variation_id, 
-          statement_type,
-          gks_proposition_type,
-          clinical_impact_assertion_type,
-          clinical_impact_clinical_significance,
-          rank
+          vg.end_release_date, 
+          vg.variation_id, 
+          vg.statement_type,
+          vg.gks_proposition_type,
+          vg.clinical_impact_assertion_type,
+          vg.clinical_impact_clinical_significance,
+          vg.rank
         FROM `clinvar_ingest.voi_group` vg    
         UNION DISTINCT
         SELECT 
           MAX(r.release_date) as end_release_date,
-          variation_id,
-          statement_type,
-          gks_proposition_type,
-          clinical_impact_assertion_type,
-          clinical_impact_clinical_significance,
-          rank
+          vg.variation_id,
+          vg.statement_type,
+          vg.gks_proposition_type,
+          vg.clinical_impact_assertion_type,
+          vg.clinical_impact_clinical_significance,
+          vg.rank
         FROM `clinvar_ingest.voi_group` vg
         LEFT JOIN `clinvar_ingest.clinvar_releases` r 
         ON 
