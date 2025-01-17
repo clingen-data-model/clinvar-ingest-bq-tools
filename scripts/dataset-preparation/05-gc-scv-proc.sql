@@ -12,6 +12,7 @@ BEGIN
         scv.submitter_id,
         scv.id,
         scv.version,
+        scv.statement_type,
         m.description as method_desc,
         m.method_type,
         IF(
@@ -72,6 +73,8 @@ BEGIN
     LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cct
     ON
       lower(cct.label) = lower(tc.lab.classification)
+      AND
+      cct.statement_type = tc.statement_type
     WHERE 
       IFNULL(tc.lab.name, IFNULL(tc.lab.id,tc.lab.classification)) IS NOT NULL
     """, schema_name, schema_name, schema_name);

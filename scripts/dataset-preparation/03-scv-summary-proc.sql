@@ -14,52 +14,7 @@ BEGIN
       schema_name = 'clinvar_ingest'
   );
 
-  -- deteremine if the final output is for clingen-stage (original XML) or not (new XML)
-  SET scv_summary_output_sql = IF(
-    project_id = 'clingen-stage',
-    FORMAT("""
-      SELECT
-        cst.original_proposition_type as clinvar_stmt_type,
-        cst.gks_proposition_type as cvc_stmt_type,
-        IFNULL(map.cv_clinsig_type, '-') as classif_type,
-        cst.significance,
-        scv.*
-      FROM scv
-      JOIN `%s.clinical_assertion` ca
-      ON
-        ca.id = scv.id
-      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-      ON 
-        map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
-      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
-      ON 
-        cst.code = map.cv_clinsig_type 
-    """, schema_name),
-    FORMAT("""
-      SELECT
-        ca.statement_type,
-        cst.original_proposition_type,
-        cst.gks_proposition_type,
-        ca.clinical_impact_assertion_type,
-        ca.clinical_impact_clinical_significance,
-        IFNULL(map.cv_clinsig_type, '-') as classif_type,
-        cst.significance,
-        scv.*
-      FROM scv
-      JOIN `%s.clinical_assertion` ca
-      ON
-        ca.id = scv.id
-      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-      ON 
-        map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
-      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
-      ON 
-        cst.code = map.cv_clinsig_type 
-        AND
-        cst.statement_type = ca.statement_type                          
-    """, schema_name)
-  );
-
+  -- NOTE: This will no longer work on clingen-stage based on recent changes to support clingen-dev.
 
   EXECUTE IMMEDIATE FORMAT("""
     CREATE OR REPLACE TABLE `%s.scv_summary` 
@@ -128,56 +83,100 @@ BEGIN
       GROUP BY
         id
     ),
-    scv AS (
-      SELECT 
-        ca.release_date,
-        ca.id, 
-        ca.version, 
-        ca.variation_id,
-        ca.local_key,
-        ca.interpretation_date_last_evaluated as last_evaluated, 
+    clinsig AS (
+      SELECT
+        ca.id,
+        cst.original_proposition_type,
+        cst.gks_proposition_type,
         cvs.rank,
-        ca.review_status, 
-        ca.interpretation_description as submitted_classification,
-        `clinvar_ingest.parseComments`(ca.content) as comments,
-        scc.text as classification_comment,
-        ca.rcv_accession_id,
-        rcv.trait_set_id,
-        ca.date_created,
-        ca.date_last_updated,
-        ca.clinical_assertion_observation_ids,
-        ca.submitter_id,
-        subm.submission_date, 
-        obs.origin,
-        obs.affected_status,
-        obs.method_desc,
-        obs.method_type,
-        am.value as assertion_method,
-        am.url as assertion_method_url
+        IFNULL(map.cv_clinsig_type, '-') as classif_type,
+        cst.significance,
+        FORMAT( '%%s, %%s, %%t', 
+            cst.label, 
+            if(cvs.rank > 0,format("%%i%%s", cvs.rank, CHR(9733)), IF(cvs.rank = 0, format("%%i%%s", cvs.rank, CHR(9734)), "n/a")), 
+            if(ca.interpretation_date_last_evaluated is null, "<n/a>", format("%%t", ca.interpretation_date_last_evaluated))) as classification_label,
+        FORMAT( '%%s, %%s, %%t', 
+            UPPER(map.cv_clinsig_type), 
+            if(cvs.rank > 0,format("%%i%%s", cvs.rank, CHR(9733)), IF(cvs.rank = 0, format("%%i%%s", cvs.rank, CHR(9734)), "n/a")), 
+            if(ca.interpretation_date_last_evaluated is null, "<n/a>", format("%%t", ca.interpretation_date_last_evaluated))) as classification_abbrev
       FROM
         `%s.clinical_assertion` ca
-      LEFT JOIN scv_classification_comment scc 
-      ON
-        scc.id = ca.id
+      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
+      ON 
+        map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
+      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
+      ON 
+        cst.code = map.cv_clinsig_type 
+        AND
+        cst.statement_type = ca.statement_type  
       LEFT JOIN `clinvar_ingest.clinvar_status` cvs
       ON
         cvs.label = ca.review_status
-      LEFT JOIN obs
-      ON
-        obs.id = ca.id
-      LEFT JOIN assertion_method am
-      ON
-        am.id = ca.id
-      LEFT JOIN `%s.submission` subm 
-      ON 
-      subm.id = ca.submission_id
-      LEFT JOIN `%s.rcv_accession` rcv
-      ON
-        rcv.id = ca.rcv_accession_id
     )
-    %s
-
-  """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, scv_summary_output_sql);
+    SELECT 
+      ca.release_date,
+      ca.id, 
+      ca.version, 
+      FORMAT('%%s.%%i', ca.id, ca.version) as full_scv_id,
+      ca.variation_id,
+      ca.local_key,
+      ca.interpretation_date_last_evaluated as last_evaluated, 
+      ca.statement_type,
+      cst.original_proposition_type,
+      cst.gks_proposition_type,
+      ca.clinical_impact_assertion_type,
+      ca.clinical_impact_clinical_significance,
+      cst.rank,
+      ca.review_status, 
+      cst.classif_type,
+      cst.significance,
+      cst.classification_label,
+      cst.classification_abbrev,
+      ca.interpretation_description as submitted_classification,
+      `clinvar_ingest.parseComments`(ca.content) as comments,
+      scc.text as classification_comment,
+      ca.rcv_accession_id,
+      rcv.trait_set_id,
+      ca.date_created,
+      ca.date_last_updated,
+      ca.clinical_assertion_observation_ids,
+      ca.submitter_id,
+      subr.current_name as submitter_name,
+      IFNULL(subr.current_abbrev, csa.current_abbrev) as submitter_abbrev,
+      subm.submission_date, 
+      obs.origin,
+      obs.affected_status,
+      obs.method_desc,
+      obs.method_type,
+      am.value as assertion_method,
+      am.url as assertion_method_url
+    FROM
+      `%s.clinical_assertion` ca
+    LEFT JOIN clinsig cst
+    ON
+      cst.id = ca.id
+    LEFT JOIN scv_classification_comment scc 
+    ON
+      scc.id = ca.id
+    LEFT JOIN obs
+    ON
+      obs.id = ca.id
+    LEFT JOIN assertion_method am
+    ON
+      am.id = ca.id
+    LEFT JOIN `%s.submitter` subr
+    ON 
+      subr.id = ca.submitter_id
+    LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa 
+    ON 
+      csa.submitter_id = subr.id
+    LEFT JOIN `%s.submission` subm 
+    ON 
+      subm.id = ca.submission_id
+    LEFT JOIN `%s.rcv_accession` rcv
+    ON
+      rcv.id = ca.rcv_accession_id
+  """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name);
 END;
 
 

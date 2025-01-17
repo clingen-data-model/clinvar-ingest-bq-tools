@@ -183,7 +183,7 @@ BEGIN
           num_submitters,
           num_submissions,
           date_created,
-          interp_date_last_evaluated,
+          interp_date_last_evaluated as date_last_evaluated,
           interp_description,
           interp_explanation,
           CAST(JSON_VALUE(REPLACE(content, '@MostRecentSubmission', 'MostRecentSubmission'), '$.MostRecentSubmission') AS DATE) AS most_recent_submission,
