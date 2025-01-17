@@ -1,4 +1,11 @@
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_var_scv_change`()
+
+-- this procedure creates a table that contains a record for each variation with a start-end range
+-- that represents every time the scvs associated with the variation change in some way.
+-- "change" is defined by the uniqueness of records in the clinvar_scvs temporal collection table.
+
+-- scvs can change for obvious reasons (e.g. new submissions, updated submissions, deleted submissions),
+-- but also for less obvious reasons (e.g. internal trait-set-id change or reassigned to a new rcv_accession_id...).
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_sum_variation_scv_change`()
 BEGIN
 
   CREATE TEMP TABLE _SESSION.release_start_vsc 
@@ -18,15 +25,12 @@ BEGIN
     FROM `clinvar_ingest.clinvar_scvs` vs
     UNION DISTINCT
     SELECT 
-      MIN(r.release_date) as start_release_date,
+      r.next_release_date as start_release_date,
       vs.variation_id
     FROM `clinvar_ingest.clinvar_scvs` vs
-    JOIN `clinvar_ingest.clinvar_releases` r 
+    JOIN `clinvar_ingest.all_schemas`() r 
     ON 
-      r.release_date > vs.end_release_date
-    GROUP BY 
-      vs.end_release_date, 
-      vs.variation_id
+      r.release_date = vs.end_release_date  
   ) st;
 
   CREATE TEMP TABLE _SESSION.release_end_vsc 
@@ -46,18 +50,15 @@ BEGIN
     FROM `clinvar_ingest.clinvar_scvs` vs
     UNION DISTINCT
     SELECT 
-      MAX(r.release_date) as end_release_date,
+      r.prev_release_date as end_release_date,
       vs.variation_id
     FROM `clinvar_ingest.clinvar_scvs` vs
-    JOIN `clinvar_ingest.clinvar_releases` r 
+    JOIN `clinvar_ingest.all_schemas`() r 
     ON 
-      r.release_date < vs.start_release_date
-    GROUP BY
-      vs.start_release_date, 
-        vs.variation_id
+      r.release_date = vs.start_release_date  
   ) en;
   
-  CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_var_scv_change` 
+  CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_sum_variation_scv_change` 
   AS
   SELECT 
     e.variation_id, 
