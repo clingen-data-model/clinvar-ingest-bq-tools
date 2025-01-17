@@ -35,14 +35,27 @@ BEGIN
       )
   """, release_date, schema_name);
 
+  -- The clinvar_variations is designed to only have one record per variation_id, 
+  -- and it will use the latest variation name or single_gene_variation record to update the gene_id and symbol
+  -- in the event that any of those values change over the life of the variation_id record.
+
   -- updated variations
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_variations` cv
       SET 
         name = v.name, 
+        mane_select = csgv.mane_select,
+        gene_id = csgv.gene_id,
+        symbol = cg.symbol,
         end_release_date = v.release_date,
         deleted_release_date = NULL
     FROM `%s.variation` v
+    LEFT JOIN `clinvar_ingest.clinvar_single_gene_variations` csgv 
+    ON 
+      v.id = csgv.variation_id 
+    LEFT JOIN `clinvar_ingest.clinvar_genes`  cg 
+    ON 
+      cg.id = csgv.gene_id
     WHERE 
       v.id = cv.id
   """, schema_name);
@@ -52,15 +65,27 @@ BEGIN
     INSERT INTO `clinvar_ingest.clinvar_variations` (
       id, 
       name, 
+      mane_select,
+      gene_id,
+      symbol,
       start_release_date, 
       end_release_date
     )
     SELECT 
       v.id, 
       v.name, 
+      csgv.mane_select,
+      csgv.gene_id,
+      cg.symbol,
       v.release_date as start_release_date, 
       v.release_date as end_release_date
     FROM `%s.variation` v
+    LEFT JOIN `clinvar_ingest.clinvar_single_gene_variations` csgv 
+    ON 
+      v.id = csgv.variation_id 
+    LEFT JOIN `clinvar_ingest.clinvar_genes`  cg 
+    ON 
+      cg.id = csgv.gene_id
     WHERE 
       NOT EXISTS (
         SELECT 

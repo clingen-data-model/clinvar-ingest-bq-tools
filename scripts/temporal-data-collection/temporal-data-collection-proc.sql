@@ -47,6 +47,12 @@ BEGIN
   CALL `clinvar_ingest.clinvar_vcv_classifications`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
   SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_result]);
 
+  CALL `clinvar_ingest.clinvar_rcvs`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
+  SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_result]);
+
+  CALL `clinvar_ingest.clinvar_rcv_classifications`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
+  SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_result]);
+
   CALL `clinvar_ingest.clinvar_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
   SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_result]);
 

@@ -45,133 +45,115 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations`
 ( 
   id STRING NOT NULL,
   name STRING,
+  mane_select BOOLEAN DEFAULT FALSE,
+  gene_id STRING,
+  symbol STRING,
   start_release_date DATE,
   end_release_date DATE,
   deleted_release_date DATE,
   deleted_count INT DEFAULT 0
 );
 
--- drop the non-GERMLINE rows from the clinsig_types table (on stage only)
-BEGIN
-  DECLARE project_id STRING;
+-- *****************  clinvar_vcvs *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
+(
+  variation_id STRING NOT NULL,
+  id STRING NOT NULL, 
+  version INT64 NOT NULL, 
+  full_vcv_id STRING,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT64 DEFAULT 0
+);
 
-  SET project_id = 
-  (
-    SELECT 
-      catalog_name as paroject_id
-    FROM `INFORMATION_SCHEMA.SCHEMATA`
-    WHERE 
-      schema_name = 'clinvar_ingest'
-  );
+-- *****************  clinvar_vcv_classifications *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcv_classifications`
+(
+  variation_id STRING NOT NULL,
+  vcv_id STRING NOT NULL,
+  statement_type STRING NOT NULL,
+  rank INT64 NOT NULL, 
+  last_evaluated DATE,
+  agg_classification STRING,
+  num_submitters INT64,
+  num_submissions INT64,
+  most_recent_submission DATE,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT64 DEFAULT 0
+);
 
-  IF (project_id = 'clingen-stage') THEN
-    -- original tables before the new clinvar XML was introduced
+-- *****************  clinvar_rcvs *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_rcvs`
+(
+  variation_id STRING NOT NULL,
+  trait_set_id STRING,
+  id STRING NOT NULL, 
+  version INT64 NOT NULL, 
+  full_rcv_id STRING,
+  vcv_id STRING,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT64 DEFAULT 0
+);
 
-    -- *****************  clinvar_vcvs *****************
-    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
-    (
-      variation_id STRING NOT NULL,
-      id STRING NOT NULL, 
-      version INT NOT NULL, 
-      rank INT NOT NULL, 
-      last_evaluated DATE,
-      agg_classification STRING,
-      start_release_date DATE,
-      end_release_date DATE,
-      deleted_release_date DATE,
-      deleted_count INT DEFAULT 0
-    );
+-- *****************  clinvar_rcv_classifications *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_rcv_classifications`
+(
+  variation_id STRING NOT NULL,
+  trait_set_id STRING,
+  rcv_id STRING NOT NULL,
+  statement_type STRING NOT NULL,
+  rank INT64 NOT NULL, 
+  clinical_impact_assertion_type STRING,
+  clinical_impact_clinical_significance STRING,
+  last_evaluated DATE,
+  agg_classification STRING,
+  num_submissions INT64,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT64 DEFAULT 0
+);
 
-    -- *****************  clinvar_scvs *****************
-    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
-    (
-      variation_id STRING NOT NULL,
-      id STRING NOT NULL, 
-      version INT NOT NULL, 
-      rpt_stmt_type STRING NOT NULL,
-      rank INT NOT NULL, 
-      last_evaluated DATE,
-      local_key STRING,
-      classif_type STRING,
-      clinsig_type INT,
-      submitted_classification STRING,
-      submitter_id STRING,
-      submission_date DATE,
-      origin STRING,
-      affected_status STRING,
-      method_type STRING,
-      start_release_date DATE,
-      end_release_date DATE,
-      deleted_release_date DATE,
-      deleted_count INT DEFAULT 0
-    );
-
-  ELSE 
-
-    -- *****************  clinvar_vcvs *****************
-    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
-    (
-      variation_id STRING NOT NULL,
-      id STRING NOT NULL, 
-      version INT64 NOT NULL, 
-      start_release_date DATE,
-      end_release_date DATE,
-      deleted_release_date DATE,
-      deleted_count INT64 DEFAULT 0
-    );
-
-    -- *****************  clinvar_vcv_classifications *****************
-    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcv_classifications`
-    (
-      vcv_id STRING NOT NULL,
-      statement_type STRING NOT NULL,
-      rank INT64 NOT NULL, 
-      last_evaluated DATE,
-      agg_classification_description STRING,
-      num_submitters INT64,
-      num_submissions INT64,
-      most_recent_submission DATE,
-      clinical_impact_assertion_type STRING,
-      clinical_impact_clinical_significance STRING,
-      start_release_date DATE,
-      end_release_date DATE,
-      deleted_release_date DATE,
-      deleted_count INT64 DEFAULT 0
-    );
-
-    -- *****************  clinvar_scvs *****************
-    CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
-    (
-      variation_id STRING NOT NULL,
-      id STRING NOT NULL, 
-      version INT NOT NULL, 
-      statement_type STRING NOT NULL,
-      original_proposition_type STRING,
-      gks_proposition_type STRING,
-      clinical_impact_assertion_type STRING,
-      clinical_impact_clinical_significance STRING,
-      rank INT NOT NULL, 
-      last_evaluated DATE,
-      local_key STRING,
-      classif_type STRING,
-      clinsig_type INT,
-      submitted_classification STRING,
-      submitter_id STRING,
-      submission_date DATE,
-      origin STRING,
-      affected_status STRING,
-      method_type STRING,
-      rcv_accession_id STRING,
-      trait_set_id STRING,
-      start_release_date DATE,
-      end_release_date DATE,
-      deleted_release_date DATE,
-      deleted_count INT DEFAULT 0
-    );
-
-  END IF;
-
-END;
+-- *****************  clinvar_scvs *****************
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
+(
+  variation_id STRING NOT NULL,
+  id STRING NOT NULL, 
+  version INT NOT NULL, 
+  full_scv_id STRING,
+  statement_type STRING NOT NULL,
+  original_proposition_type STRING,
+  gks_proposition_type STRING,
+  clinical_impact_assertion_type STRING,
+  clinical_impact_clinical_significance STRING,
+  rank INT NOT NULL, 
+  last_evaluated DATE,
+  local_key STRING,
+  classif_type STRING,
+  clinsig_type INT,
+  classification_label STRING,
+  classification_abbrev STRING,
+  submitted_classification STRING,
+  classification_comment STRING,
+  submitter_id STRING,
+  submitter_name STRING,
+  submitter_abbrev STRING,
+  submission_date DATE,
+  origin STRING,
+  affected_status STRING,
+  method_type STRING,
+  rcv_accession_id STRING,
+  trait_set_id STRING,
+  start_release_date DATE,
+  end_release_date DATE,
+  deleted_release_date DATE,
+  deleted_count INT DEFAULT 0
+);
 
 -- *****************  clinvar_gc_scvs *****************
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_gc_scvs`
