@@ -6,7 +6,7 @@ BEGIN
   SET release_date = (
     SELECT 
       MAX(end_release_date)
-    FROM `clinvar_ingest.voi_scv_group`
+    FROM `clinvar_ingest.clinvar_sum_scvs`
   );
   SET schema_name = (
     SELECT 
@@ -82,8 +82,8 @@ BEGIN
       g.hgnc_id,
       g.symbol,
       v.name,
-      vcv.interp_description as agg_classification,
-      cvs1.rank
+      vac.interp_description as agg_classification,
+      cvs1.rank,
       gc_scv.scv_acxn,
       gc_scv.local_key,
       gc_scv.case_count,
@@ -102,10 +102,13 @@ BEGIN
     JOIN `%s.variation_archive` vcv
     ON
       vcv.variation_id = gc_scv.variation_id
+    JOIN `%s.variation_archive_classification` vac
+    ON
+      vac.vcv_id = vcv.id
     LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
     ON 
-      cvs1.label = vcv.review_status
-  """, schema_name, schema_name, schema_name, schema_name);
+      cvs1.label = vac.review_status
+  """, schema_name, schema_name, schema_name, schema_name, schema_name);
 
   -- gc case info for current release
   EXECUTE IMMEDIATE FORMAT("""
@@ -183,7 +186,7 @@ BEGIN
       v.gc_scv_count,
       STRING_AGG(split( sgrp.scv_label, "%%")[0]||"%%", "\\n" ORDER BY sgrp.rank desc, sgrp.scv_group_type, sgrp.scv_label) as all_scvs
     FROM v
-    JOIN `clinvar_ingest.voi_scv_group` sgrp
+    JOIN `clinvar_ingest.clinvar_sum_scvs` sgrp
     ON
       sgrp.variation_id = v.variation_id 
       AND
