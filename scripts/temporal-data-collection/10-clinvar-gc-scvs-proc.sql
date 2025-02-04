@@ -20,8 +20,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_gc_scvs` cgs
       SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+        deleted_release_date = %T
     WHERE 
       cgs.deleted_release_date is NULL 
       AND 
@@ -55,8 +54,7 @@ BEGIN
       cgs.lab_classification = gscv.lab_classification,
       cgs.lab_classif_type = gscv.lab_classif_type,
       cgs.lab_type = gscv.lab_type,
-      cgs.end_release_date = %T,
-      cgs.deleted_release_date = NULL
+      cgs.end_release_date = %T
     FROM `%s.gc_scv` gscv
     WHERE 
       gscv.variation_id = cgs.variation_id 
@@ -70,6 +68,8 @@ BEGIN
       gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id 
       AND
       gscv.sample_id IS NOT DISTINCT FROM cgs.sample_id
+      AND
+      cgs.deleted_release_date is NULL
   """, release_date, schema_name);
 
   -- new gscv variation+id+version
@@ -125,6 +125,8 @@ BEGIN
           gscv.lab_id IS NOT DISTINCT FROM cgs.lab_id 
           AND
           gscv.sample_id IS NOT DISTINCT FROM cgs.sample_id
+          AND
+          cgs.deleted_release_date is NULL
       )
   """, release_date, release_date, schema_name);
 

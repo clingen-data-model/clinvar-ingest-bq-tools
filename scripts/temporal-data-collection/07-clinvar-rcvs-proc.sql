@@ -20,8 +20,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_rcvs` crcv
       SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+        deleted_release_date = %T
     WHERE 
       crcv.deleted_release_date is NULL 
       AND
@@ -44,8 +43,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_rcvs` crcv
       SET 
-        end_release_date = rcv.release_date,
-        deleted_release_date = NULL
+        end_release_date = rcv.release_date
     FROM `%s.rcv_accession` rcv
     WHERE 
       rcv.variation_id = crcv.variation_id 
@@ -55,6 +53,8 @@ BEGIN
       rcv.id = crcv.id 
       AND 
       rcv.version = crcv.version
+      AND
+      crcv.deleted_release_date is NULL 
   """, schema_name);
 
   -- new rcv_accession
@@ -90,6 +90,8 @@ BEGIN
           rcv.id = crcv.id 
           AND 
           rcv.version = crcv.version
+          AND
+          crcv.deleted_release_date is NULL 
       )
   """, schema_name);
 

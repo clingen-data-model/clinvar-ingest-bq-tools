@@ -112,6 +112,10 @@ BEGIN
       LEFT JOIN `clinvar_ingest.clinvar_status` cvs
       ON
         cvs.label = ca.review_status
+        AND
+        cvs.scv = TRUE
+        AND
+        ca.release_date between cvs.start_release_date and cvs.end_release_date
     )
     SELECT 
       ca.release_date,
@@ -178,19 +182,3 @@ BEGIN
       rcv.id = ca.rcv_accession_id
   """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name);
 END;
-
-
--- repair any null review_status values
---  set any NULL review_status either 'no assertion provided' (if interp_desc is null or not provided) or 'no assertion criteria provided' (otherwise)
---
--- UPDATE `%s.clinical_assertion` ca
--- SET 
---   ca.review_status = 
---     IF( 
---       ca.interpretation_description is null OR 
---       ca.interpretation_description = 'not provided', 
---       'no assertion provided', 
---       'no assertion criteria provided'
---     )
--- WHERE ca.review_status IS NULL
--- ;

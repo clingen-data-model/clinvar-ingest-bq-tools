@@ -6,6 +6,8 @@ BEGIN
   DECLARE scv_classification_terms ARRAY<STRING>;
   DECLARE scv_classification_statement_combo_terms ARRAY<STRING>;
   DECLARE scv_review_status_terms ARRAY<STRING>;
+  DECLARE rcv_classification_review_status_terms ARRAY<STRING>;
+  DECLARE vcv_classification_review_status_terms ARRAY<STRING>;
   DECLARE required_field_validation_errors ARRAY<STRING>;
   DECLARE release_date_validation_errors ARRAY<STRING>;
   DECLARE all_validation_errors ARRAY<STRING> default [];
@@ -13,25 +15,16 @@ BEGIN
   DECLARE rcv_mapping_exists BOOLEAN;
   DECLARE required_check_table_fields ARRAY<STRUCT<table_name STRING, field_name STRING>>;
   DECLARE release_check_tables ARRAY<STRING>;
-  DECLARE project_id STRING;
-
-  SET project_id = (
-    SELECT 
-      catalog_name as paroject_id
-    FROM `INFORMATION_SCHEMA.SCHEMATA`
-    WHERE 
-      schema_name = 'clinvar_ingest'
-  );
 
   -- Check for new interpretation_descriptions in clinical_assertion
   EXECUTE IMMEDIATE FORMAT("""
-      SELECT ARRAY_AGG(DISTINCT IFNULL(ca.interpretation_description,'null'))
-      FROM `%s.clinical_assertion` ca
-      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-      ON 
-        map.scv_term = LOWER(IFNULL(ca.interpretation_description,'not provided'))
-      WHERE 
-        map.scv_term IS NULL
+    SELECT ARRAY_AGG(DISTINCT IFNULL(ca.interpretation_description,'null'))
+    FROM `%s.clinical_assertion` ca
+    LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
+    ON 
+      map.scv_term = LOWER(IFNULL(ca.interpretation_description,'not provided'))
+    WHERE 
+      map.scv_term IS NULL
   """, schema_name) INTO scv_classification_terms;
 
   IF scv_classification_terms IS NOT NULL AND ARRAY_LENGTH(scv_classification_terms) > 0 THEN
@@ -45,47 +38,48 @@ BEGIN
     );   
   END IF;
 
-  IF (project_id <> 'clingen-stage') THEN
-    -- Check for interpretatoin_descrition+statement_type combos not available in clinvar_clinsig_types
-    EXECUTE IMMEDIATE FORMAT("""
-      SELECT 
-        ARRAY_AGG(DISTINCT IFNULL(ca.interpretation_description,'null') || ' + ' || ca.statement_type)
-      FROM `%s.clinical_assertion` ca
-      LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-      ON 
-        map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
-      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
-      ON 
-        cst.code = map.cv_clinsig_type 
-        AND
-        cst.statement_type = ca.statement_type
-      WHERE
-        cst.code IS NULL
-    """, schema_name) INTO scv_classification_statement_combo_terms;
+  -- Check for interpretation_description+statement_type combos not available in clinvar_clinsig_types
+  EXECUTE IMMEDIATE FORMAT("""
+    SELECT 
+      ARRAY_AGG(DISTINCT IFNULL(ca.interpretation_description,'null') || ' + ' || ca.statement_type)
+    FROM `%s.clinical_assertion` ca
+    LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
+    ON 
+      map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
+    LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
+    ON 
+      cst.code = map.cv_clinsig_type 
+      AND
+      cst.statement_type = ca.statement_type
+    WHERE
+      cst.code IS NULL
+  """, schema_name) INTO scv_classification_statement_combo_terms;
 
-    IF scv_classification_statement_combo_terms IS NOT NULL AND ARRAY_LENGTH(scv_classification_statement_combo_terms) > 0 THEN
-      SET all_validation_errors = ARRAY_CONCAT(
-        all_validation_errors,
-        [CONCAT(
-          all_validation_errors, 
-          "New SCV classification+statement_type combos found: [",
-          ARRAY_TO_STRING(scv_classification_statement_combo_terms, ', '),
-          "].\nNOTE: Add clinvar_clinsig_types records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
-        )]
-      );
-    END IF; 
-
-  END IF;
+  IF scv_classification_statement_combo_terms IS NOT NULL AND ARRAY_LENGTH(scv_classification_statement_combo_terms) > 0 THEN
+    SET all_validation_errors = ARRAY_CONCAT(
+      all_validation_errors,
+      [CONCAT(
+        all_validation_errors, 
+        "New SCV classification+statement_type combos found: [",
+        ARRAY_TO_STRING(scv_classification_statement_combo_terms, ', '),
+        "].\nNOTE: Add clinvar_clinsig_types records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
+      )]
+    );
+  END IF; 
 
   -- Check for new review_status terms in clinical_assertion
   EXECUTE IMMEDIATE FORMAT("""
-      SELECT ARRAY_AGG(DISTINCT IFNULL(ca.review_status,'null'))
-      FROM `%s.clinical_assertion` ca
-      LEFT JOIN `clinvar_ingest.clinvar_status` cs
-      ON 
-        cs.label = LOWER(ca.review_status)
-      WHERE 
-        cs.label IS NULL
+    SELECT ARRAY_AGG(DISTINCT IFNULL(ca.review_status,'null'))
+    FROM `%s.clinical_assertion` ca
+    LEFT JOIN `clinvar_ingest.clinvar_status` cs
+    ON 
+      cs.label = LOWER(ca.review_status)
+      AND
+      ca.release_date between cs.start_release_date and cs.end_release_date
+      AND
+      cs.scv = TRUE
+    WHERE 
+      cs.label IS NULL
   """, schema_name) INTO scv_review_status_terms;
 
   IF scv_review_status_terms IS NOT NULL AND ARRAY_LENGTH(scv_review_status_terms) > 0 THEN
@@ -98,6 +92,58 @@ BEGIN
       )]
     ); 
   END IF;
+
+  -- Check for new review_status terms in rcv_accession_classification
+  EXECUTE IMMEDIATE FORMAT("""
+    SELECT ARRAY_AGG(DISTINCT IFNULL(rcvc.review_status,'null'))
+    FROM `%s.rcv_accession_classification` rcvc
+    LEFT JOIN `clinvar_ingest.clinvar_status` cs
+    ON 
+      cs.label = LOWER(rcvc.review_status)
+      AND
+      rcvc.release_date between cs.start_release_date and cs.end_release_date
+      AND
+      cs.scv = TRUE
+    WHERE 
+      cs.label IS NULL
+  """, schema_name) INTO rcv_classification_review_status_terms;
+
+  IF rcv_classification_review_status_terms IS NOT NULL AND ARRAY_LENGTH(rcv_classification_review_status_terms) > 0 THEN
+    SET all_validation_errors = ARRAY_CONCAT(
+      all_validation_errors, 
+      [CONCAT(
+        "New RCV classification review status terms found: [", 
+        ARRAY_TO_STRING(rcv_classification_review_status_terms, ', '),
+        "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
+      )]
+    ); 
+  END IF;
+
+  -- Check for new review_status terms in variation_archive_classification
+  EXECUTE IMMEDIATE FORMAT("""
+    SELECT ARRAY_AGG(DISTINCT IFNULL(vcvc.review_status,'null'))
+    FROM `%s.variation_archive_classification` vcvc
+    LEFT JOIN `clinvar_ingest.clinvar_status` cs
+    ON 
+      cs.label = LOWER(vcvc.review_status)
+      AND
+      vcvc.release_date between cs.start_release_date and cs.end_release_date
+      AND
+      cs.scv = TRUE
+    WHERE 
+      cs.label IS NULL
+  """, schema_name) INTO vcv_classification_review_status_terms;
+
+  IF vcv_classification_review_status_terms IS NOT NULL AND ARRAY_LENGTH(vcv_classification_review_status_terms) > 0 THEN
+    SET all_validation_errors = ARRAY_CONCAT(
+      all_validation_errors, 
+      [CONCAT(
+        "New VCV classification review status terms found: [", 
+        ARRAY_TO_STRING(vcv_classification_review_status_terms, ', '),
+        "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
+      )]
+    ); 
+  END IF;  
 
   CALL `clinvar_ingest.check_table_exists`(schema_name, 'rcv_mapping', rcv_mapping_exists);
 

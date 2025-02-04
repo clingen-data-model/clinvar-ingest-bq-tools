@@ -25,8 +25,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_submitters` cs
       SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+        deleted_release_date = %T
     WHERE 
       cs.deleted_release_date is NULL
       AND 
@@ -48,11 +47,12 @@ BEGIN
         all_abbrevs = s.all_abbrevs, 
         current_abbrev = s.current_abbrev, 
         org_category = s.org_category,
-        end_release_date = s.release_date,
-        deleted_release_date = NULL
+        end_release_date = s.release_date
     FROM `%s.submitter` s
     WHERE 
       s.id = cs.id
+      AND
+      cs.deleted_release_date is NULL
   """, schema_name);
 
   -- new variations
@@ -89,6 +89,8 @@ BEGIN
         FROM `clinvar_ingest.clinvar_submitters` cs
         WHERE 
           cs.id = s.id
+          AND
+          cs.deleted_release_date is NULL
       )
   """, schema_name);
 

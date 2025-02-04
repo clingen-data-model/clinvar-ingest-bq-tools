@@ -21,8 +21,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_variations` cv
       SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+        deleted_release_date = %T
     WHERE 
       cv.deleted_release_date is NULL
       AND 
@@ -44,21 +43,22 @@ BEGIN
     UPDATE `clinvar_ingest.clinvar_variations` cv
       SET 
         name = v.name, 
-        mane_select = csgv.mane_select,
-        gene_id = csgv.gene_id,
-        symbol = cg.symbol,
-        end_release_date = v.release_date,
-        deleted_release_date = NULL
+        mane_select = sgv.mane_select,
+        gene_id = sgv.gene_id,
+        symbol = g.symbol,
+        end_release_date = v.release_date
     FROM `%s.variation` v
-    LEFT JOIN `clinvar_ingest.clinvar_single_gene_variations` csgv 
+    LEFT JOIN `%s.single_gene_variation` sgv 
     ON 
-      v.id = csgv.variation_id 
-    LEFT JOIN `clinvar_ingest.clinvar_genes`  cg 
+      v.id = sgv.variation_id 
+    LEFT JOIN `%s.gene`  g 
     ON 
-      cg.id = csgv.gene_id
+      g.id = sgv.gene_id
     WHERE 
       v.id = cv.id
-  """, schema_name);
+      AND
+      cv.deleted_release_date is NULL
+  """, schema_name, schema_name, schema_name);
 
   -- new variations
   EXECUTE IMMEDIATE FORMAT("""
@@ -74,18 +74,18 @@ BEGIN
     SELECT 
       v.id, 
       v.name, 
-      csgv.mane_select,
-      csgv.gene_id,
-      cg.symbol,
+      sgv.mane_select,
+      sgv.gene_id,
+      g.symbol,
       v.release_date as start_release_date, 
       v.release_date as end_release_date
     FROM `%s.variation` v
-    LEFT JOIN `clinvar_ingest.clinvar_single_gene_variations` csgv 
+    LEFT JOIN `%s.single_gene_variation` sgv 
     ON 
-      v.id = csgv.variation_id 
-    LEFT JOIN `clinvar_ingest.clinvar_genes`  cg 
+      v.id = sgv.variation_id 
+    LEFT JOIN `%s.gene`  g 
     ON 
-      cg.id = csgv.gene_id
+      g.id = sgv.gene_id
     WHERE 
       NOT EXISTS (
         SELECT 
@@ -93,8 +93,10 @@ BEGIN
         FROM `clinvar_ingest.clinvar_variations` cv
         WHERE 
           cv.id = v.id 
+          AND
+          cv.deleted_release_date is NULL
       )
-  """, schema_name);
+  """, schema_name, schema_name, schema_name);
 
   SET result_message = "clinvar_variations processed successfully";
 

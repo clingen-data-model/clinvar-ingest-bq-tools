@@ -23,8 +23,8 @@ def split_clinvarset_file(file_path, output_prefix):
     records = []
 
     with gzip.open(file_path, 'rt', encoding='utf-8') as large_file:
-        # Skip the first line
-        large_file.readline()        
+        # Skip the first 2 line
+        first_line  = large_file.readline()
         # file_size = large_file.seek(0, 2)  # Get the total file size
 
         while True:
@@ -54,20 +54,20 @@ def split_clinvarset_file(file_path, output_prefix):
                     
                     xml_content = split_content.strip() + '\n</ClinVarSet>'
 
-                    # if file_counter > 30:
-                    # Convert XML to a dictionary
-                    data_dict = xmltodict.parse(xml_content)
+                    if file_counter > 9:
+                        # Convert XML to a dictionary
+                        data_dict = xmltodict.parse(xml_content)
 
-                    record_id = data_dict['ClinVarSet']['@ID']
-                    record_content = json.dumps(data_dict)
+                        record_id = data_dict['ClinVarSet']['@ID']
+                        record_content = json.dumps(data_dict)
 
-                    records.append({'id': record_id, 'content': record_content})
+                        records.append({'id': record_id, 'content': record_content})
 
                     # Write the record to a csv file every 100,000 records
                     if record_counter % 100000 == 0:
                         
-                        # if file_counter > 30:
-                        save_records_to_csv(records, file_counter, output_prefix)
+                        if file_counter > 9:
+                            save_records_to_csv(records, file_counter, output_prefix)
 
                         # Reset the records list
                         records = []
@@ -89,6 +89,6 @@ def split_clinvarset_file(file_path, output_prefix):
         save_records_to_csv(records, file_counter, output_prefix)
 
 # Usage example
-file_path = "/Users/lbabb/Downloads/rcv3/ClinVarFullRelease_2024-01.xml.gz"
-output_prefix = "/Users/lbabb/Downloads/rcv3/rcv_clinvarset_recs"
+file_path = "/Users/lbabb/Downloads/rcv/ClinVarFullRelease_2024-03.xml.gz"
+output_prefix = "/Users/lbabb/Downloads/rcv/rcv_clinvarset_recs"
 split_clinvarset_file(file_path, output_prefix)

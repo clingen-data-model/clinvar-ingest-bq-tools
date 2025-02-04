@@ -20,8 +20,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_single_gene_variations` csgv
     SET 
-      deleted_release_date = %T,
-      deleted_count = deleted_count + 1
+      deleted_release_date = %T
     WHERE 
       csgv.deleted_release_date is NULL 
       AND
@@ -44,11 +43,12 @@ BEGIN
       somatic = sgv.somatic,
       relationship_type = sgv.relationship_type,
       source = sgv.source,
-      end_release_date = sgv.release_date,
-      deleted_release_date = NULL
+      end_release_date = sgv.release_date
     FROM `%s.single_gene_variation` sgv
     WHERE 
       sgv.variation_id = csgv.variation_id 
+      AND 
+      csgv.deleted_release_date is NULL
   """, schema_name);
 
   -- new single gene variations
@@ -81,6 +81,8 @@ BEGIN
         FROM `clinvar_ingest.clinvar_single_gene_variations` csgv
         WHERE 
           sgv.variation_id = csgv.variation_id
+          AND 
+          csgv.deleted_release_date is NULL
       )
   """, schema_name);
 

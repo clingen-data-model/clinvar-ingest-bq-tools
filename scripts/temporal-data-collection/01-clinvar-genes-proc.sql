@@ -20,8 +20,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_genes` cg
     SET 
-      deleted_release_date = %T,
-      deleted_count = deleted_count + 1
+      deleted_release_date = %T
     WHERE 
       cg.deleted_release_date is NULL 
       AND 
@@ -41,11 +40,12 @@ BEGIN
     SET 
       hgnc_id = g.hgnc_id,
       symbol = g.symbol,
-      end_release_date = g.release_date,
-      deleted_release_date = NULL
+      end_release_date = g.release_date
     FROM `%s.gene` g
     WHERE 
       g.id = cg.id
+      AND 
+      deleted_release_date is NULL
   """, schema_name);
 
   -- new genes
@@ -72,6 +72,8 @@ BEGIN
         FROM `clinvar_ingest.clinvar_genes` cg
         WHERE 
           cg.id = g.id 
+          AND
+          cg.deleted_release_date is NULL
       )
   """, schema_name);
 

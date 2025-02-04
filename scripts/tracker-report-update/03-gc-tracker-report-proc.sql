@@ -108,6 +108,8 @@ BEGIN
     LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
     ON 
       cvs1.label = vac.review_status
+      AND
+      vac.release_date between cvs1.start_release_date and cvs1.end_release_date
   """, schema_name, schema_name, schema_name, schema_name, schema_name);
 
   -- gc case info for current release

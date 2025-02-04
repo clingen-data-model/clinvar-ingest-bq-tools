@@ -40,7 +40,7 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `variation_tracker.%s_variation` 
       AS
-      SELECT  
+      SELECT DISTINCT
         rv.report_id,
         cv.release_date as report_release_date,
         rv.variation_id, 
@@ -49,20 +49,22 @@ BEGIN
         vg.rank,
         FALSE as report_submitter_variation
       FROM `variation_tracker.report_variation` rv
+      JOIN `clinvar_ingest.all_schemas`() cv
+      ON
+        TRUE
       JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vg 
       ON 
         vg.variation_id = rv.variation_id
-      JOIN `clinvar_ingest.all_schemas`() cv 
-      ON 
+        and
         cv.release_date BETWEEN vg.start_release_date AND vg.end_release_date
       WHERE 
-        rv.report_id = "%s"
+        rv.report_id = "%s" 
     """, rec.tname, rec.id);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `variation_tracker.%s_scv` 
       AS
-      SELECT  
+      SELECT DISTINCT
         rv.report_id,
         rv.report_release_date,
         rv.variation_id, 
@@ -139,7 +141,8 @@ BEGIN
           scv.gks_proposition_type,
           scv.rank, 
           scv.report_release_date,
-          scv.id, scv.version, 
+          scv.id, 
+          scv.version,
           vs.full_scv_id,
           revstat.label as review_status,
           vs.submitter_id, 
@@ -169,7 +172,11 @@ BEGIN
           scv.rank IS NOT DISTINCT FROM var.rank
         JOIN `clinvar_ingest.clinvar_status` revstat 
         ON 
-          revstat.rank = scv.rank and revstat.scv
+          revstat.rank = scv.rank 
+          AND 
+          revstat.scv = TRUE
+          AND
+          scv.report_release_date BETWEEN revstat.start_release_date AND revstat.end_release_date
         JOIN `clinvar_ingest.clinvar_variations` v 
         ON
           v.id = scv.variation_id
@@ -327,7 +334,7 @@ BEGIN
       AS
       WITH x AS 
       (
-        SELECT 
+        SELECT DISTINCT
           v.variation_id,
           v.statement_type,
           v.gks_proposition_type,
@@ -405,7 +412,7 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `variation_tracker.%s_scv_priorities` 
       AS
-      SELECT  
+      SELECT DISTINCT  
         vp.report_release_date,
         vp.variation_id,
         vp.statement_type,

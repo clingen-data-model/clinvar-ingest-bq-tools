@@ -216,32 +216,51 @@ VALUES
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_status` (
     rank INT64, 
     label STRING, 
-    scv BOOL
+    scv BOOL,
+    start_release_date DATE,
+    end_release_date DATE
 );
 
 INSERT INTO `clinvar_ingest.clinvar_status` (
     rank, 
     label, 
-    scv
+    scv,
+    start_release_date,
+    end_release_date
 ) 
 VALUES
-    (-3, 'no classifications from unflagged records', FALSE),
-    (-3, 'flagged submission', TRUE),
-    (-2, 'no interpretation for the single variant', FALSE),
-    (-2, 'no classification for the single variant', FALSE),
-    (-1, 'no assertion provided', TRUE),
-    (-1, 'no classification provided', TRUE),
-    (-1, 'not classified by submitter', FALSE),
-    (0,  'no assertion criteria provided', TRUE),
-    (1,  'criteria provided, single submitter', TRUE),
-    (1,  'classified by single submitter', FALSE),
-    (1,  'criteria provided, conflicting interpretations', FALSE),
-    (1,  'criteria provided, conflicting classifications', FALSE),
-    (2,  'criteria provided, multiple submitters, no conflicts', FALSE),
-    (2,  'criteria provided, multiple submitters', FALSE),
-    (2,  'classified by multiple submitters', FALSE),
-    (3,  'reviewed by expert panel', TRUE),
-    (4,  'practice guideline', TRUE),
-    (4,  'reviewed by professional society', FALSE) ;
+    -- scv review statuses - MUST have unique rank values 
+    -- or downstream reporting will be wrong - THESE are NOT lossy
+    (-3, 'flagged submission', TRUE, DATE'2023-11-21', DATE'9999-12-31'),
+    (-1, 'no classification provided', TRUE, DATE'2024-01-26', DATE'9999-12-31'),
+    (-1, 'no assertion provided', TRUE, DATE'1900-01-01', DATE'2024-01-07'),
+    (0,  'no assertion criteria provided', TRUE, DATE'1900-01-01', DATE'9999-12-31'),
+    (1,  'criteria provided, single submitter', TRUE, DATE'1900-01-01', DATE'9999-12-31'),
+    (3,  'reviewed by expert panel', TRUE, DATE'1900-01-01', DATE'9999-12-31'),
+    (4,  'practice guideline', TRUE, DATE'1900-01-01', DATE'9999-12-31'),
+    -- vcv/rcv review statuses, THESE are lossy conversions from review status to rank and back again.
+
+    (-3, 'no classifications from unflagged records', FALSE, DATE'2023-11-21', DATE'9999-12-31'),
+
+    (-2, 'no interpretation for the single variant', FALSE, DATE'1900-01-01', DATE'2024-01-07'),
+    (-2, 'no classification for the single variant', FALSE, DATE'2024-01-26', DATE'9999-12-31'),
+
+    (1,  'criteria provided, conflicting interpretations', FALSE, DATE'1900-01-01', DATE'2024-01-07'),
+    (1,  'criteria provided, conflicting classifications', FALSE, DATE'2024-01-26', DATE'9999-12-31'),
+
+    (2,  'criteria provided, multiple submitters, no conflicts', FALSE, DATE'1900-01-01', DATE'9999-12-31')
+
+    -- used for somatic impact aggregate submissions because they don't do any conflict resolution
+    (2,  'criteria provided, multiple submitters', FALSE, DATE'2024-01-26', DATE'9999-12-31')
+;
+
+
+
+--  the items below may predate Jan.01.2023
+
+    -- (2,  'classified by multiple submitters', FALSE),
+--    (1,  'classified by single submitter', FALSE),
+--   (-1, 'not classified by submitter', FALSE),
+    -- (4,  'reviewed by professional society', FALSE) ;
 
  

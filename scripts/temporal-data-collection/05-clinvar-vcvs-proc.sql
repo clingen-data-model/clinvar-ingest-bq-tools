@@ -20,8 +20,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_vcvs` cvcv
       SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+        deleted_release_date = %T
     WHERE 
       cvcv.deleted_release_date is NULL 
       AND
@@ -42,8 +41,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_vcvs` cvcv
       SET 
-        end_release_date = vcv.release_date,
-        deleted_release_date = NULL
+        end_release_date = vcv.release_date
     FROM `%s.variation_archive` vcv
     WHERE 
       vcv.variation_id = cvcv.variation_id 
@@ -51,6 +49,8 @@ BEGIN
       vcv.id = cvcv.id 
       AND 
       vcv.version = cvcv.version
+      AND
+      cvcv.deleted_release_date is NULL
   """, schema_name);
 
   -- new variation_archive
@@ -82,6 +82,8 @@ BEGIN
           vcv.id = cvcv.id 
           AND 
           vcv.version = cvcv.version
+          AND
+          cvcv.deleted_release_date is NULL
       )
   """, schema_name);
 

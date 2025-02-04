@@ -21,8 +21,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_rcv_classifications` crcvc
       SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+        deleted_release_date = %T
     WHERE 
       crcvc.deleted_release_date is NULL 
       AND
@@ -37,6 +36,8 @@ BEGIN
         LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
         ON 
           cvs1.label = rcvc.review_status
+          AND
+          rcvc.release_date between cvs1.start_release_date and cvs1.end_release_date
         WHERE       
           rcv.variation_id = crcvc.variation_id
           AND
@@ -65,7 +66,7 @@ BEGIN
     UPDATE `clinvar_ingest.clinvar_rcv_classifications` crcvc
       SET 
         end_release_date = %T,
-        deleted_release_date = NULL
+        review_status = rcvc.review_status
     FROM `%s.rcv_accession_classification` rcvc
     CROSS JOIN UNNEST(rcvc.agg_classification) as cx
     JOIN `%s.rcv_accession` rcv
@@ -74,6 +75,8 @@ BEGIN
     LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
     ON 
       cvs1.label = rcvc.review_status
+      AND
+      rcvc.release_date between cvs1.start_release_date and cvs1.end_release_date
     WHERE 
       rcv.variation_id = crcvc.variation_id
       AND
@@ -93,7 +96,9 @@ BEGIN
       AND
       cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type 
       AND
-      cx.clinical_impact_clinical_significance IS NOT DISTINCT FROM crcvc.clinical_impact_clinical_significance     
+      cx.clinical_impact_clinical_significance IS NOT DISTINCT FROM crcvc.clinical_impact_clinical_significance
+      AND
+      crcvc.deleted_release_date is NULL 
   """, release_date, schema_name, schema_name);
 
   -- new rcv_accession_classification
@@ -104,6 +109,7 @@ BEGIN
       rcv_id,
       statement_type,
       rank, 
+      review_status,
       last_evaluated, 
       agg_classification_description, 
       num_submissions,
@@ -118,6 +124,7 @@ BEGIN
       rcvc.rcv_id,
       rcvc.statement_type,
       cvs1.rank, 
+      rcvc.review_status,
       cx.date_last_evaluated as last_evaluated,
       cx.interp_description as agg_classification_description,
       cx.num_submissions,
@@ -136,6 +143,8 @@ BEGIN
     LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
     ON 
       cvs1.label = rcvc.review_status
+      AND
+      rcvc.release_date between cvs1.start_release_date and cvs1.end_release_date
     WHERE 
       NOT EXISTS (
       SELECT crcvc.rcv_id 
@@ -160,6 +169,8 @@ BEGIN
         cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type 
         AND
         cx.clinical_impact_clinical_significance IS NOT DISTINCT FROM crcvc.clinical_impact_clinical_significance
+        AND
+        crcvc.deleted_release_date is NULL 
       )
   """, release_date, release_date, schema_name, schema_name);
 

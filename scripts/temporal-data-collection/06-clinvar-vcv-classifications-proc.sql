@@ -21,8 +21,7 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_vcv_classifications` cvcvc
       SET 
-        deleted_release_date = %T,
-        deleted_count = deleted_count + 1
+        deleted_release_date = %T
     WHERE 
       cvcvc.deleted_release_date is NULL 
       AND
@@ -36,6 +35,8 @@ BEGIN
         LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
         ON 
           cvs1.label = vcvc.review_status
+          AND
+          vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
         WHERE       
           vcv.variation_id = cvcvc.variation_id
           AND
@@ -53,7 +54,7 @@ BEGIN
           AND
           vcvc.num_submissions IS NOT DISTINCT FROM cvcvc.num_submissions 
           AND
-          vcvc.most_recent_submission IS NOT DISTINCT FROM cvcvc.most_recent_submission 
+          vcvc.most_recent_submission IS NOT DISTINCT FROM cvcvc.most_recent_submission
       )
   """, release_date, schema_name, schema_name);
 
@@ -62,7 +63,7 @@ BEGIN
     UPDATE `clinvar_ingest.clinvar_vcv_classifications` cvcvc
       SET 
         end_release_date = %T,
-        deleted_release_date = NULL
+        review_status = vcvc.review_status
     FROM `%s.variation_archive_classification` vcvc
     JOIN `%s.variation_archive` vcv
     ON
@@ -70,6 +71,8 @@ BEGIN
     LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
     ON 
       cvs1.label = vcvc.review_status
+      AND
+      vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
     WHERE 
       vcv.variation_id = cvcvc.variation_id
       AND
@@ -87,7 +90,9 @@ BEGIN
       AND
       vcvc.num_submissions IS NOT DISTINCT FROM cvcvc.num_submissions 
       AND
-      vcvc.most_recent_submission IS NOT DISTINCT FROM cvcvc.most_recent_submission       
+      vcvc.most_recent_submission IS NOT DISTINCT FROM cvcvc.most_recent_submission
+      AND
+      cvcvc.deleted_release_date is NULL
   """, release_date, schema_name, schema_name);
 
   -- new variation_archive_classification
@@ -97,6 +102,7 @@ BEGIN
       vcv_id,
       statement_type,
       rank, 
+      review_status,
       last_evaluated, 
       agg_classification_description, 
       num_submitters,
@@ -110,6 +116,7 @@ BEGIN
       vcvc.vcv_id,
       vcvc.statement_type,
       cvs1.rank, 
+      vcvc.review_status,
       vcvc.date_last_evaluated as last_evaluated,
       vcvc.interp_description as agg_classification_description,
       vcvc.num_submitters,
@@ -127,6 +134,8 @@ BEGIN
     LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
     ON 
       cvs1.label = vcvc.review_status
+      AND
+      vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
     WHERE 
       NOT EXISTS (
       SELECT cvcvc.vcv_id 
@@ -149,6 +158,8 @@ BEGIN
         vcvc.num_submissions IS NOT DISTINCT FROM cvcvc.num_submissions 
         AND
         vcvc.most_recent_submission IS NOT DISTINCT FROM cvcvc.most_recent_submission 
+        AND
+        cvcvc.deleted_release_date is NULL
       )
   """, release_date, release_date, schema_name, schema_name);
 
