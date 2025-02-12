@@ -126,7 +126,7 @@ derived_scvs as (
     vs.submitter_id,
     vs.submission_date
   FROM flagged_vars fv
-  LEFT JOIN `clinvar_ingest.voi_scv` vs
+  LEFT JOIN `clinvar_ingest.clinvar_scvs` vs
   ON 
     fv.variation_id = vs.variation_id
     AND
@@ -302,14 +302,20 @@ group_results AS (
     (SELECT MIN(sig.percent) FROM UNNEST(cr.derived_sig_type) AS sig WHERE sig.count != 0) as derived_outlier_pct,
     cv.id,
     cv.version,
-    cv.rank as vcv_rank,
-    cv.agg_classification
+    cvc.rank as vcv_rank,
+    cvc.agg_classification
   FROM calculated_results cr
   LEFT JOIN `clinvar_ingest.clinvar_vcvs` cv
   ON
     cv.variation_id = cr.variation_id
     AND
     cr.batch_release_date BETWEEN cv.start_release_date AND cv.end_release_date
+  LEFT JOIN `clinvar_ingest.clinvar_vcv_classifications` cvc
+  ON
+    cvc.vcv_id = cv.id
+    AND
+    cr.batch_release_date BETWEEN cvc.start_release_date AND cvc.end_release_date
+    
   ),
 final_results AS (
   select

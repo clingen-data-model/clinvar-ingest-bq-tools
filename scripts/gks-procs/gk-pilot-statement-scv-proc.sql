@@ -278,6 +278,8 @@ BEGIN
       left join `clinvar_ingest.clinvar_clinsig_types` cct 
       on 
         cct.code = gks.classif_type
+        and
+        cct.statement_type = gks.statement_type??
       left join scv_exts
       on
         scv_exts.id = gks.id

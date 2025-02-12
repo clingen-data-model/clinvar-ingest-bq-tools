@@ -28,7 +28,7 @@ BEGIN
       r.next_release_date as start_release_date,
       vs.variation_id
     FROM `clinvar_ingest.clinvar_scvs` vs
-    JOIN `clinvar_ingest.all_schemas`() r 
+    JOIN `clinvar_ingest.all_releases`() r 
     ON 
       r.release_date = vs.end_release_date  
   ) st;
@@ -53,7 +53,7 @@ BEGIN
       r.prev_release_date as end_release_date,
       vs.variation_id
     FROM `clinvar_ingest.clinvar_scvs` vs
-    JOIN `clinvar_ingest.all_schemas`() r 
+    JOIN `clinvar_ingest.all_releases`() r 
     ON 
       r.release_date = vs.start_release_date  
   ) en;

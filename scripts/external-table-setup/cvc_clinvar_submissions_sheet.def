@@ -15,7 +15,7 @@
       },
       {
         "name": "scv_ver",
-        "type": "STRING"
+        "type": "INTEGER"
       },
       {
         "name": "batch_id",

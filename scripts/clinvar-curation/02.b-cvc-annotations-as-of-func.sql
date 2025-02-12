@@ -1,8 +1,8 @@
-CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_annotations_as_of`(as_of_date DATE, include_finalized BOOL, only_latest BOOL) AS (
+CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_annotations`() AS (
 WITH anno AS
   (
     select 
-      as_of_date,
+      CURRENT_DATE() as as_of_date,
       release_date,
       annotation_id, 
       -- variant and vcv
@@ -88,17 +88,22 @@ WITH anno AS
       vmrd.id,
       cv.version,      
       cv.variation_id,
-      cv.start_release_date, 
-      cv.end_release_date,
-      cv.deleted_release_date,
-      cv.agg_classification,
-      cv.rank
+      cvc.start_release_date, 
+      cvc.end_release_date,
+      cvc.deleted_release_date,
+      cvc.agg_classification_description,
+      cvc.rank
     FROM vcv_max_release_date vmrd
     JOIN `clinvar_ingest.clinvar_vcvs` cv
     ON 
       vmrd.id = cv.id 
       AND 
       vmrd.max_end_release_date = cv.end_release_date
+    JOIN `clinvar_ingest.clinvar_vcv_classifications` cvc
+    ON 
+      vmrd.id = cvc.vcv_id 
+      AND 
+      vmrd.max_end_release_date = cvc.end_release_date
   )
   SELECT 
     as_of_date,
@@ -122,7 +127,8 @@ WITH anno AS
     a.reason,
     a.notes,
     -- originally annotated scv id+ver assertion data
-    cs.rpt_stmt_type,
+    cs.statement_type,
+    cs.gks_proposition_type as rpt_stmt_type,
     cs.rank,
     cs.classif_type,
     cs.clinsig_type,

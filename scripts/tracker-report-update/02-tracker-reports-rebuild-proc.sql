@@ -49,7 +49,7 @@ BEGIN
         vg.rank,
         FALSE as report_submitter_variation
       FROM `variation_tracker.report_variation` rv
-      JOIN `clinvar_ingest.all_schemas`() cv
+      JOIN `clinvar_ingest.all_releases`() cv
       ON
         TRUE
       JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vg 
@@ -468,7 +468,7 @@ BEGIN
         vp.variation_id = vvc.variation_id 
         AND
         vp.report_release_date BETWEEN vvc.start_release_date AND vvc.end_release_date
-      JOIN `clinvar_ingest.all_schemas`() rel
+      JOIN `clinvar_ingest.all_releases`() rel
       ON  
         vp.report_release_date = rel.release_date
     """, rec.tname, rec.tname, rec.tname);    

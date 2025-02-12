@@ -1,6 +1,6 @@
 -- TABLES to support the clinvar curation dashboard, reporting and downstream processing
 
-CREATE OR REPLACE TABLE `clinvar_curator.cvc_clinvar_reviews`
+CREATE TABLE `clinvar_curator.cvc_clinvar_reviews`
 (
   annotation_id STRING,
   date_added TIMESTAMP,
@@ -12,7 +12,7 @@ CREATE OR REPLACE TABLE `clinvar_curator.cvc_clinvar_reviews`
 )
 ;
 
-CREATE OR REPLACE TABLE `clinvar_curator.cvc_clinvar_submissions`
+CREATE TABLE `clinvar_curator.cvc_clinvar_submissions`
 (
   annotation_id STRING,
   scv_id STRING,
@@ -21,7 +21,7 @@ CREATE OR REPLACE TABLE `clinvar_curator.cvc_clinvar_submissions`
 )
 ;
 
-CREATE OR REPLACE TABLE `clinvar_curator.cvc_clinvar_batches`
+CREATE TABLE `clinvar_curator.cvc_clinvar_batches`
 (
   batch_id STRING,
   finalized_datetime TIMESTAMP
@@ -43,7 +43,7 @@ CREATE OR REPLACE TABLE `clinvar_curator.cvc_clinvar_batches`
 -- - `submission_date`: The date part of the `to_datetime`.
 -- - `subm_date.monyy `: the MON'YY representation of the submission_date.
 -- - `subm_date.yymm `: the YY-MM representation of the submission_date.
--- - `batch_release_date`: The release date of the batch, determined by a custom function `release_date_as_of`.
+-- - `batch_release_date`: The release date of the batch, determined by a custom function `schema_on`.
 CREATE OR REPLACE VIEW clinvar_curator.cvc_batch_window_view
 AS
   WITH batch_window AS (
@@ -59,11 +59,11 @@ AS
     bw.to_datetime,
     DATE(bw.to_datetime) as submission_date,
     `clinvar_ingest.determineMonthBasedOnRange`(DATE(bw.from_datetime), DATE(bw.to_datetime)) as subm_date,
-    (
-      SELECT release_date  
-      FROM `clinvar_ingest.release_date_as_of`(DATE(bw.to_datetime))
-    ) as batch_release_date
+    rel.release_date as batch_release_date
   FROM batch_window bw
+  JOIN `clinvar_ingest.all_releases`() rel
+  ON
+    DATE(bw.from_datetime) between rel.release_date and rel.next_release_date
 ;
 
 -- This script creates or replaces a view named `cvc_annotations_view` in the `clinvar_curator` schema.
@@ -176,7 +176,7 @@ AS
 -- - `clinvar_curator.cvc_clinvar_submissions`: Provides submission data.
 -- - `clinvar_curator.cvc_batch_window_view`: Provides batch window data.
 -- - `clinvar_curator.cvc_annotations_view`: Provides annotation data.
--- - `clinvar_ingest.voi_scv`: Provides SCV data for validating submissions.
+-- - `clinvar_ingest.clinvar_scvs`: Provides SCV data for validating submissions.
 -- - `clinvar_curator.cvc_clinvar_submissions`: Provides prior submission data for comparison.
 CREATE OR REPLACE VIEW clinvar_curator.cvc_submitted_annotations_view
 AS
@@ -216,7 +216,7 @@ AS
   JOIN `clinvar_curator.cvc_annotations_view` av
   ON
     av.annotation_id = ccs.annotation_id
-  LEFT JOIN `clinvar_ingest.voi_scv` vs
+  LEFT JOIN `clinvar_ingest.clinvar_scvs` vs
   ON
     vs.id = ccs.scv_id
     AND
@@ -235,7 +235,7 @@ AS
 -- 
 -- The view is constructed using a Common Table Expression (CTE) `latest_release` to fetch the most recent release date.
 -- 
--- The main SELECT statement joins the `cvc_submitted_annotations_view` with the `latest_release` CTE and two instances of the `voi_scv` table.
+-- The main SELECT statement joins the `cvc_submitted_annotations_view` with the `latest_release` CTE and two instances of the `clinvar_scvs` table.
 -- 
 -- The `outcome` field is determined using a CASE statement that evaluates various conditions:
 --   - "invalid submission" if the submission is not valid.
@@ -302,13 +302,13 @@ AS
     sa.annotated_date,
     sa.review_status
   FROM `clinvar_curator.cvc_submitted_annotations_view` sa
-  JOIN `clinvar_ingest.release_date_as_of`(CURRENT_DATE()) latest_release ON TRUE
-  LEFT JOIN `clinvar_ingest.voi_scv` cur_vs
+  JOIN `clinvar_ingest.schema_on`(CURRENT_DATE()) latest_release ON TRUE
+  LEFT JOIN `clinvar_ingest.clinvar_scvs` cur_vs
   ON
     cur_vs.id = sa.scv_id
     AND
     latest_release.release_date between cur_vs.start_release_date and cur_vs.end_release_date
-  LEFT JOIN `clinvar_ingest.voi_scv` anno_vs
+  LEFT JOIN `clinvar_ingest.clinvar_scvs` anno_vs
   ON
     anno_vs.id = sa.scv_id
     AND
