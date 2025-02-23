@@ -339,8 +339,6 @@ END;
 --   AND
 --   scv.rank IS NOT DISTINCT from his.rank
 --   AND 
---   scv.gks_proposition_type IS NOT DISTINCT FROM his.rpt_stmt_type
---   AND
 --   scv.last_evaluated is not distinct from his.last_evaluated
 --   AND
 --   scv.clinsig_type is not distinct from his.clinsig_type
@@ -353,7 +351,8 @@ END;
 
 -- ;
 
--- -- if the clinvar_scvs table needs to be reinitialized then the following INSERT statement should be run, once:
+-- -- if the clinvar_scvs table needs to be reinitialized then the following INSERT statement should be run, once
+-- -- in order to add any scvs that may have been annotated and deleted before Jan.07.2023:  (3 records)
 -- INSERT INTO `clinvar_ingest.clinvar_scvs` 
 -- (
 --   variation_id, 
@@ -385,7 +384,8 @@ END;
 --   affected_status, 
 --   method_type, 
 --   start_release_date, 
---   end_release_date  
+--   end_release_date,
+--   deleted_release_date 
 -- ) 
 -- SELECT 
 --   scv.variation_id,
@@ -419,8 +419,12 @@ END;
 --   scv.affected_status,
 --   scv.method_type,
 --   scv.start_release_date,
---   scv.end_release_date
+--   scv.end_release_date,
+--   scv.deleted_release_date
 -- FROM  `clinvar_ingest.clinvar_scvs_curated_before_2023` scv
+-- LEFT JOIN `clingen-dev.clinvar_ingest.clinvar_scvs` scv_existing
+-- on
+--   scv_existing.id = scv.id
 -- -- get submitter and classification info
 -- JOIN `clingen-dev.clinvar_ingest.clinvar_submitters` subm
 -- ON
@@ -462,4 +466,6 @@ END;
 --   cst.start_release_date = scv.start_release_date
 -- WHERE
 --   scv.end_release_date < DATE'2023-01-07'
+--   and
+--   scv_existing.id is null
 -- ;
