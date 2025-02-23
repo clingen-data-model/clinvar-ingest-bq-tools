@@ -1,4 +1,6 @@
-CREATE OR REPLACE PROCEDURE `variation_tracker.tracker_reports_rebuild`()
+CREATE OR REPLACE PROCEDURE `variation_tracker.tracker_reports_rebuild`(
+  reportIds ARRAY<STRING>
+)
 BEGIN  
   DECLARE disable_out_of_date_alerts BOOLEAN DEFAULT FALSE;
   
@@ -14,7 +16,10 @@ BEGIN
       LEFT JOIN `variation_tracker.report_option` ro
       ON 
         ro.report_id = r.id
-      WHERE r.active
+      WHERE 
+        r.active 
+        AND
+        (reportIds IS NULL OR ARRAY_LENGTH(reportIds) = 0 OR r.id IN UNNEST(reportIds))
       GROUP BY 
         r.id, 
         r.name, 
