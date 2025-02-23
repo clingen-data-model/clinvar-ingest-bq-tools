@@ -1,0 +1,39 @@
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.refresh_external_table_copies`()
+BEGIN
+
+  CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_submitter_abbrevs`
+  AS
+  SELECT * from `clinvar_ingest.clinvar_submitter_abbrevs_ext`
+  ;
+
+  CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_releases`
+  AS
+  SELECT * from `clinvar_ingest.clinvar_releases_ext`
+  ;
+
+  CREATE OR REPLACE TABLE `variation_tracker.report`
+  AS
+  SELECT * from `variation_tracker.report_ext`
+  ;
+
+  CREATE OR REPLACE TABLE `variation_tracker.report_gene`
+  AS
+  SELECT * from `variation_tracker.report_gene_ext`
+  ;
+
+  CREATE OR REPLACE TABLE `variation_tracker.report_option`
+  AS
+  SELECT * from `variation_tracker.report_option_ext`
+  ;
+
+  CREATE OR REPLACE TABLE `variation_tracker.report_submitter`
+  AS
+  SELECT * from `variation_tracker.report_submitter_ext`
+  ;
+
+  CREATE OR REPLACE TABLE `variation_tracker.report_variant_list`
+  AS
+  SELECT * from `variation_tracker.report_variant_list_ext`
+  ;
+
+END;

@@ -19,5 +19,6 @@ BEGIN
   CALL `clinvar_ingest.scv_summary`(rec.schema_name);
   CALL `clinvar_ingest.single_gene_variation`(rec.schema_name, rec.release_date);
   CALL `clinvar_ingest.gc_scv`(rec.schema_name);
+  CALL `clinvar_ingest.refresh_scv_lookup`(rec.schema_name);
 
 END;

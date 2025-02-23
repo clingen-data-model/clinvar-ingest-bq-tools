@@ -1,7 +1,7 @@
 {
   "googleSheetsOptions": {
     "skipLeadingRows": 1,
-    "range": "'Reports'!A:G"
+    "range": "'Reports'!A:H"
   },
   "schema": {
     "fields": [
@@ -11,6 +11,10 @@
       },
       {
         "name": "name",
+        "type": "STRING"
+      },
+      {
+        "name": "type",
         "type": "STRING"
       },
       {
@@ -37,6 +41,6 @@
   },
   "sourceFormat": "GOOGLE_SHEETS",
   "sourceUris": [
-    "https://docs.google.com/spreadsheets/d/1bADskBcobHTmmXungY09beWPDEa1nqM-PP__86yGVj0/edit\\#gid\\=1018498593"
+    "https://docs.google.com/spreadsheets/d/1bADskBcobHTmmXungY09beWPDEa1nqM-PP__86yGVj0/edit?gid\\=514594313\\#gid\\=514594313"
   ]
 }
