@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_submitter_annotations`(bool unreviewed_only) AS (
+CREATE OR REPLACE TABLE FUNCTION `clingen-dev.clinvar_curator.cvc_submitter_annotations`(unreviewed BOOL) AS (
 WITH x AS 
   (
     SELECT
@@ -34,11 +34,12 @@ WITH x AS
           a.action="remove flagged submission") AND 
         a.is_outdated_scv
       ) AS outdated_remove_flagged_submission_count
-    FROM `clinvar_curator.cvc_annotations`(unreviewed_only) a
+    FROM `clinvar_curator.cvc_annotations`(unreviewed) a
     GROUP BY
       a.release_date,
       as_of_date,
-      a.submitter_id )
+      a.submitter_id 
+  )
   SELECT
     s.id,
     s.current_name,
@@ -55,16 +56,13 @@ WITH x AS
     MAX(scv.submission_date) as latest_submission_date,
     x.release_date,
     x.as_of_date
-  FROM
-    x
-  JOIN
-    `clinvar_ingest.clinvar_submitters` s
+  FROM x
+  JOIN `clinvar_ingest.clinvar_submitters` s
   ON
     s.id = x.submitter_id 
     AND
     x.release_date BETWEEN S.start_release_date AND S.end_release_date
-  JOIN
-    `clinvar_ingest.clinvar_scvs` scv
+  JOIN `clinvar_ingest.clinvar_scvs` scv
   ON
     scv.submitter_id = s.id 
     AND 

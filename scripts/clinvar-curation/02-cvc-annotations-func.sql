@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_annotations`(unreviewed_only BOOL) AS (
+CREATE OR REPLACE TABLE FUNCTION `clingen-dev.clinvar_curator.cvc_annotations`(unreviewed BOOL) AS (
 WITH anno AS
   (
     select 
@@ -13,7 +13,7 @@ WITH anno AS
       -- scv
       a.scv_id, 
       a.scv_ver, 
-      a.review_status,
+      a.clinvar_review_status,
       -- annotation assessment record
       a.curator,
       a.annotated_on,
@@ -35,19 +35,21 @@ WITH anno AS
       a.annotation_label, 
       a.is_latest,
       -- if annotation was reviewed then show the review info
-      rev.annotation_id as rev_annotation_id,
-      rev.reviewer as rev_reviewer,
-      rev.status as rev_status,
-      rev.notes as rev_notes,
-      -- reviewed batch info
-      rev.batch_id as rev_batch_id,
-      rev.review_label as rev_label,
+      a.reviewer,
+      a.review_status,
+      a.review_notes,
+      a.review_label,
+      a.review_batch_id,
+      a.review_batch_date,
+      -- submission batch info
+      a.submission_batch_id,
+      a.submission_batch_date,
       -- prior review data
       a.has_prior_scv_id_annotation,
       a.has_prior_scv_ver_annotation,
       a.has_prior_submission_batch_id,
       a.prior_scv_annotations
-    from `clinvar_curator.cvc_baseline_annotations`(unreviewed_only) a
+    from `clinvar_curator.cvc_baseline_annotations`(unreviewed) a
     -- we could do an INNER JOIN but if there was an errant record in the annotations 
     -- sheet that didn't line up with a real scv then it would be inadvertantly hidden
     -- So,it is possible (not probable) that the cs.* fields could all be null when returned.
@@ -69,15 +71,15 @@ WITH anno AS
   ),
   scv_max_release_date AS (
     SELECT 
-      id, 
-      MAX(end_release_date) as max_end_release_date
+      cs.id, 
+      MAX(cs.end_release_date) as max_end_release_date
     FROM anno as a
-    JOIN `clinvar_ingest.clinvar_scvs` ON 
-      id = a.scv_id
+    JOIN `clinvar_ingest.clinvar_scvs` cs  ON 
+      cs.id = a.scv_id
     WHERE 
-      a.release_date >= start_release_date
+      a.release_date >= cs.start_release_date
     GROUP BY 
-      id
+      cs.id
   ),
   scv_last AS (
     SELECT 
@@ -98,16 +100,16 @@ WITH anno AS
   ),
   vcv_max_release_date AS (
     SELECT 
-      id, 
-      MAX(end_release_date) as max_end_release_date
+      cv.id, 
+      MAX(cv.end_release_date) as max_end_release_date
     FROM anno as a
-    JOIN `clinvar_ingest.clinvar_vcvs` 
+    JOIN `clinvar_ingest.clinvar_vcvs` cv
     ON 
-      id = a.vcv_id
+      cv.id = a.vcv_id
     where 
-      a.release_date >= start_release_date
+      a.release_date >= cv.start_release_date
     GROUP BY 
-      id
+      cv.id
   ),
   vcvg_last AS (
     SELECT 
@@ -145,7 +147,7 @@ WITH anno AS
     -- scv   
     a.scv_id, 
     a.scv_ver, 
-    a.review_status,
+    a.clinvar_review_status,
     -- annotation assessment record
     a.curator,
     a.annotated_on,
@@ -170,6 +172,17 @@ WITH anno AS
     a.has_prior_scv_ver_annotation,
     a.has_prior_submission_batch_id,
     a.prior_scv_annotations,
+
+    -- review info
+    a.reviewer,
+    a.review_status,
+    a.review_notes,
+    a.review_label,
+    a.review_batch_id,
+    a.review_batch_date,
+    -- submission batch info
+    a.submission_batch_id,
+    a.submission_batch_date,
 
     -- is this the annotation the latest for this scv id (TRUE or Count=0 means no newer annotations currently exist for the exact scv id)
     a.is_latest AS is_latest_annotation,
