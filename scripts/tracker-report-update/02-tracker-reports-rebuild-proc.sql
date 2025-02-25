@@ -17,8 +17,6 @@ BEGIN
       ON 
         ro.report_id = r.id
       WHERE 
-        r.active 
-        AND
         (reportIds IS NULL OR ARRAY_LENGTH(reportIds) = 0 OR r.id IN UNNEST(reportIds))
       GROUP BY 
         r.id, 
