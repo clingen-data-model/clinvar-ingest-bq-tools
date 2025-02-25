@@ -61,7 +61,7 @@ jobs:
 
     - name: Upload artifacts
       if: steps.build_check.outputs.ts_files_modified == 'true'
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: dist
         path: ./dist
