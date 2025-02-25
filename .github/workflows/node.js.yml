@@ -126,22 +126,6 @@ jobs:
           gsutil cp -r ./dist/* gs://clinvar-ingest/bq-tools
         fi
 
-    - name: Execute clingen-stage modified sql Scripts
-      if: steps.get_changed_files.outputs.modified_files_exist == 'true'
-      run: |
-        echo "Executing sql scripts for clingen-stage in alphabetical order..."
-        for file in $(find ./scripts -type f -name '*.sql' | sort); do
-          relative_file=$(realpath --relative-to=. "$file")  # Get relative path of the file
-          if grep -q "$relative_file" modified_files.txt; then
-            echo "Executing $file..."
-            bq query --use_legacy_sql=false --project_id=$PROJECT_ID < "$file"
-          else
-            echo "Skipping $file as it was not modified."
-          fi
-        done
-      env:
-        PROJECT_ID: 'clingen-stage'
-
     - name: Execute clingen-dev modified sql Scripts
       if: steps.get_changed_files.outputs.modified_files_exist == 'true'
       run: |
