@@ -8,6 +8,7 @@ BEGIN
   DECLARE scv_review_status_terms ARRAY<STRING>;
   DECLARE rcv_classification_review_status_terms ARRAY<STRING>;
   DECLARE vcv_classification_review_status_terms ARRAY<STRING>;
+  DECLARE trait_set_id_mismatch INT64;
   DECLARE required_field_validation_errors ARRAY<STRING>;
   DECLARE release_date_validation_errors ARRAY<STRING>;
   DECLARE all_validation_errors ARRAY<STRING> default [];
@@ -102,8 +103,6 @@ BEGIN
       cs.label = LOWER(rcvc.review_status)
       AND
       rcvc.release_date between cs.start_release_date and cs.end_release_date
-      AND
-      cs.scv = TRUE
     WHERE 
       cs.label IS NULL
   """, schema_name) INTO rcv_classification_review_status_terms;
@@ -123,16 +122,17 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     SELECT ARRAY_AGG(DISTINCT IFNULL(vcvc.review_status,'null'))
     FROM `%s.variation_archive_classification` vcvc
+    JOIN `%s.variation_archive` va
+    ON 
+      va.id = vcvc.vcv_id
     LEFT JOIN `clinvar_ingest.clinvar_status` cs
     ON 
       cs.label = LOWER(vcvc.review_status)
       AND
-      vcvc.release_date between cs.start_release_date and cs.end_release_date
-      AND
-      cs.scv = TRUE
+      va.release_date between cs.start_release_date and cs.end_release_date
     WHERE 
       cs.label IS NULL
-  """, schema_name) INTO vcv_classification_review_status_terms;
+  """, schema_name, schema_name) INTO vcv_classification_review_status_terms;
 
   IF vcv_classification_review_status_terms IS NOT NULL AND ARRAY_LENGTH(vcv_classification_review_status_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(

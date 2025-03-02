@@ -3,6 +3,11 @@ CREATE OR REPLACE PROCEDURE `variation_tracker.tracker_reports_rebuild`(
 )
 BEGIN  
   DECLARE disable_out_of_date_alerts BOOLEAN DEFAULT FALSE;
+
+  -- process ALL active reports if the reportIds argument is null or an empty array
+  IF (reportIds IS NULL OR ARRAY_LENGTH(reportIds) = 0) THEN
+    SET reportIds = (SELECT ARRAY_AGG(r.id) FROM `variation_tracker.report` r WHERE r.active);
+  END IF;
   
   FOR rec IN
     (
@@ -17,11 +22,13 @@ BEGIN
       ON 
         ro.report_id = r.id
       WHERE 
-        (reportIds IS NULL OR ARRAY_LENGTH(reportIds) = 0 OR r.id IN UNNEST(reportIds))
+        (r.id IN UNNEST(reportIds))
       GROUP BY 
         r.id, 
         r.name, 
         r.abbrev
+      ORDER BY
+        r.id
     )
   DO
 
@@ -479,7 +486,6 @@ BEGIN
   END FOR;
 
 END;
-
 
 
 -- https://stackoverflow.com/questions/325933/determine-whether-two-date-ranges-overlap

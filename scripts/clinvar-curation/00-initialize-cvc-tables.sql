@@ -91,41 +91,88 @@ AS
 -- The view is designed to facilitate querying and analysis of ClinVar annotations with additional metadata and transformations.
 CREATE OR REPLACE VIEW clinvar_curator.cvc_annotations_view
 AS
-  SELECT
-        CAST(UNIX_MILLIS(annotation_date) AS STRING) as annotation_id,
-        a.vcv_id as vcv_axn,
-        SPLIT(a.scv_id,'.')[OFFSET(0)] AS scv_id,
-        CAST(SPLIT(a.scv_id,'.')[OFFSET(1)] AS INT64) AS scv_ver,
-        CAST(a.variation_id AS String) AS variation_id,
-        CAST(a.submitter_id AS String) AS submitter_id,
-        LOWER(a.action) AS action,
-        SPLIT(a.curator_email,'@')[OFFSET(0)] AS curator,
-        a.annotation_date AS annotated_on,
-        DATE(a.annotation_date) AS annotated_date,
-        TIME(a.annotation_date) AS annotated_time_utc,
-        a.reason,
-        a.notes,
-        SPLIT(a.vcv_id,'.')[OFFSET(0)] AS vcv_id,
-        CAST(SPLIT(a.vcv_id,'.')[OFFSET(1)] AS INT64) AS vcv_ver,
-        -- if there are no other scv_id annotations after when orderd by annotation date then it is the latest
-        (
-          COUNT(a.annotation_date) 
-          OVER (
-            PARTITION BY SPLIT(a.scv_id,'.')[OFFSET(0)] 
-            ORDER BY a.annotation_date 
-            ROWS BETWEEN 1 FOLLOWING AND UNBOUNDED FOLLOWING
-          ) = 0
-        ) AS is_latest,
+  WITH anno AS 
+  (
+    SELECT
+      CAST(UNIX_MILLIS(annotation_date) AS STRING) as annotation_id,
+      a.vcv_id as vcv_axn,
+      SPLIT(a.scv_id,'.')[OFFSET(0)] AS scv_id,
+      CAST(SPLIT(a.scv_id,'.')[OFFSET(1)] AS INT64) AS scv_ver,
+      CAST(a.variation_id AS String) AS variation_id,
+      CAST(a.submitter_id AS String) AS submitter_id,
+      LOWER(a.action) AS action,
+      SPLIT(a.curator_email,'@')[OFFSET(0)] AS curator,
+      a.annotation_date AS annotated_on,
+      DATE(a.annotation_date) AS annotated_date,
+      a.reason,
+      a.notes,
+      SPLIT(a.vcv_id,'.')[OFFSET(0)] AS vcv_id,
+      CAST(SPLIT(a.vcv_id,'.')[OFFSET(1)] AS INT64) AS vcv_ver,
+      CASE LOWER(a.action)
+      WHEN 'flagging candidate' THEN
+        'flag'
+      WHEN 'no change' THEN
+        'no chg'
+      WHEN 'remove flagged submission' THEN
+        'rem flg sub'
+      ELSE
+        'unk'
+      END as action_abbrev,
+      LEFT(a.reason, 25)||IF(LENGTH(a.reason) > 25,'...','') as reason_abbrev,
+      a.review_status as clinvar_review_status
+    FROM `clinvar_curator.clinvar_annotations` a
+  ),
+  anno_review AS 
+  (
+    SELECT 
+      a.*,
+      rev.reviewer,
+      rev.status as review_status,
+      rev.notes as review_notes,
+      IF(rev.annotation_id is null, 
+        NULL, 
         FORMAT(
-          '%t (%s) %s: %s',
-          DATE(a.annotation_date), 
-          IFNULL(SPLIT(a.curator_email,'@')[OFFSET(0)],'n/a'), 
-          IF(LOWER(a.action) ='flagging candidate','flag',IF(LOWER(a.action) = 'no change', 'no chg', 'n/a or unk' )), 
-          LEFT(IFNULL(a.reason,'n/a'), 25)||IF(LENGTH(a.reason) > 25,'...','')
-      ) as annotation_label,
-      a.review_status
-      FROM `clinvar_curator.clinvar_annotations` a
-;
+          '%s (%s) %s',
+          IFNULL(rev.status, 'n/a'),
+          IFNULL(rev.reviewer, 'n/a'),
+          IFNULL(FORMAT('*%s*',sub.batch_id), '')
+        )
+      ) as review_label,
+      rev.batch_id,
+      DATE(b_rev.finalized_datetime) as batch_date,
+      (sub.annotation_id is not null) as is_submitted
+    FROM anno a
+    LEFT JOIN `clinvar_curator.cvc_clinvar_submissions` sub
+    ON
+      sub.annotation_id = a.annotation_id
+    LEFT JOIN `clinvar_curator.cvc_clinvar_reviews` rev
+    ON
+      rev.annotation_id = a.annotation_id
+    LEFT JOIN `clinvar_curator.cvc_clinvar_batches` b_rev
+    ON
+      b_rev.batch_id = rev.batch_id
+  )
+  select 
+    ar.*,
+    FORMAT(
+      '%t (%s) %s: %s',
+      ar.annotated_date, 
+      IFNULL(ar.curator,'n/a'),
+      ar.action_abbrev, 
+      IFNULL(ar.reason_abbrev,'n/a')
+    ) as annotation_label,
+    -- if there are no other scv_id annotations after when orderd by annotation date then it is the latest
+    (
+      COUNT(ar.annotated_date) 
+      OVER (
+        PARTITION BY ar.batch_id, ar.scv_id 
+        ORDER BY ar.annotation_id 
+        ROWS BETWEEN 1 FOLLOWING AND UNBOUNDED FOLLOWING
+      ) = 0
+    ) AS is_latest,
+    (ar.batch_id is not null) AS is_reviewed
+  from anno_review as ar
+  ;
 
 -- This script creates a view named `cvc_batch_scv_max_annotation_view` in the `clinvar_curator` schema.
 -- The view aggregates data from the `cvc_clinvar_reviews` with their corresponding`cvc_annotations_view` data.
