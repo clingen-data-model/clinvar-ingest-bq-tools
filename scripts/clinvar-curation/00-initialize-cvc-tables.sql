@@ -30,41 +30,6 @@ CREATE TABLE `clinvar_curator.cvc_clinvar_batches`
 
 -- VIEWS to support the clinvar curation dashboard, reporting and downstream processing
 
--- This script creates or replaces a view named `cvc_batch_window_view` in the `clinvar_curator` schema.
--- The view calculates the `from_datetime` and `to_datetime` window for each batch such that they do not 
--- overlap based on the `finalized_datetime` of the batches in the `cvc_clinvar_batches` table.
--- It also embellishes the batch window data with additional information such as the submission date in 
--- (YYYY-MM-DD date), subm_date.monyy (MON'YY string), sbum_date.yymm (YY-MM string) and the release date 
--- of the batch.
--- The main SELECT statement of the view includes:
--- - `batch_id`: The ID of the batch.
--- - `from_datetime`: The start datetime of the batch window.
--- - `to_datetime`: The end datetime of the batch window.
--- - `submission_date`: The date part of the `to_datetime`.
--- - `subm_date.monyy `: the MON'YY representation of the submission_date.
--- - `subm_date.yymm `: the YY-MM representation of the submission_date.
--- - `batch_release_date`: The release date of the batch, determined by a custom function `schema_on`.
-CREATE OR REPLACE VIEW clinvar_curator.cvc_batch_window_view
-AS
-  WITH batch_window AS (
-    SELECT 
-      ccb.batch_id, 
-      LAG(DATETIME(ccb.finalized_datetime), 1, DATETIME('0001-01-01')) OVER (ORDER BY ccb.finalized_datetime ASC) AS from_datetime,
-      DATETIME(ccb.finalized_datetime) AS to_datetime
-    FROM clinvar_curator.cvc_clinvar_batches ccb
-  )
-  SELECT
-    bw.batch_id,
-    bw.from_datetime,
-    bw.to_datetime,
-    DATE(bw.to_datetime) as submission_date,
-    `clinvar_ingest.determineMonthBasedOnRange`(DATE(bw.from_datetime), DATE(bw.to_datetime)) as subm_date,
-    rel.release_date as batch_release_date
-  FROM batch_window bw
-  JOIN `clinvar_ingest.all_releases`() rel
-  ON
-    DATE(bw.from_datetime) between rel.release_date and rel.next_release_date
-;
 
 -- This script creates or replaces a view named `cvc_annotations_view` in the `clinvar_curator` schema.
 -- The view is constructed from all the `clinvar_annotations` data and includes the following transformations and fields:
@@ -95,6 +60,7 @@ AS
   (
     SELECT
       CAST(UNIX_MILLIS(annotation_date) AS STRING) as annotation_id,
+      rel.release_date as annotation_release_date,
       a.vcv_id as vcv_axn,
       SPLIT(a.scv_id,'.')[OFFSET(0)] AS scv_id,
       CAST(SPLIT(a.scv_id,'.')[OFFSET(1)] AS INT64) AS scv_ver,
@@ -121,6 +87,9 @@ AS
       LEFT(a.reason, 25)||IF(LENGTH(a.reason) > 25,'...','') as reason_abbrev,
       a.review_status as clinvar_review_status
     FROM `clinvar_curator.clinvar_annotations` a
+    JOIN `clinvar_ingest.all_releases`() rel
+    ON 
+      DATE(a.annotation_date) between rel.release_date+1 and rel.next_release_date
   ),
   anno_review AS 
   (
@@ -172,7 +141,7 @@ AS
     ) AS is_latest,
     (ar.batch_id is not null) AS is_reviewed
   from anno_review as ar
-  ;
+  ;      
 
 -- This script creates a view named `cvc_batch_scv_max_annotation_view` in the `clinvar_curator` schema.
 -- The view aggregates data from the `cvc_clinvar_reviews` with their corresponding`cvc_annotations_view` data.
@@ -201,8 +170,8 @@ AS
 -- - valid_submission: A boolean indicating if the submission was valid for NCBI's receipt.
 -- - invalid_submission_reason: A string describing the reason why NCBI rejected the submission.
 -- - batch_id: The batch identifier from the `cvc_clinvar_submissions` table.
--- - batch_release_date: The release date of the batch from the `cvc_batch_window_view` table.
--- - submission_date: The date of submission from the `cvc_batch_window_view` table.
+-- - batch_release_date: The release date of the batch 
+-- - submission_date: The date the annotation was submitted
 -- - submission_month_year: The month and year of submission in 'MON'YY' format.
 -- - submission_yy_mm: The year and month of submission in 'YY-MM' format.
 -- - variation_id: The variation identifier from the `cvc_annotations_view` table.
@@ -221,13 +190,12 @@ AS
 -- 
 -- The view joins data from the following tables:
 -- - `clinvar_curator.cvc_clinvar_submissions`: Provides submission data.
--- - `clinvar_curator.cvc_batch_window_view`: Provides batch window data.
 -- - `clinvar_curator.cvc_annotations_view`: Provides annotation data.
 -- - `clinvar_ingest.clinvar_scvs`: Provides SCV data for validating submissions.
 -- - `clinvar_curator.cvc_clinvar_submissions`: Provides prior submission data for comparison.
 CREATE OR REPLACE VIEW clinvar_curator.cvc_submitted_annotations_view
 AS
-  SELECT
+SELECT
     IF(vs.id is null OR vs.version != av.scv_ver OR ccs_prior.annotation_id is not null, FALSE, TRUE) as valid_submission,
     CASE
     WHEN (vs.id is NULL) THEN
@@ -238,10 +206,10 @@ AS
       'submitted in prior batch'
     END as invalid_submission_reason,
     ccs.batch_id,
-    br.batch_release_date,
-    br.submission_date,
-    br.subm_date.monyy as submission_month_year,
-    br.subm_date.yymm as submission_yy_mm,
+    b.batch_release_date,
+    b.batch_end_date as submission_date,
+    b.submission.monyy as submission_month_year,
+    b.submission.yymm as submission_yy_mm,
     av.variation_id,
     av.vcv_axn,
     av.vcv_id,
@@ -255,11 +223,12 @@ AS
     av.curator,
     av.annotation_id,
     av.annotated_date,
+    av.annotation_release_date,
     av.review_status
   FROM `clinvar_curator.cvc_clinvar_submissions` ccs
-  JOIN `clinvar_curator.cvc_batch_window_view` br
+  JOIN `clinvar_curator.cvc_clinvar_batches` b
   ON
-    br.batch_id = ccs.batch_id
+    b.batch_id = ccs.batch_id
   JOIN `clinvar_curator.cvc_annotations_view` av
   ON
     av.annotation_id = ccs.annotation_id
@@ -267,7 +236,7 @@ AS
   ON
     vs.id = ccs.scv_id
     AND
-    br.batch_release_date BETWEEN vs.start_release_date AND vs.end_release_date
+    b.batch_release_date BETWEEN vs.start_release_date AND vs.end_release_date
   LEFT JOIN `clinvar_curator.cvc_clinvar_submissions` ccs_prior
   ON
     ccs_prior.batch_id < ccs.batch_id
@@ -347,6 +316,7 @@ AS
     sa.curator,
     sa.annotation_id,
     sa.annotated_date,
+    sa.annotation_release_date,
     sa.review_status
   FROM `clinvar_curator.cvc_submitted_annotations_view` sa
   JOIN `clinvar_ingest.schema_on`(CURRENT_DATE()) latest_release ON TRUE
@@ -359,5 +329,5 @@ AS
   ON
     anno_vs.id = sa.scv_id
     AND
-    sa.annotated_date between anno_vs.start_release_date and anno_vs.end_release_date
+    sa.annotation_release_date between anno_vs.start_release_date and anno_vs.end_release_date
   ;

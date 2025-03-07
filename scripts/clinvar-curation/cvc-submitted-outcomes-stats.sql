@@ -12,10 +12,15 @@ WITH batch_anno AS (
   SELECT
     bsa.batch_id,
     bsa.scv_id,
+    ccb.submission.yymm as submission_date_yy_mm,
+    ccb.submission.monyy as submission_date_month_year,
     av.action,
     av.variation_id,
     (ccs.annotation_id is not null) as submitted_flag
   FROM clinvar_curator.cvc_batch_scv_max_annotation_view bsa
+  JOIN clinvar_curator.cvc_clinvar_batches ccb
+  ON
+    ccb.batch_id = bsa.batch_id
   JOIN `clinvar_curator.cvc_annotations_view` av
   ON
     av.annotation_id = bsa.annotation_id
@@ -24,20 +29,17 @@ WITH batch_anno AS (
     ccs.annotation_id = bsa.annotation_id
 )
 SELECT
-  bwv.subm_date.yymm as submission_date_yy_mm,
-  bwv.subm_date.monyy as submission_date_month_year,
+  ba.submission_date_yy_mm,
+  ba.submission_date_month_year,
   COUNT(DISTINCT IF(submitted_flag, variation_id, null)) submitted_var_count,
   COUNT(DISTINCT IF(submitted_flag, scv_id, null)) submitted_scv_count,
   count(distinct ba.variation_id) as all_var_count,
   count(distinct ba.scv_id) as all_scv_count,
   string_agg(DISTINCT ba.batch_id ORDER BY ba.batch_id) as batch_ids
 FROM batch_anno ba
-JOIN `clinvar_curator.cvc_batch_window_view` bwv
-  ON
-    bwv.batch_id = ba.batch_id
 GROUP BY
-  bwv.subm_date.yymm,
-  bwv.subm_date.monyy
+  ba.submission_date_yy_mm,
+  ba.submission_date_month_year
 
 -- overall_as_of connected sheet comparing all annotations vs submitted annotations
 select 

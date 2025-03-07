@@ -5,8 +5,10 @@
 CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_baseline_annotations`(
   scope STRING
 )
-AS (
-  WITH anno AS (
+AS 
+(
+  WITH anno AS 
+  (
     SELECT
       av.annotation_id,
       av.vcv_axn,
@@ -18,6 +20,7 @@ AS (
       av.curator,
       av.annotated_on,
       av.annotated_date,
+      av.annotation_release_date,
       av.reason,
       av.notes,
       av.vcv_id,
@@ -51,7 +54,8 @@ AS (
         FALSE
       END
     ),
-    anno_history AS (
+    anno_history AS 
+    (
       SELECT
         a.annotation_id,
         (COUNTIF(a.scv_id = prior_a.scv_id) > 0) as has_prior_scv_id_annotation,
@@ -79,7 +83,7 @@ AS (
     )
     SELECT 
       CURRENT_DATE() as as_of_date,
-      rel.release_date as annotation_release_date,
+      a.annotation_release_date,
       a.annotation_id,
       -- variant and vcv
       a.variation_id,
@@ -116,9 +120,6 @@ AS (
       ah.prior_scv_annotations,
       a.result_set_scope
     FROM anno as a 
-    JOIN `clinvar_ingest.all_releases`() rel
-    ON 
-      a.annotated_date between rel.release_date+1 and rel.next_release_date
     LEFT JOIN anno_history ah
     ON
       ah.annotation_id = a.annotation_id

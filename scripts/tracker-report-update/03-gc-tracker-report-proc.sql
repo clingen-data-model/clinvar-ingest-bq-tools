@@ -163,11 +163,14 @@ BEGIN
       SELECT 
         gc_scv.variation_id,
         COUNT(gc_scv.id) as gc_scv_count,
-        MIN(vcv.date_created) as first_in_clinvar
+        MIN(scv.date_created) as first_in_clinvar
       FROM gc_scv
       JOIN `%s.variation_archive` vcv
       ON
         vcv.variation_id = gc_scv.variation_id
+      JOIN `%s.scv_summary` scv
+      ON
+        scv.variation_id = vcv.variation_id
       GROUP BY 
         gc_scv.variation_id
     )
@@ -188,7 +191,7 @@ BEGIN
       v.variation_id,
       v.first_in_clinvar,
       v.gc_scv_count
-  """, cur.schema_name, cur.release_date);
+  """, cur.schema_name, cur.schema_name, cur.release_date);
 
   -- gc variation report (1 of 2)  - first remove all gc_variation records for the release_date being processed
   EXECUTE IMMEDIATE FORMAT("""

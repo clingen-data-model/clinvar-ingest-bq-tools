@@ -42,6 +42,17 @@ AS (
     ORDER BY 1
 );
 
+CREATE OR REPLACE TABLE FUNCTION `clinvar_ingest.release_on`(on_date DATE) AS (
+SELECT
+                x.release_date,
+                x.prev_release_date,
+                x.next_release_date
+            FROM `clinvar_ingest.all_releases`() x
+            WHERE on_date >= x.release_date
+            ORDER BY 2 DESC
+            LIMIT 1
+);
+
 
 
 -- the main all_schemas() table function used by all other specialized functions.
