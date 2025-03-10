@@ -124,6 +124,7 @@ AS
     a.review_label,
     a.batch_id,
     a.batch_date,
+    a.batch_release_date,
 
     -- is this the annotation the latest for this scv id (TRUE or Count=0 means no newer annotations currently exist for the exact scv id)
     a.is_latest AS is_latest_annotation,

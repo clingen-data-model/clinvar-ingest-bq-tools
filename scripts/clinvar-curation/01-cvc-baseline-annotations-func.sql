@@ -32,6 +32,7 @@ AS
       av.review_notes,
       av.batch_id,
       av.batch_date,
+      av.batch_release_date,
       av.is_submitted,
       av.is_reviewed,
       av.is_latest,
@@ -112,6 +113,7 @@ AS
       a.is_reviewed,
       a.batch_id,
       a.batch_date,
+      a.batch_release_date,
       a.is_submitted,
       -- anno history
       ah.has_prior_scv_id_annotation,

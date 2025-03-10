@@ -109,6 +109,7 @@ AS
       ) as review_label,
       rev.batch_id,
       DATE(b_rev.finalized_datetime) as batch_date,
+      b_rev.batch_release_date,
       (sub.annotation_id is not null) as is_submitted
     FROM anno a
     LEFT JOIN `clinvar_curator.cvc_clinvar_submissions` sub
@@ -319,7 +320,7 @@ AS
     sa.annotation_release_date,
     sa.review_status
   FROM `clinvar_curator.cvc_submitted_annotations_view` sa
-  JOIN `clinvar_ingest.schema_on`(CURRENT_DATE()) latest_release ON TRUE
+  JOIN `clinvar_ingest.release_on`(CURRENT_DATE()) latest_release ON TRUE
   LEFT JOIN `clinvar_ingest.clinvar_scvs` cur_vs
   ON
     cur_vs.id = sa.scv_id

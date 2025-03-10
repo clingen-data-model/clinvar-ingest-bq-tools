@@ -69,7 +69,13 @@ ORDER BY 3 desc
 WITH 
 submitted_outcomes AS (
   SELECT
-    *
+    scv_id,
+    batch_release_date,
+    batch_id,
+    submission_yy_mm,
+    submission_month_year,
+    variation_id,
+    invalid_submission_reason
   FROM `clinvar_curator.cvc_submitted_outcomes_view`
 ),
 flagged_vars AS (
@@ -95,7 +101,8 @@ actual_scvs as (
     fv.submission_yy_mm,
     fv.submission_month_year,
     vs.variation_id, 
-    vs.rpt_stmt_type, 
+    vs.statement_type,
+    vs.gks_proposition_type, 
     vs.rank,
     vs.clinsig_type,
     vs.classif_type,
@@ -105,12 +112,13 @@ actual_scvs as (
     vs.submitter_id,
     vs.submission_date
   FROM flagged_vars fv
-  LEFT JOIN `clinvar_ingest.voi_scv` vs
+  LEFT JOIN `clinvar_ingest.clinvar_scvs` vs
   ON 
     fv.variation_id = vs.variation_id
     AND
     fv.batch_release_date BETWEEN vs.start_release_date AND vs.end_release_date  
-  ),
+  )
+  ,
 derived_scvs as (
   SELECT
     fv.batch_release_date,
@@ -118,7 +126,8 @@ derived_scvs as (
     fv.submission_yy_mm,
     fv.submission_month_year,
     vs.variation_id, 
-    vs.rpt_stmt_type, 
+    vs.statement_type,
+    vs.gks_proposition_type, 
     vs.rank,
     vs.clinsig_type,
     vs.classif_type,
@@ -149,7 +158,8 @@ actual_groups AS (
     batch_id,
     submission_yy_mm,
     submission_month_year,
-    rpt_stmt_type, 
+    statement_type,
+    gks_proposition_type, 
     rank,
     clinsig_type,
     classif_type,
@@ -161,11 +171,13 @@ actual_groups AS (
     batch_id,
     submission_yy_mm,
     submission_month_year,
-    rpt_stmt_type, 
+    statement_type,
+    gks_proposition_type, 
     rank,
     classif_type,
     clinsig_type
-),
+)
+,
 derived_groups AS (
   SELECT 
     variation_id, 
@@ -173,7 +185,8 @@ derived_groups AS (
     batch_id,
     submission_yy_mm,
     submission_month_year,
-    rpt_stmt_type, 
+    statement_type,
+    gks_proposition_type, 
     rank,
     clinsig_type,
     classif_type,
@@ -185,11 +198,13 @@ derived_groups AS (
     batch_id,
     submission_yy_mm,
     submission_month_year,
-    rpt_stmt_type, 
+    statement_type,
+    gks_proposition_type, 
     rank,
     classif_type,
     clinsig_type
-),
+)
+,
 calculated_results AS (
   SELECT 
     agrps.batch_release_date,
@@ -197,7 +212,8 @@ calculated_results AS (
     agrps.submission_yy_mm,
     agrps.submission_month_year,
     agrps.variation_id,
-    agrps.rpt_stmt_type, 
+    agrps.statement_type,
+    agrps.gks_proposition_type, 
     agrps.rank,
     -- actual scvs
     COUNT(DISTINCT agrps.clinsig_type) as actual_unique_clinsig_type_count,
@@ -244,7 +260,9 @@ calculated_results AS (
     AND
     agrps.batch_id = ascvs.batch_id
     AND
-    agrps.rpt_stmt_type = ascvs.rpt_stmt_type
+    agrps.statement_type = ascvs.statement_type
+    AND
+    agrps.gks_proposition_type = ascvs.gks_proposition_type
     AND
     agrps.rank = ascvs.rank
     AND
@@ -260,7 +278,9 @@ calculated_results AS (
     AND
     dgrps.batch_id = dscvs.batch_id
     AND
-    dgrps.rpt_stmt_type = dscvs.rpt_stmt_type
+    dgrps.statement_type = dscvs.statement_type
+    AND
+    dgrps.gks_proposition_type = dscvs.gks_proposition_type
     AND
     dgrps.rank = dscvs.rank
     AND
@@ -271,12 +291,13 @@ calculated_results AS (
     agrps.submission_yy_mm,
     agrps.submission_month_year,
     agrps.variation_id,
-    agrps.rpt_stmt_type, 
+    agrps.statement_type,
+    agrps.gks_proposition_type, 
     agrps.rank
 ),
 group_results AS (
   SELECT 
-    (cr.rank = IF(cv.rank=2,1,cv.rank)) as is_top_rank,
+    (cr.rank = IF(cvc.rank=2,1,cvc.rank)) as is_top_rank,
     (cr.actual_agg_sig_type not in (1,2,4)) as actual_is_conflicting,
     (cr.derived_agg_sig_type not in (1,2,4)) as derived_is_conflicting,
     (cr.actual_submission_count != cr.derived_submission_count) as is_modified,
@@ -286,7 +307,8 @@ group_results AS (
     cr.submission_yy_mm,
     cr.submission_month_year,
     cr.variation_id,
-    cr.rpt_stmt_type, 
+    cr.statement_type,
+    cr.gks_proposition_type, 
     cr.rank,
     cr.actual_agg_sig_type,
     cr.actual_agg_classif_w_count,
@@ -305,7 +327,7 @@ group_results AS (
     cv.id,
     cv.version,
     cvc.rank as vcv_rank,
-    cvc.agg_classification
+    cvc.agg_classification_description
   FROM calculated_results cr
   LEFT JOIN `clinvar_ingest.clinvar_vcvs` cv
   ON
@@ -316,6 +338,8 @@ group_results AS (
   ON
     cvc.vcv_id = cv.id
     AND
+    cvc.statement_type = cr.statement_type
+    AND
     cr.batch_release_date BETWEEN cvc.start_release_date AND cvc.end_release_date
     
   ),
@@ -325,7 +349,8 @@ final_results AS (
     submission_yy_mm,
     submission_month_year,
     variation_id,
-    rpt_stmt_type,
+    statement_type,
+    gks_proposition_type,
 
     MAX(rank) as top_rank,
     MAX_BY(is_removed, rank) as top_is_removed,
@@ -344,14 +369,16 @@ final_results AS (
     submission_yy_mm,
     submission_month_year,
     variation_id,
-    rpt_stmt_type
+    statement_type,
+    gks_proposition_type
 )
 SELECT
   batch_id,
   submission_yy_mm,
   submission_month_year,
   variation_id,
-  rpt_stmt_type,
+  statement_type,
+  gks_proposition_type,
   top_rank,
   top_actual_agg_classif_w_count,
   CASE
