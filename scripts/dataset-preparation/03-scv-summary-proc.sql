@@ -146,7 +146,7 @@ BEGIN
       ca.clinical_assertion_observation_ids,
       ca.submitter_id,
       subr.current_name as submitter_name,
-      IFNULL(subr.current_abbrev, csa.current_abbrev) as submitter_abbrev,
+      IFNULL(IFNULL(subr.current_abbrev, csa.current_abbrev),LEFT(subr.current_name,25)||"...") as submitter_abbrev,
       subm.submission_date, 
       obs.origin,
       obs.affected_status,
