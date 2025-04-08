@@ -17,8 +17,8 @@ BEGIN
     FROM clinvar_ingest.schema_on(on_date) AS s
   );
 
-  -- use the max end-release-date from clinvar_gc_scvs as the last_complete_release_processed_date, since it is the last table to be processed
-  SET last_complete_release_processed_date = (select max(end_release_date) from clinvar_ingest.clinvar_gc_scvs);
+  -- use the max end-release-date from clinvar_scvs as the last_complete_release_processed_date, since it is the last table to be processed
+  SET last_complete_release_processed_date = (select max(end_release_date) from clinvar_ingest.clinvar_scvs);
 
   -- if the previous release date is not equal to the last_complete_release_processed_date, raise an exception 
   IF rec.prev_release_date != last_complete_release_processed_date THEN
@@ -56,9 +56,6 @@ BEGIN
   CALL `clinvar_ingest.clinvar_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
   SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_result]);
 
-  CALL `clinvar_ingest.clinvar_gc_scvs`(rec.schema_name, rec.release_date, rec.prev_release_date, single_call_result);
-  SET all_processed_results = ARRAY_CONCAT(all_processed_results, [single_call_result]);
-  
   -- output the list of all processed results for auditing purposes.
   SELECT * FROM UNNEST(all_processed_results);
 

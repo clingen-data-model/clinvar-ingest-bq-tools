@@ -149,27 +149,6 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
   deleted_release_date DATE
 );
 
--- *****************  clinvar_gc_scvs *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_gc_scvs`
-(
-  variation_id STRING NOT NULL,
-  id STRING NOT NULL, 
-  version INT NOT NULL, 
-  submitter_id STRING,
-  method_desc STRING,
-  method_type STRING,
-  lab_name STRING,
-  lab_date_reported DATE,
-  lab_id STRING,
-  lab_classification STRING,
-  lab_classif_type STRING,
-  lab_type STRING,
-  sample_id STRING,
-  start_release_date DATE,
-  end_release_date DATE,
-  deleted_release_date DATE
-);
-
 
 -- -- initialize submitter info by release based on clinical_assertion release info,
 -- --  36 very old submitter ids existed before 2019-07-01 which need to be manually 

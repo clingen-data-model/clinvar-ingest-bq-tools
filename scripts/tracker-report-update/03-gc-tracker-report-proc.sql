@@ -1,8 +1,14 @@
-CREATE OR REPLACE PROCEDURE `variation_tracker.gc_tracker_report_rebuild`()
+CREATE OR REPLACE PROCEDURE `variation_tracker.gc_tracker_report_rebuild`(schemaName STRING)
 BEGIN
+
   DECLARE cur STRUCT<schema_name STRING, release_date DATE>;
-  
-  SET cur = (SELECT STRUCT(schema_name, release_date) FROM `clinvar_ingest.all_schemas`() ORDER BY release_date DESC LIMIT 1);
+
+  -- default to the latest schema if no schema_name argument is passed
+  IF (schemaName IS NULL) THEN
+    SET cur = (SELECT STRUCT(schema_name, release_date) FROM `clinvar_ingest.all_schemas`() ORDER BY release_date DESC LIMIT 1);
+  ELSE
+    SET cur = (SELECT STRUCT(schema_name, release_date) FROM `clinvar_ingest.all_schemas`() WHERE schema_name = schemaName);
+  END IF;
   
   -- vceps for current release
   EXECUTE IMMEDIATE FORMAT("""
@@ -24,108 +30,9 @@ BEGIN
       rs.type = "VCEP" 
       AND 
       rs.submitter_id IS NOT NULL
-  """, cur.schema_name);
-
-  -- gc scv info for current release
-  EXECUTE IMMEDIATE FORMAT("""
-    CREATE OR REPLACE TEMP TABLE gc_scv
-    AS
-    SELECT
-      scv.submitter_id,
-      scv.variation_id,
-      gcscv.id,
-      FORMAT("%%s.%%i", gcscv.id, gcscv.version) as scv_acxn,
-      IF(scv.local_key IS NULL, NULL, SPLIT(scv.local_key, "|")[0]) as local_key,
-      scv.local_key as local_key_orig,
-      scv.date_created as first_in_clinvar,
-      scv.classification_comment,
-      COUNT(IFNULL(gcscv.lab_id,gcscv.lab_name)) as case_count
-    FROM `%s.gc_scv` gcscv
-    JOIN `%s.scv_summary` scv
-    ON
-      scv.id = gcscv.id
-    WHERE 
-      -- these are the dupe gc submissions that are older
-      gcscv.id NOT IN (
-        "SCV000607136","SCV000986740",
-        "SCV000986708","SCV000986786",
-        "SCV000986705","SCV000986788",
-        "SCV000986813","SCV000607109"
-      )
-    GROUP BY
-      scv.submitter_id,
-      scv.variation_id,
-      gcscv.id,
-      gcscv.version,
-      scv.local_key,
-      scv.date_created,
-      scv.classification_comment
-  """, cur.schema_name, cur.schema_name);
-
-  -- gc scv w/ agg info for current release
-  EXECUTE IMMEDIATE FORMAT("""
-    CREATE OR REPLACE TEMP TABLE gc_scv_agg 
-    AS
-    SELECT
-      gc_scv.submitter_id,
-      gc_scv.variation_id,
-      g.hgnc_id,
-      g.symbol,
-      v.name,
-      vac.interp_description as agg_classification,
-      cvs1.rank,
-      gc_scv.scv_acxn,
-      gc_scv.local_key,
-      gc_scv.case_count,
-      gc_scv.first_in_clinvar,
-      gc_scv.classification_comment
-    FROM gc_scv
-    JOIN `%s.variation` v
-    ON
-      v.id = gc_scv.variation_id
-    LEFT JOIN `%s.single_gene_variation` sgv
-    ON
-      sgv.variation_id = gc_scv.variation_id
-    LEFT JOIN `%s.gene` g
-    ON
-      sgv.gene_id = g.id 
-    JOIN `%s.variation_archive` vcv
-    ON
-      vcv.variation_id = gc_scv.variation_id
-    JOIN `%s.variation_archive_classification` vac
-    ON
-      vac.vcv_id = vcv.id
-    LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
-    ON 
-      cvs1.label = vac.review_status
+      -- NEW test for rank to exclude COGR tagged VCEPs
       AND
-      vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
-  """, cur.schema_name, cur.schema_name, cur.schema_name, cur.schema_name, cur.schema_name);
-
-  -- gc case info for current release
-  EXECUTE IMMEDIATE FORMAT("""
-    CREATE OR REPLACE TEMP TABLE gc_cur_case
-    AS
-    SELECT
-      gscv.variation_id,
-      gc_scv.scv_acxn,
-      gc_scv.local_key,
-      gc_scv.local_key_orig,
-      gscv.lab_name,
-      gscv.lab_id,
-      gscv.lab_classification,
-      gscv.lab_classif_type,
-      gscv.lab_date_reported,
-      gscv.sample_id,
-      IF(
-        gscv.sample_id IS NULL, 
-        gc_scv.local_key, 
-        CONCAT(gc_scv.local_key, "|", gscv.sample_id)
-      ) as case_report_key
-    FROM gc_scv
-    JOIN `%s.gc_scv` gscv
-    ON 
-      gc_scv.id = gscv.id
+      scv.rank = 3
   """, cur.schema_name);
 
   -- gc case related lab info fo current release
@@ -133,26 +40,26 @@ BEGIN
     CREATE OR REPLACE TEMP TABLE lab_case
     AS
     SELECT
-      gc_cc.variation_id,
-      gc_cc.lab_id as submitter_id,
-      gc_cc.case_report_key,
+      gso.variation_id,
+      gso.lab_id as submitter_id,
+      gso.scv_obs_id,
       STRING_AGG(DISTINCT FORMAT("%%s.%%i", lab_scv.id, lab_scv.version)) as acxn,
       STRING_AGG(DISTINCT lab_scv.classif_type ORDER BY lab_scv.classif_type) as classif_type,
       STRING_AGG(DISTINCT lab_scv.submitted_classification ORDER BY lab_scv.submitted_classification) as classification,
       MIN(lab_scv.last_evaluated) as last_evaluated,
       MIN(lab_scv.date_created) as first_in_clinvar,
       COUNT(DISTINCT lab_scv.id) as scv_count
-    FROM gc_cur_case gc_cc
+    FROM `%s.gc_scv_obs` gso
     LEFT JOIN `%s.scv_summary` lab_scv
     ON
-      lab_scv.submitter_id = gc_cc.lab_id 
+      lab_scv.submitter_id = gso.lab_id 
       and
-      lab_scv.variation_id = gc_cc.variation_id 
+      lab_scv.variation_id = gso.variation_id 
     GROUP BY
-      gc_cc.lab_id,
-      gc_cc.variation_id,
-      gc_cc.case_report_key
-  """, cur.schema_name);
+      gso.lab_id,
+      gso.variation_id,
+      gso.scv_obs_id
+  """, cur.schema_name, cur.schema_name);
 
   -- gc var report
   EXECUTE IMMEDIATE FORMAT("""
@@ -161,37 +68,110 @@ BEGIN
     WITH v AS 
     (
       SELECT 
-        gc_scv.variation_id,
-        COUNT(gc_scv.id) as gc_scv_count,
-        MIN(scv.date_created) as first_in_clinvar
-      FROM gc_scv
-      JOIN `%s.variation_archive` vcv
-      ON
-        vcv.variation_id = gc_scv.variation_id
-      JOIN `%s.scv_summary` scv
-      ON
-        scv.variation_id = vcv.variation_id
+        gso.variation_id,
+        COUNT(gso.id) as gc_scv_count,
+        MIN(gso.vcv_first_in_clinvar) as first_in_clinvar
+      FROM `%s.gc_scv_obs` gso
       GROUP BY 
-        gc_scv.variation_id
+        gso.variation_id
+    ),
+    sgrp AS (
+      SELECT  
+        sgrp.id,
+        sgrp.variation_id,
+        sgrp.scv_group_type,
+        v.first_in_clinvar,
+        v.gc_scv_count,
+        REGEXP_EXTRACT(sgrp.scv_label, r'\\(([0-9A-Z\\-]+)\\, ') as class_type,
+        split( sgrp.scv_label, "%%")[0]||"%%"  label,
+        sgrp.rank, 
+        sgrp.scv_label
+      FROM v
+      JOIN `clinvar_ingest.clinvar_sum_scvs` sgrp
+      ON
+        sgrp.variation_id = v.variation_id 
+        AND
+        %T between sgrp.start_release_date and sgrp.end_release_date
+    ),
+    sgrp_var_class_type AS (
+      SELECT
+        sgrp.variation_id,
+        sgrp.scv_group_type,
+        sgrp.class_type,
+        cct.gks_code_order,
+        FORMAT("%%s (%%i)", sgrp.class_type, COUNT(DISTINCT sgrp.id)) as label
+      FROM sgrp
+      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cct
+      ON
+        LOWER(cct.code) = LOWER(sgrp.class_type)
+      GROUP BY
+        sgrp.variation_id,
+        sgrp.scv_group_type,
+        sgrp.class_type,
+        cct.gks_code_order
+    ),
+    sgrp_var_class_type_count AS (
+      SELECT
+        svct.variation_id,
+        STRING_AGG(
+          svct.label,
+          "\\n"
+          ORDER BY
+            svct.scv_group_type,
+            svct.gks_code_order
+        ) as class_type_count_label
+      FROM sgrp_var_class_type svct
+      GROUP BY
+        svct.variation_id
+    ),
+    sgrp_var_scv_lists AS (
+      SELECT
+        sgrp.variation_id,
+        sgrp.first_in_clinvar,
+        sgrp.gc_scv_count,
+        COUNT(
+          distinct sgrp.id
+        ) as scv_count,
+        STRING_AGG(
+          sgrp.label, 
+          "\\n" 
+          ORDER BY 
+            sgrp.rank desc, 
+            sgrp.scv_group_type, 
+            sgrp.label
+        ) as all_scvs,
+        STRING_AGG(
+          IF(
+            sgrp.class_type = "VUS", 
+            sgrp.label, 
+            NULL
+          ), 
+          "\\n" 
+          ORDER BY 
+            sgrp.rank desc, 
+            sgrp.scv_group_type, 
+            sgrp.label
+        ) AS vus_scvs
+      FROM sgrp
+      GROUP BY
+        sgrp.variation_id,
+        sgrp.first_in_clinvar,
+        sgrp.gc_scv_count  
     )
     -- variation data related to single GC submitter's submissions
     SELECT
-      v.variation_id,
-      v.first_in_clinvar,
-      COUNT(distinct sgrp.id) as scv_count,
-      v.gc_scv_count,
-      STRING_AGG(split( sgrp.scv_label, "%%")[0]||"%%", "\\n" ORDER BY sgrp.rank desc, sgrp.scv_group_type, sgrp.scv_label) as all_scvs
-    FROM v
-    JOIN `clinvar_ingest.clinvar_sum_scvs` sgrp
+      sgrp_var.variation_id,
+      sgrp_var.first_in_clinvar,
+      sgrp_var.scv_count,
+      sgrp_var.gc_scv_count,
+      sgrp_var.all_scvs,
+      sgrp_var.vus_scvs,
+      svctc.class_type_count_label
+    FROM sgrp_var_scv_lists sgrp_var
+    LEFT JOIN sgrp_var_class_type_count svctc
     ON
-      sgrp.variation_id = v.variation_id 
-      AND
-      %T between sgrp.start_release_date and sgrp.end_release_date
-    GROUP BY
-      v.variation_id,
-      v.first_in_clinvar,
-      v.gc_scv_count
-  """, cur.schema_name, cur.schema_name, cur.release_date);
+      svctc.variation_id = sgrp_var.variation_id
+  """, cur.schema_name, cur.release_date);
 
   -- gc variation report (1 of 2)  - first remove all gc_variation records for the release_date being processed
   EXECUTE IMMEDIATE FORMAT("""
@@ -207,10 +187,10 @@ BEGIN
       submitter_id, 
       variation_id, 
       hgnc_id, 
-      symbol,
-      name, 
-      agg_classification, 
-      rank, 
+      gene_symbol,
+      variant_name, 
+      vcvc_classification, 
+      vcvc_rank, 
       clinvar_name, 
       submitted_classification,
       classif_type, 
@@ -219,43 +199,47 @@ BEGIN
       gc_scv_first_in_clinvar, 
       local_key,
       gc_case_count,
-      all_scvs, 
+      all_scvs,
+      vus_scvs,
+      class_type_count_label, 
       variant_first_in_clinvar, 
       novel_at_first_gc_submission,
       novel_as_of_report_run_date, 
       only_other_gc_submitters
     )
     -- variant-centric output for single GC submitter
-    SELECT
+    SELECT DISTINCT
       %T as report_date,
-      gc.submitter_id,
-      gc.variation_id,
-      gc.hgnc_id,
-      gc.symbol,
-      gc.name,
-      gc.agg_classification,
-      gc.rank,
+      gso.submitter_id,
+      gso.variation_id,
+      gso.hgnc_id,
+      gso.gene_symbol,
+      gso.variant_name,
+      gso.vcvc_classification,
+      gso.vcvc_rank,
       vcep.clinvar_name,
       vcep.submitted_classification,
       vcep.classif_type,
       vcep.last_evaluated,
-      gc.scv_acxn,
-      gc.first_in_clinvar as gc_scv_first_in_clinvar,
-      gc.local_key,
-      gc.case_count as gc_case_count,
+      gso.scv_acxn,
+      gso.first_in_clinvar as gc_scv_first_in_clinvar,
+      gso.local_key,
+      gso.case_count as gc_case_count,
       var.all_scvs,
+      var.vus_scvs,
+      var.class_type_count_label,
       var.first_in_clinvar as variant_first_in_clinvar,
-      IF((var.first_in_clinvar = gc.first_in_clinvar), "Yes", "No") as novel_at_first_gc_submission,
+      IF((var.first_in_clinvar = gso.first_in_clinvar), "Yes", "No") as novel_at_first_gc_submission,
       IF((var.scv_count = 1), "Yes", "No") as novel_as_of_report_run_date,
       IF((var.scv_count > 1 AND var.scv_count = var.gc_scv_count), "Yes", "No") as only_other_gc_submitters
-    FROM gc_scv_agg gc
-    LEFT JOIN vcep 
+    FROM `%s.gc_scv_obs` gso
+    LEFT JOIN vcep
     ON 
-      vcep.variation_id = gc.variation_id
+      vcep.variation_id = gso.variation_id
     LEFT JOIN var
     ON
-      var.variation_id = gc.variation_id
-  """, cur.release_date);
+      var.variation_id = gso.variation_id
+  """, cur.release_date, cur.schema_name);
 
   -- gc case report (1 of 2)  - first remove all gc_case records for the release_date being processed
   EXECUTE IMMEDIATE FORMAT("""
@@ -268,9 +252,10 @@ BEGIN
     INSERT INTO `variation_tracker.gc_case` 
     (
       report_date,
+      scv_obs_id,
       submitter_id,
       variation_id,
-      gene_id,
+      hgnc_id,
       gene_symbol,
       variant_name,
       ep_name,
@@ -286,6 +271,7 @@ BEGIN
       gc_scv_first_in_clinvar,
       gc_scv_local_key,
       case_report_sample_id,
+      case_report_sample_variant_id,
       lab_scv_classification,
       lab_scv_classif_type,
       lab_scv_last_evaluated,
@@ -294,28 +280,50 @@ BEGIN
       lab_scv_in_clinvar_as_of_release,
       ep_diff_alert,
       lab_diff_alert,
-      classification_comment
+      classification_comment,
+      obs_origin,
+      vcvc_classification,
+      vcvc_rank,
+      case_count,
+      clinical_features,
+      co_occuring_variation_ids,
+      patient_ids,
+      all_scvs,
+      vus_scvs,
+      class_type_count_label
+    )
+    WITH gso_co_occuring AS
+    (
+      SELECT 
+        gso.scv_obs_id,
+        ARRAY_TO_STRING(ARRAY_AGG(DISTINCT co.variation_id), ', ') as variation_ids
+      FROM `%s.gc_scv_obs` gso
+      CROSS JOIN UNNEST(gso.co_occuring) as co
+      GROUP BY 
+        gso.scv_obs_id
     )
     SELECT
       %T as report_date,
-      gc.submitter_id,
-      gc.variation_id,
-      gc.hgnc_id as gene_id,
-      gc.symbol as gene_symbol,
-      gc.name as variant_name,
+      gso.scv_obs_id,
+      gso.submitter_id,
+      gso.variation_id,
+      gso.hgnc_id,
+      gso.gene_symbol,
+      gso.variant_name,
       vcep.clinvar_name as ep_name,
       vcep.submitted_classification as ep_classification,
       vcep.classif_type as ep_classif_type,
       vcep.last_evaluated as ep_last_evaluated_date,
-      gc_cc.lab_name as case_report_lab_name,
-      gc_cc.lab_id as case_report_lab_id,
-      gc_cc.lab_classification as case_report_lab_classification,
-      gc_cc.lab_classif_type as case_report_lab_classif_type,
-      gc_cc.lab_date_reported as case_report_lab_date_reported,
-      gc.scv_acxn as gc_scv_acxn,
-      gc.first_in_clinvar as gc_scv_first_in_clinvar,
-      gc.local_key as gc_scv_local_key,
-      gc_cc.sample_id as case_report_sample_id,
+      gso.lab_name as case_report_lab_name,
+      gso.lab_id as case_report_lab_id,
+      gso.lab_classification as case_report_lab_classification,
+      gso.lab_classif_type as case_report_lab_classif_type,
+      gso.lab_date_reported as case_report_lab_date_reported,
+      gso.scv_acxn as gc_scv_acxn,
+      gso.first_in_clinvar as gc_scv_first_in_clinvar,
+      gso.local_key as gc_scv_local_key,
+      gso.sample_id as case_report_sample_id,
+      gso.sample_variant_id as case_report_sample_variant_id,
       -- classification
       lab_case.classification as lab_scv_classification,
       -- classification type
@@ -329,7 +337,7 @@ BEGIN
         WHEN 0 THEN 
           null 
         WHEN 1 THEN 
-          IF(gc.first_in_clinvar <= lab_case.first_in_clinvar, "No", "Yes") 
+          IF(gso.first_in_clinvar <= lab_case.first_in_clinvar, "No", "Yes") 
         ELSE 
           "Error: multiple lab scvs." 
         END as lab_scv_before_gc_scv,
@@ -346,11 +354,11 @@ BEGIN
       CASE 
         WHEN vcep.classif_type IS NULL THEN 
           null 
-        WHEN (IFNULL(gc_cc.lab_classif_type,"n/a") <> vcep.classif_type) THEN
+        WHEN (IFNULL(gso.lab_classif_type,"n/a") <> vcep.classif_type) THEN
           FORMAT("%%s vs %%s (%%s)", 
-            UPPER(IFNULL(gc_cc.lab_classif_type,"n/a")), 
+            UPPER(IFNULL(gso.lab_classif_type,"n/a")), 
             UPPER(vcep.classif_type), 
-            IF(IFNULL(gc_cc.lab_date_reported,vcep.last_evaluated) is NULL, "?",IF(gc_cc.lab_date_reported > vcep.last_evaluated, "<",">"))
+            IF(IFNULL(gso.lab_date_reported,vcep.last_evaluated) is NULL, "?",IF(gso.lab_date_reported > vcep.last_evaluated, "<",">"))
           )
         ELSE 
           null
@@ -358,11 +366,11 @@ BEGIN
       -- alert for LAB diff, show null if no vcep scv or if LAB classification exactly matches GC CASE report classification
       -- show error if more than 1 scv exists on variant for case report submitter
       CASE 
-        WHEN lab_case.scv_count=1 AND (IFNULL(gc_cc.lab_classif_type,"n/a") <> lab_case.classif_type) THEN 
+        WHEN lab_case.scv_count=1 AND (IFNULL(gso.lab_classif_type,"n/a") <> lab_case.classif_type) THEN 
           FORMAT("%%s vs %%s (%%s)", 
-            UPPER(IFNULL(gc_cc.lab_classif_type,"n/a")), 
+            UPPER(IFNULL(gso.lab_classif_type,"n/a")), 
             UPPER(lab_case.classif_type), 
-            IF(IFNULL(gc_cc.lab_date_reported,vcep.last_evaluated) is NULL, "?",IF(gc_cc.lab_date_reported > lab_case.last_evaluated, "<",">"))
+            IF(IFNULL(gso.lab_date_reported,vcep.last_evaluated) is NULL, "?",IF(gso.lab_date_reported > lab_case.last_evaluated, "<",">"))
           )
         WHEN lab_case.scv_count > 1 THEN
           -- error 
@@ -371,21 +379,32 @@ BEGIN
           -- lab_case count = 0 OR gc_cc and lab_case classifications match so do nothing
           null
         END as lab_diff_alert,
-      gc.classification_comment
-    FROM gc_scv_agg gc
-    LEFT JOIN vcep 
+      gso.classification_comment,
+      gso.obs_origin,
+      gso.vcvc_classification,
+      gso.vcvc_rank,
+      gso.case_count,
+      gso.clinical_features,
+      gso_co.variation_ids as co_occuring_variation_ids,
+      gso.patient_ids,
+      var.all_scvs,
+      var.vus_scvs,
+      var.class_type_count_label
+    FROM `%s.gc_scv_obs` gso
+    LEFT JOIN vcep
     ON 
-      vcep.variation_id = gc.variation_id
-    LEFT JOIN gc_cur_case gc_cc
-    ON
-      gc.scv_acxn = gc_cc.scv_acxn
+      vcep.variation_id = gso.variation_id
     LEFT JOIN lab_case
     ON 
-      lab_case.variation_id = gc_cc.variation_id 
-      AND
-      lab_case.case_report_key = gc_cc.case_report_key
-  """, cur.release_date);
+      lab_case.scv_obs_id = gso.scv_obs_id
+    LEFT JOIN gso_co_occuring gso_co
+    ON
+      gso_co.scv_obs_id = gso.scv_obs_id
+    LEFT JOIN var
+    ON 
+      var.variation_id = gso.variation_id
+  """, cur.schema_name, cur.release_date, cur.schema_name);
 
---     -- gc alerts? (TODO)
+    -- gc alerts? (TODO)
 
 END;
