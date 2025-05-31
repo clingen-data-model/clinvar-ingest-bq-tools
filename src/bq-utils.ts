@@ -264,16 +264,20 @@ function normalizeHpId(hp_id: string | null | undefined): string | null | undefi
   if (hp_id === null || hp_id === undefined) return hp_id;
 
   const original = hp_id;
-  const cleaned = hp_id.replace(/^(hp:)+/i, 'HP:');
 
-  const match = cleaned.match(/^(?:HP:)?(\d+)$/i);
-  if (!match) return original.toUpperCase();
+  // Collapse multiple HP: or HP prefixes like HP:HP0123 → HP0123
+  const collapsed = hp_id.replace(/^(hp:)+/i, '')  // collapse HP:HP:
+                        .replace(/.*?(hp)(\d+)$/i, '$2'); // if HP123 pattern exists, keep the digits only
 
-  let digits = match[1].replace(/^0+/, '') || '0'; // remove leading zeros
+  // Only proceed if it’s all digits now
+  if (!/^\d+$/.test(collapsed)) return original.toUpperCase();
+
+  // Remove leading zeros
+  const digits = collapsed.replace(/^0+/, '') || '0';
 
   if (digits.length <= 7) {
     return `HP:${digits.padStart(7, '0')}`.toUpperCase();
   }
 
-  return original.toUpperCase(); // can't safely normalize
+  return original.toUpperCase(); // too long after trimming
 }

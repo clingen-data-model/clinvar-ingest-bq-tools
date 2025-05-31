@@ -92,11 +92,14 @@ test('createSigType should return correct counts and percentages', () => {
 });
 
 test('normalizeHpId should normalize HP IDs correctly', () => {
+  expect(normalizeHpId('HP:HP0001234')).toBe('HP:0001234');
+  expect(normalizeHpId('HP1234')).toBe('HP:0001234');
   expect(normalizeHpId('HP:0001234')).toBe('HP:0001234');
   expect(normalizeHpId('1234')).toBe('HP:0001234');
   expect(normalizeHpId('HP:hp:1234')).toBe('HP:0001234');
   expect(normalizeHpId('000012345')).toBe('HP:0012345');
   expect(normalizeHpId('HP:0001234567')).toBe('HP:1234567');
+  expect(normalizeHpId('HP:hp0001234567')).toBe('HP:1234567');
   expect(normalizeHpId('hp:')).toBe('HP:');
   expect(normalizeHpId('')).toBe('');
   expect(normalizeHpId(null)).toBe(null);
