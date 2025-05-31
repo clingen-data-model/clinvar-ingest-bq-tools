@@ -255,3 +255,25 @@ function createSigType(nosig_count: number, unc_count: number, sig_count: number
     { count: sig_count, percent: Math.round((sig_count / total) * 1000) / 1000 }
   ];
 }
+
+/**
+ * Normalize HP ID to the form HP:[\d]{7}, or remove or add leading zeros if gt or lt 7 digits, respectively.
+ * Handles case-insensitive HP: prefixes like hp:hp:1234 and malformed entries.
+ */
+export function normalizeHpId(hp_id: string | null | undefined): string | null | undefined {
+  if (hp_id === null || hp_id === undefined) return hp_id;
+
+  const original = hp_id;
+  const cleaned = hp_id.replace(/^(hp:)+/i, 'HP:');
+
+  const match = cleaned.match(/^(?:HP:)?(\d+)$/i);
+  if (!match) return original.toUpperCase();
+
+  let digits = match[1].replace(/^0+/, '') || '0'; // remove leading zeros
+
+  if (digits.length <= 7) {
+    return `HP:${digits.padStart(7, '0')}`.toUpperCase();
+  }
+
+  return original.toUpperCase(); // can't safely normalize
+}

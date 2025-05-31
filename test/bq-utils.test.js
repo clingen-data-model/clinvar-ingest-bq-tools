@@ -5,6 +5,7 @@ const formatNearestMonth = bqUtils.__get__('formatNearestMonth');
 const determineMonthBasedOnRange = bqUtils.__get__('determineMonthBasedOnRange');
 const keyObjectById = bqUtils.__get__('keyObjectById');
 const normalizeAndKeyById = bqUtils.__get__('normalizeAndKeyById');
+const normalizeHpId = bqUtils.__get__('normalizeHpId');
 
 
 test('formatNearestMonth should format dates correctly', () => {
@@ -88,4 +89,17 @@ test('createSigType should return correct counts and percentages', () => {
         { count: 10, percent: 0.333 },
         { count: 15, percent: 0.5 }
     ]);
+});
+
+test('normalizeHpId should normalize HP IDs correctly', () => {
+  expect(normalizeHpId('HP:0001234')).toBe('HP:0001234');
+  expect(normalizeHpId('1234')).toBe('HP:0001234');
+  expect(normalizeHpId('HP:hp:1234')).toBe('HP:0001234');
+  expect(normalizeHpId('000012345')).toBe('HP:0012345');
+  expect(normalizeHpId('HP:0001234567')).toBe('HP:1234567');
+  expect(normalizeHpId('hp:')).toBe('HP:');
+  expect(normalizeHpId('')).toBe('');
+  expect(normalizeHpId(null)).toBe(null);
+  expect(normalizeHpId(undefined)).toBe(undefined);
+  expect(normalizeHpId('hp:123-456')).toBe('HP:123-456');
 });
