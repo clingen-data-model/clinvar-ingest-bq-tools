@@ -260,7 +260,7 @@ function createSigType(nosig_count: number, unc_count: number, sig_count: number
  * Normalize HP ID to the form HP:[\d]{7}, or remove or add leading zeros if gt or lt 7 digits, respectively.
  * Handles case-insensitive HP: prefixes like hp:hp:1234 and malformed entries.
  */
-export function normalizeHpId(hp_id: string | null | undefined): string | null | undefined {
+function normalizeHpId(hp_id: string | null | undefined): string | null | undefined {
   if (hp_id === null || hp_id === undefined) return hp_id;
 
   const original = hp_id;
