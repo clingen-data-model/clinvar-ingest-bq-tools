@@ -195,6 +195,9 @@ function normalizeValueKey(key: string | number, value: any): { key: string; val
   if (typeof key === "string" && (/^objectCondition_/.test(key))) {
     return { key: 'objectCondition', value };
   }
+  if (typeof key === "string" && (/^objectTumorType_/.test(key))) {
+    return { key: 'objectTumorType', value };
+  }
   if (typeof key === "string" && (/^definingContext_/.test(key))) {
     return { key: 'definingContext', value };
   }
