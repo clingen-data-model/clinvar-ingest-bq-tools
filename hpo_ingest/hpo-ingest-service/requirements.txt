@@ -1,5 +1,0 @@
-Flask
-google-cloud-storage
-google-cloud-bigquery
-pandas
-pyarrow
