@@ -19,18 +19,18 @@ def to_snake_case(s):
 def convert_to_bigquery_date(date_value):
     """
     Convert various date formats to BigQuery DATE format (YYYY-MM-DD).
-    Returns pd.NaT for invalid/empty dates to allow BigQuery to handle as NULL.
+    Returns None for invalid/empty dates to allow pandas to_datetime to handle as NaT.
     """
     if pd.isna(date_value) or date_value == "" or str(date_value).strip() == "":
-        return pd.NaT
+        return None
 
     try:
         parsed_date = pd.to_datetime(date_value, errors="raise")
         if pd.isna(parsed_date):
-            return pd.NaT
+            return None
         return parsed_date.strftime("%Y-%m-%d")
     except (ValueError, TypeError):
-        return pd.NaT
+        return None
 
 
 def process_tsv_data(tsv_data, table_config):
@@ -38,13 +38,14 @@ def process_tsv_data(tsv_data, table_config):
     Process TSV data string into a DataFrame based on table configuration.
     Args:
         tsv_data (str): TSV data as string.
-        table_config (dict): Table configuration with id_column, list_columns, and schema.
+        table_config (dict): Table configuration with id_column, schema, and delimiter.
+                           - delimiter: Character to split REPEATED columns (default: ",")
     Returns:
         pd.DataFrame: Processed DataFrame ready for BigQuery.
     """
     id_column = table_config.get("id_column")
-    list_columns = table_config.get("list_columns", [])
     schema = table_config.get("schema", [])
+    delimiter = table_config.get("delimiter", ",")
 
     df = pd.read_csv(io.StringIO(tsv_data), sep="\t")
 
@@ -61,41 +62,63 @@ def process_tsv_data(tsv_data, table_config):
     if "id" in df.columns:
         df["id"] = df["id"].astype(str)
 
-    # Convert specified columns to list of strings, splitting on pipe '|'
-    for col in list_columns:
-        if col in df.columns:
-            df[col] = (
-                df[col]
+    # Process each column based on its schema definition
+    for field in schema:
+        col_name = field.name
+        if col_name not in df.columns:
+            continue
+
+        is_repeated = hasattr(field, "mode") and field.mode == "REPEATED"
+
+        if is_repeated:
+            # First split REPEATED columns using the configured delimiter
+            df[col_name] = (
+                df[col_name]
                 .fillna("")
-                .apply(lambda x: [s.strip() for s in x.split("|")] if x else [])
+                .apply(
+                    lambda x: [s.strip() for s in str(x).split(delimiter)]
+                    if str(x).strip()
+                    else []
+                )
             )
 
-    # Convert columns based on schema types for BigQuery compatibility
-    date_columns = []
-    integer_columns = []
+            # Then apply type conversion to each element in the REPEATED column
+            if field.field_type == "DATE":
+                df[col_name] = df[col_name].apply(
+                    lambda x: [convert_to_bigquery_date(item) for item in x]
+                    if x
+                    else []
+                )
+                # Convert each date string to date object
+                df[col_name] = df[col_name].apply(
+                    lambda x: [
+                        pd.to_datetime(item, errors="coerce").date() if item else None
+                        for item in x
+                    ]
+                    if x
+                    else []
+                )
+            elif field.field_type == "INTEGER":
+                df[col_name] = df[col_name].apply(
+                    lambda x: [pd.to_numeric(item, errors="coerce") for item in x]
+                    if x
+                    else []
+                )
+            # STRING REPEATED columns are already processed (split into list of strings)
 
-    for field in schema:
-        if field.field_type == "DATE":
-            date_columns.append(field.name)
-        elif field.field_type == "INTEGER":
-            integer_columns.append(field.name)
-
-    # Convert DATE columns
-    for col in date_columns:
-        if col in df.columns:
-            df[col] = df[col].apply(convert_to_bigquery_date)
-
-    # Ensure INTEGER columns are properly typed and handle NaN
-    for col in integer_columns:
-        if col in df.columns:
-            # Convert to nullable integer type to handle NaN values properly
-            df[col] = pd.to_numeric(df[col], errors="coerce").astype("Int64")
-
-    # Convert empty strings to None for STRING columns to ensure proper NULL handling
-    string_columns = [field.name for field in schema if field.field_type == "STRING"]
-    for col in string_columns:
-        if col in df.columns:
-            # Replace empty strings with None for proper NULL handling
-            df[col] = df[col].replace("", None)
+        else:
+            # Process non-REPEATED columns
+            if field.field_type == "DATE":
+                df[col_name] = df[col_name].apply(convert_to_bigquery_date)
+                # Convert to date objects for PyArrow compatibility
+                df[col_name] = pd.to_datetime(df[col_name], errors="coerce").dt.date
+            elif field.field_type == "INTEGER":
+                # Convert to nullable integer type to handle NaN values properly
+                df[col_name] = pd.to_numeric(df[col_name], errors="coerce").astype(
+                    "Int64"
+                )
+            elif field.field_type == "STRING":
+                # Replace empty strings with None for proper NULL handling
+                df[col_name] = df[col_name].replace("", None)
 
     return df

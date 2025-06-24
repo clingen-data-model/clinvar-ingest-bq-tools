@@ -36,17 +36,38 @@ submitter_organization_schema = [
     bigquery.SchemaField("number_of_clinvar_submissions", "INTEGER"),
     bigquery.SchemaField("date_last_submitted", "DATE"),
     bigquery.SchemaField("maximum_review_status", "STRING"),
-    bigquery.SchemaField("collection_methods", "STRING"),
+    bigquery.SchemaField("collection_methods", "STRING", mode="REPEATED"),
     bigquery.SchemaField("novel_and_updates", "STRING"),
-    bigquery.SchemaField("clinical_significance_categories_submitted", "STRING"),
+    bigquery.SchemaField(
+        "clinical_significance_categories_submitted", "STRING", mode="REPEATED"
+    ),
     bigquery.SchemaField("number_of_submissions_from_clinical_testing", "INTEGER"),
     bigquery.SchemaField("number_of_submissions_from_research", "INTEGER"),
     bigquery.SchemaField("number_of_submissions_from_literature_only", "INTEGER"),
     bigquery.SchemaField("number_of_submissions_from_curation", "INTEGER"),
     bigquery.SchemaField("number_of_submissions_from_phenotyping", "INTEGER"),
-    bigquery.SchemaField("somatic_clinical_impact_values_submitted", "STRING"),
-    bigquery.SchemaField("somatic_oncogenicity_values_submitted", "STRING"),
+    bigquery.SchemaField(
+        "somatic_clinical_impact_values_submitted", "STRING", mode="REPEATED"
+    ),
+    bigquery.SchemaField(
+        "somatic_oncogenicity_values_submitted", "STRING", mode="REPEATED"
+    ),
 ]
+
+# Table configuration map: table_name -> config dict
+TABLE_CONFIGS = {
+    "ncbi_gene": {
+        "schema": ncbi_gene_schema,
+        "id_column": "GeneID",
+        "delimiter": "|",
+    },
+    "submitter_organization": {
+        "schema": submitter_organization_schema,
+        "id_column": "organization ID",
+        "delimiter": ",",
+    },
+    # Add more table configs as needed
+}
 
 
 def extract_json_nodes(content, file_name):
@@ -95,22 +116,6 @@ def process_json_from_gcs(bucket_name, file_name, table_name):
 
     df = pd.DataFrame(filtered_data)
     return load_to_bigquery(df, table_name)
-
-
-# Table configuration map: table_name -> config dict
-TABLE_CONFIGS = {
-    "ncbi_gene": {
-        "schema": ncbi_gene_schema,
-        "id_column": "GeneID",
-        "list_columns": ["synonyms"],
-    },
-    "submitter_organization": {
-        "schema": submitter_organization_schema,
-        "id_column": "organization ID",
-        "list_columns": [],
-    },
-    # Add more table configs as needed
-}
 
 
 def process_tsv_from_gcs(bucket_name, file_name, table_name):

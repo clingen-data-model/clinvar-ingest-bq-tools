@@ -16,9 +16,10 @@ except ImportError:
 
     # Create a mock SchemaField for testing
     class MockSchemaField:
-        def __init__(self, name, field_type):
+        def __init__(self, name, field_type, mode=None):
             self.name = name
             self.field_type = field_type
+            self.mode = mode
 
     bigquery = type("MockBigQuery", (), {"SchemaField": MockSchemaField})()
 
@@ -89,7 +90,7 @@ class TestProcessTsvData(unittest.TestCase):
             tsv_data = f.read()
 
         # Define the table config for submitter_organization
-        table_config = {"id_column": "organization ID", "list_columns": []}
+        table_config = {"id_column": "organization ID", "delimiter": ","}
 
         # Call the function
         df = process_tsv_data(tsv_data, table_config)
@@ -145,18 +146,18 @@ class TestDateConversion(unittest.TestCase):
             ("12/31/2023", "2023-12-31"),
             ("31/12/2023", "2023-12-31"),  # pandas should handle this
             ("2025-02-28", "2025-02-28"),
-            ("", pd.NaT),
-            (None, pd.NaT),
-            ("invalid date", pd.NaT),
-            ("2025-02-30", pd.NaT),  # invalid date
-            ("   ", pd.NaT),  # whitespace only
+            ("", None),
+            (None, None),
+            ("invalid date", None),
+            ("2025-02-30", None),  # invalid date
+            ("   ", None),  # whitespace only
         ]
 
         for input_date, expected in test_cases:
             with self.subTest(input_date=input_date):
                 result = convert_to_bigquery_date(input_date)
-                if pd.isna(expected):
-                    self.assertTrue(pd.isna(result))
+                if expected is None:
+                    self.assertIsNone(result)
                 else:
                     self.assertEqual(result, expected)
 
@@ -180,23 +181,37 @@ class TestDateConversion(unittest.TestCase):
         # Create table config with schema
         table_config = {
             "id_column": "organization ID",
-            "list_columns": [],
             "schema": mock_schema,
+            "delimiter": ",",
         }
 
         # Process the data
         df = process_tsv_data(test_tsv, table_config)
 
-        # Check that date column was converted properly
-        expected_dates = ["2025-06-26", "2023-12-31", pd.NaT, "2024-01-15"]
-        actual_dates = df["date_last_submitted"].tolist()
+        # Check that date column was converted properly to date objects
+        expected_date_strings = ["2025-06-26", "2023-12-31", None, "2024-01-15"]
+        actual_dates = df["date_last_submitted"]
 
-        for i, (actual, expected) in enumerate(zip(actual_dates, expected_dates)):
-            if pd.isna(expected):
+        # Check that the column contains Python date objects or NaT
+        for i, expected_str in enumerate(expected_date_strings):
+            actual = actual_dates.iloc[i]
+            if expected_str is None:
                 self.assertTrue(pd.isna(actual), f"Row {i}: expected NaT, got {actual}")
             else:
+                import datetime
+
+                expected_date = datetime.datetime.strptime(
+                    expected_str, "%Y-%m-%d"
+                ).date()
                 self.assertEqual(
-                    actual, expected, f"Row {i}: expected {expected}, got {actual}"
+                    actual,
+                    expected_date,
+                    f"Row {i}: expected {expected_date}, got {actual}",
+                )
+                self.assertIsInstance(
+                    actual,
+                    datetime.date,
+                    f"Row {i}: expected date object, got {type(actual)}",
                 )
 
         # Check that other columns weren't affected
@@ -217,13 +232,76 @@ class TestDateConversion(unittest.TestCase):
 2\tAnother\t12/31/2023"""
 
         # Table config without schema
-        table_config = {"id_column": "id", "list_columns": []}
+        table_config = {"id_column": "id", "delimiter": "|"}
 
         # Process the data
         df = process_tsv_data(test_tsv, table_config)
 
         # Check that date field was NOT converted (remains as original string)
         self.assertEqual(df["date_field"].tolist(), ["Jun 26, 2025", "12/31/2023"])
+
+    def test_process_tsv_data_with_repeated_columns_custom_delimiter(self):
+        """Test that process_tsv_data handles REPEATED columns with custom delimiter."""
+        # Create mock schema with REPEATED fields
+        mock_schema = [
+            bigquery.SchemaField("id", "STRING"),
+            bigquery.SchemaField("name", "STRING"),
+            bigquery.SchemaField("tags", "STRING", mode="REPEATED"),
+            bigquery.SchemaField("categories", "STRING", mode="REPEATED"),
+        ]
+
+        # Create test TSV data with comma-separated values
+        test_tsv = """id\tname\ttags\tcategories
+1\tItem A\ttag1,tag2,tag3\tcat1,cat2
+2\tItem B\tsingle_tag\tcat3
+3\tItem C\t\t"""
+
+        # Create table config with custom delimiter
+        table_config = {
+            "id_column": "id",
+            "schema": mock_schema,
+            "delimiter": ",",  # Custom delimiter for REPEATED columns
+        }
+
+        # Process the data
+        df = process_tsv_data(test_tsv, table_config)
+
+        # Check that REPEATED columns were converted properly
+        expected_tags = [["tag1", "tag2", "tag3"], ["single_tag"], []]
+        expected_categories = [["cat1", "cat2"], ["cat3"], []]
+
+        self.assertEqual(df["tags"].tolist(), expected_tags)
+        self.assertEqual(df["categories"].tolist(), expected_categories)
+
+        # Check that non-REPEATED columns weren't affected
+        self.assertEqual(df["name"].tolist(), ["Item A", "Item B", "Item C"])
+
+    def test_process_tsv_data_with_repeated_columns_default_delimiter(self):
+        """Test that process_tsv_data uses comma delimiter by default for REPEATED columns."""
+        # Create mock schema with REPEATED fields
+        mock_schema = [
+            bigquery.SchemaField("id", "STRING"),
+            bigquery.SchemaField("values", "STRING", mode="REPEATED"),
+        ]
+
+        # Create test TSV data with comma-separated values
+        test_tsv = """id\tvalues
+1\tval1,val2,val3
+2\tsingle_val"""
+
+        # Create table config without custom delimiter (should use default ,)
+        table_config = {
+            "id_column": "id",
+            "schema": mock_schema,
+            # No delimiter specified - should default to ","
+        }
+
+        # Process the data
+        df = process_tsv_data(test_tsv, table_config)
+
+        # Check that REPEATED columns were converted properly with comma delimiter
+        expected_values = [["val1", "val2", "val3"], ["single_val"]]
+        self.assertEqual(df["values"].tolist(), expected_values)
 
 
 if __name__ == "__main__":
