@@ -21,7 +21,7 @@
 This project contains the Typescript tools that are transformed into javascript and
 used by BigQuery routines to transform the ClinVar Ingest fields that have not
 been completely parsed from their json form.  Additionally, it provides tools that
-derive HGVS from ClinVar fields, format dates and calculate nearest months for 
+derive HGVS from ClinVar fields, format dates and calculate nearest months for
 aggregating data around ClinVar releases.
 
 ## Prerequisites
