@@ -3,5 +3,8 @@ node_modules/
 /build
 
 # Python cache directories
+__pycache__/
+*.py[cod]
+*$py.class
 .pytest_cache/
 .ruff_cache/

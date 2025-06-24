@@ -16,17 +16,35 @@ def to_snake_case(s):
     return s.lower()
 
 
+def convert_to_bigquery_date(date_value):
+    """
+    Convert various date formats to BigQuery DATE format (YYYY-MM-DD).
+    Returns None for invalid/empty dates to allow BigQuery to handle as NULL.
+    """
+    if pd.isna(date_value) or date_value == "" or str(date_value).strip() == "":
+        return None
+
+    try:
+        parsed_date = pd.to_datetime(date_value, errors="raise")
+        if pd.isna(parsed_date):
+            return None
+        return parsed_date.strftime("%Y-%m-%d")
+    except (ValueError, TypeError):
+        return None
+
+
 def process_tsv_data(tsv_data, table_config):
     """
     Process TSV data string into a DataFrame based on table configuration.
     Args:
         tsv_data (str): TSV data as string.
-        table_config (dict): Table configuration with id_column and list_columns.
+        table_config (dict): Table configuration with id_column, list_columns, and schema.
     Returns:
         pd.DataFrame: Processed DataFrame ready for BigQuery.
     """
     id_column = table_config.get("id_column")
     list_columns = table_config.get("list_columns", [])
+    schema = table_config.get("schema", [])
 
     df = pd.read_csv(io.StringIO(tsv_data), sep="\t")
 
@@ -51,5 +69,15 @@ def process_tsv_data(tsv_data, table_config):
                 .fillna("")
                 .apply(lambda x: [s.strip() for s in x.split("|")] if x else [])
             )
+
+    # Convert DATE columns based on schema
+    date_columns = []
+    for field in schema:
+        if field.field_type == "DATE":
+            date_columns.append(field.name)
+
+    for col in date_columns:
+        if col in df.columns:
+            df[col] = df[col].apply(convert_to_bigquery_date)
 
     return df
