@@ -1,6 +1,7 @@
 import unittest
 import sys
 import os
+import pandas as pd
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from utils import to_snake_case, process_tsv_data, convert_to_bigquery_date  # noqa: E402
@@ -144,17 +145,20 @@ class TestDateConversion(unittest.TestCase):
             ("12/31/2023", "2023-12-31"),
             ("31/12/2023", "2023-12-31"),  # pandas should handle this
             ("2025-02-28", "2025-02-28"),
-            ("", None),
-            (None, None),
-            ("invalid date", None),
-            ("2025-02-30", None),  # invalid date
-            ("   ", None),  # whitespace only
+            ("", pd.NaT),
+            (None, pd.NaT),
+            ("invalid date", pd.NaT),
+            ("2025-02-30", pd.NaT),  # invalid date
+            ("   ", pd.NaT),  # whitespace only
         ]
 
         for input_date, expected in test_cases:
             with self.subTest(input_date=input_date):
                 result = convert_to_bigquery_date(input_date)
-                self.assertEqual(result, expected)
+                if pd.isna(expected):
+                    self.assertTrue(pd.isna(result))
+                else:
+                    self.assertEqual(result, expected)
 
     def test_process_tsv_data_with_date_conversion(self):
         """Test that process_tsv_data converts DATE columns based on schema."""
@@ -184,10 +188,16 @@ class TestDateConversion(unittest.TestCase):
         df = process_tsv_data(test_tsv, table_config)
 
         # Check that date column was converted properly
-        expected_dates = ["2025-06-26", "2023-12-31", None, "2024-01-15"]
+        expected_dates = ["2025-06-26", "2023-12-31", pd.NaT, "2024-01-15"]
         actual_dates = df["date_last_submitted"].tolist()
 
-        self.assertEqual(actual_dates, expected_dates)
+        for i, (actual, expected) in enumerate(zip(actual_dates, expected_dates)):
+            if pd.isna(expected):
+                self.assertTrue(pd.isna(actual), f"Row {i}: expected NaT, got {actual}")
+            else:
+                self.assertEqual(
+                    actual, expected, f"Row {i}: expected {expected}, got {actual}"
+                )
 
         # Check that other columns weren't affected
         self.assertEqual(
