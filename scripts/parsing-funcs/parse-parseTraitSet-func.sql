@@ -36,7 +36,7 @@ RETURNS STRUCT<
   type STRING,
   id STRING
 >
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -106,7 +106,7 @@ WITH x as (
       }]
     }]
   }
-  """ as content  
+  """ as content
 ),
 traitSets as (
   select `clinvar_ingest.parseTraitSet`(FORMAT('{"TraitSet": %s}', x.content)) as traitSet from x

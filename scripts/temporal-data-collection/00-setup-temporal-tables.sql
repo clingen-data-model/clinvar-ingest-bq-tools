@@ -1,8 +1,8 @@
 -- *****************  clinvar_genes & clinvar_single_gene_variations *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_single_gene_variations` 
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_single_gene_variations`
 (
-  variation_id	STRING NOT NULL,	
-  gene_id	STRING NOT NULL,	
+  variation_id	STRING NOT NULL,
+  gene_id	STRING NOT NULL,
   relationship_type STRING,
   source STRING,
   mane_select BOOLEAN DEFAULT FALSE,
@@ -13,7 +13,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_single_gene_variations`
 );
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_genes`
-( 
+(
   id STRING NOT NULL,
   symbol STRING,
   hgnc_id STRING,
@@ -23,8 +23,8 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_genes`
 );
 
 -- *****************  clinvar_submitters *****************
-CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_submitters` 
-(	
+CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_submitters`
+(
   id	STRING,
   current_name	STRING,
   current_abbrev STRING,
@@ -39,7 +39,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_submitters`
 
 -- *****************  clinvar_variations *****************
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations`
-( 
+(
   id STRING NOT NULL,
   name STRING,
   mane_select BOOLEAN DEFAULT FALSE,
@@ -54,8 +54,8 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations`
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcvs`
 (
   variation_id STRING NOT NULL,
-  id STRING NOT NULL, 
-  version INT64 NOT NULL, 
+  id STRING NOT NULL,
+  version INT64 NOT NULL,
   full_vcv_id STRING,
   start_release_date DATE,
   end_release_date DATE,
@@ -68,7 +68,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_vcv_classifications`
   variation_id STRING NOT NULL,
   vcv_id STRING NOT NULL,
   statement_type STRING NOT NULL,
-  rank INT64 NOT NULL, 
+  rank INT64 NOT NULL,
   review_status STRING,
   last_evaluated DATE,
   agg_classification_description STRING,
@@ -85,8 +85,8 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_rcvs`
 (
   variation_id STRING NOT NULL,
   trait_set_id STRING,
-  id STRING NOT NULL, 
-  version INT64 NOT NULL, 
+  id STRING NOT NULL,
+  version INT64 NOT NULL,
   full_rcv_id STRING,
   vcv_id STRING,
   start_release_date DATE,
@@ -101,7 +101,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_rcv_classifications`
   trait_set_id STRING,
   rcv_id STRING NOT NULL,
   statement_type STRING NOT NULL,
-  rank INT64 NOT NULL, 
+  rank INT64 NOT NULL,
   review_status STRING,
   clinical_impact_assertion_type STRING,
   clinical_impact_clinical_significance STRING,
@@ -117,15 +117,15 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_rcv_classifications`
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 (
   variation_id STRING NOT NULL,
-  id STRING NOT NULL, 
-  version INT NOT NULL, 
+  id STRING NOT NULL,
+  version INT NOT NULL,
   full_scv_id STRING,
   statement_type STRING NOT NULL,
   original_proposition_type STRING,
   gks_proposition_type STRING,
   clinical_impact_assertion_type STRING,
   clinical_impact_clinical_significance STRING,
-  rank INT NOT NULL, 
+  rank INT NOT NULL,
   review_status STRING,
   last_evaluated DATE,
   local_key STRING,
@@ -151,7 +151,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 
 
 -- -- initialize submitter info by release based on clinical_assertion release info,
--- --  36 very old submitter ids existed before 2019-07-01 which need to be manually 
+-- --  36 very old submitter ids existed before 2019-07-01 which need to be manually
 -- --  loaded and provided to create the full submitter table pre-2019-07-01
 
 -- CREATE or REPLACE TABLE `clinvar_2019_06_01_v0.pre_2019_07_01_submitter`
@@ -209,33 +209,33 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 -- create or replace table `clinvar_2019_06_01_v0.submitter`
 -- as
 -- with ca as (
---   select 
---     ca.release_date, 
---     ca.submitter_id 
---   from `clinvar_2019_06_01_v0.clinical_assertion` ca 
+--   select
+--     ca.release_date,
+--     ca.submitter_id
+--   from `clinvar_2019_06_01_v0.clinical_assertion` ca
 --   group by ca.release_date, ca.submitter_id
 -- )
--- select 
+-- select
 --   ca.release_date,
 --   ca.submitter_id,
 --   s.current_name,
 --   s.current_abbrev,
 --   s.org_category,
 --   s.all_names,
---   s.all_abbrevs  
+--   s.all_abbrevs
 -- from ca
 -- join `clinvar_2019_06_01_v0.pre_2019_07_01_submitter` s
 -- on
 --   s.id = ca.submitter_id
 -- union all
--- select 
+-- select
 --   ca.release_date,
 --   ca.submitter_id,
 --   s.current_name,
 --   s.current_abbrev,
 --   s.org_category,
 --   s.all_names,
---   s.all_abbrevs  
+--   s.all_abbrevs
 -- from ca
 -- join `clinvar_2019_07_01_v1_1_0_m2.submitter` s
 -- on
@@ -257,7 +257,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 -- order by 1
 
 -- -- repair bad submitter ids pre-201907
--- UPDATE `clinvar_2019_06_01_v0.scv_summary` 
+-- UPDATE `clinvar_2019_06_01_v0.scv_summary`
 -- SET scv.submitter_id = vals.good_id
 -- FROM (
 --   SELECT '1' bad_id, '500139' good_id UNION ALL
@@ -306,9 +306,9 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 -- SELECT id, submitter_ids
 -- FROM (
 --   SELECT id, array_agg(distinct submitter_id) as submitter_ids
---   FROM `clinvar_ingest.clinvar_scvs` 
+--   FROM `clinvar_ingest.clinvar_scvs`
 --   group by id
---   HAVING COUNT(distinct submitter_id) > 1 
+--   HAVING COUNT(distinct submitter_id) > 1
 -- )
 -- ;
 
@@ -328,31 +328,31 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 --   SELECT scv1.id, scv1.submitter_id
 --   FROM `clinvar_ingest.clinvar_scvs` scv1
 --   where scv1.submitter_id not in ("500029", "500062")
---   and exists 
+--   and exists
 --   (
---     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2 
+--     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2
 --     where scv2.id = scv1.id and scv2.submitter_id in ("500029", "500062")
 --   )
 --   group by scv1.id, scv1.submitter_id
 -- ) scv
--- WHERE ss.submitter_id in ("500029", "500062") and scv.id = ss.id 
--- ; 
+-- WHERE ss.submitter_id in ("500029", "500062") and scv.id = ss.id
+-- ;
 
 -- update `clinvar_ingest.clinvar_scvs` cs
 -- SET cs.submitter_id = scv.submitter_id
 -- FROM (
 --   SELECT scv1.id, scv1.submitter_id
 --   FROM `clinvar_ingest.clinvar_scvs` scv1
---   where scv1.submitter_id not in ("500029", "500062") 
---   and exists 
+--   where scv1.submitter_id not in ("500029", "500062")
+--   and exists
 --   (
---     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2 
+--     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2
 --     where scv2.id = scv1.id and scv2.submitter_id in ("500029", "500062")
 --   )
 --   group by scv1.id, scv1.submitter_id
 -- ) scv
--- WHERE cs.submitter_id in ("500029", "500062") and scv.id = cs.id 
--- ; 
+-- WHERE cs.submitter_id in ("500029", "500062") and scv.id = cs.id
+-- ;
 
 -- CREATE OR REPLACE TABLE `clinvar_2019_06_01_v0.submitter`
 -- (
@@ -385,7 +385,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 -- DROP VIEW `clinvar_2022_07_24_v1_6_46.variation`;
 -- CREATE OR REPLACE TABLE `clinvar_2022_07_24_v1_6_46.variation`
 -- AS
--- SELECT 
+-- SELECT
 --   datarepo_row_id,
 --   name,
 --   variation_type,
@@ -400,8 +400,8 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 --   num_copies,
 --   child_ids
 -- FROM (
---   SELECT 
---     *, 
+--   SELECT
+--     *,
 --     ROW_NUMBER() OVER (PARTITION BY release_date, id) row_number
 --     FROM `datarepo-550c0177.clinvar_2022_07_24_v1_6_46.variation`
 -- )
@@ -415,7 +415,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 --   SELECT v2.release_date, v2.id, v2.first_name
 --   FROM (
 --     SELECT release_date, id, ARRAY_AGG(name)[OFFSET(0)] as first_name
---     FROM `clinvar_2019_06_01_v0.variation` 
+--     FROM `clinvar_2019_06_01_v0.variation`
 --     GROUP BY release_date, id
 --     HAVING count(name) > 1
 --   ) v2
@@ -424,11 +424,11 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 
 -- one variant processing of SCVs per release
 
--- -- housekeeping, remove any duplicate rows in scv.summary for the snapshot dbs clinvar_2019_06_01_v0, 
+-- -- housekeeping, remove any duplicate rows in scv.summary for the snapshot dbs clinvar_2019_06_01_v0,
 -- --   clinvar_2021_03_02_v1_2_9(SCV001164315), clinvar_2022_07_24_v1_6_46(1,337 duplicates?!)
 -- CREATE OR REPLACE TABLE `clinvar_2022_07_24_v1_6_46.scv_summary`
 -- AS
--- SELECT 
+-- SELECT
 --   release_date,
 --   id,
 --   version,
@@ -447,7 +447,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
 --   affected_status,
 --   method_type,
 --   last_processed_curation_action,
---   pending_curation_action	
+--   pending_curation_action
 -- FROM (
 --   SELECT *, ROW_NUMBER() OVER (PARTITION BY release_date, variation_id, id, version) row_number
 --   FROM `clinvar_2022_07_24_v1_6_46.scv_summary`

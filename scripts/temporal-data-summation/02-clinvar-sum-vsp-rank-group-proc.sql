@@ -1,18 +1,18 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_sum_vsp_rank_group`()
-BEGIN  
+BEGIN
 
-  -- create a grouping of scvs based on the var/rank/prop-type/stmt-type to produce the 
+  -- create a grouping of scvs based on the var/rank/prop-type/stmt-type to produce the
   -- array of counts & percentages of the 3 major significance categories of scvs within that group
   -- (do not introduce clinical_impact_clinical_significance here)
   CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_sum_vsp_rank_group`
   AS
-  WITH x AS 
+  WITH x AS
   (
-    -- this gets us the count of scvs for a given rank and clinical significance 
-    -- within a statement_type and gks_proposition_type. It does this for 
-    -- each variation_id change for a given scv 
-    SELECT 
-      vs.variation_id, 
+    -- this gets us the count of scvs for a given rank and clinical significance
+    -- within a statement_type and gks_proposition_type. It does this for
+    -- each variation_id change for a given scv
+    SELECT
+      vs.variation_id,
       vsc.start_release_date,
       vsc.end_release_date,
       vs.statement_type,
@@ -24,13 +24,13 @@ BEGIN
     FROM `clinvar_ingest.clinvar_scvs` vs
     JOIN `clinvar_ingest.clinvar_sum_variation_scv_change` vsc
     ON
-        vs.variation_id = vsc.variation_id 
+        vs.variation_id = vsc.variation_id
         AND
         vs.start_release_date <= vsc.end_release_date
-        AND 
+        AND
         vs.end_release_date >= vsc.start_release_date
     GROUP BY
-      vs.variation_id, 
+      vs.variation_id,
       vsc.start_release_date,
       vsc.end_release_date,
       vs.statement_type,
@@ -39,7 +39,7 @@ BEGIN
       vs.classif_type,
       vs.clinsig_type
   )
-  SELECT 
+  SELECT
     x.start_release_date,
     x.end_release_date,
     x.variation_id,
@@ -62,19 +62,19 @@ BEGIN
   FROM x
   JOIN `clinvar_ingest.clinvar_scvs` vs
   ON
-    vs.variation_id = x.variation_id 
+    vs.variation_id = x.variation_id
     AND
-    vs.statement_type IS NOT DISTINCT FROM x.statement_type 
+    vs.statement_type IS NOT DISTINCT FROM x.statement_type
     AND
-    vs.gks_proposition_type IS NOT DISTINCT FROM x.gks_proposition_type 
+    vs.gks_proposition_type IS NOT DISTINCT FROM x.gks_proposition_type
     AND
-    vs.rank IS NOT DISTINCT FROM x.rank 
+    vs.rank IS NOT DISTINCT FROM x.rank
     AND
     vs.start_release_date <= x.end_release_date
-    AND 
+    AND
     vs.end_release_date >= x.start_release_date
   GROUP BY
-    x.variation_id, 
+    x.variation_id,
     x.start_release_date,
     x.end_release_date,
     x.statement_type,

@@ -1,15 +1,15 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseObservedData`(json STRING)
-RETURNS 
+RETURNS
   ARRAY<
     STRUCT<
       attribute STRUCT<type STRING, value STRING, integer_value INT64, date_value DATE>,
       severity STRING,
-      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>, 
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >
   >
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -24,7 +24,7 @@ WITH x as (
       "ObservedData":
       [
         {"Attribute":{"$":"Autosomal dominant inheritance","@Type":"ModeOfInheritance"}},
-        {"Attribute":{"$":"ACMG Guidelines, 2015","@Type":"AssertionMethod"}, 
+        {"Attribute":{"$":"ACMG Guidelines, 2015","@Type":"AssertionMethod"},
           "Citation":{"@Abbrev":"ACMG, 2015","@Type":"practice guideline","ID":{"$":"25741868"}}},
         {"Attribute": {"@Type": "VariantAlleles","@integerValue": "2"},
           "Severity": "mild",

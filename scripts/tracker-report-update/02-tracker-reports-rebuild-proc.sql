@@ -1,31 +1,31 @@
 CREATE OR REPLACE PROCEDURE `variation_tracker.tracker_reports_rebuild`(
   reportIds ARRAY<STRING>
 )
-BEGIN  
+BEGIN
   DECLARE disable_out_of_date_alerts BOOLEAN DEFAULT FALSE;
 
   -- process ALL active reports if the reportIds argument is null or an empty array
   IF (reportIds IS NULL OR ARRAY_LENGTH(reportIds) = 0) THEN
     SET reportIds = (SELECT ARRAY_AGG(r.id) FROM `variation_tracker.report` r WHERE r.active);
   END IF;
-  
+
   FOR rec IN
     (
-      SELECT 
-        r.id, 
-        r.name, 
-        r.abbrev, 
-        LOWER(FORMAT("%s_%s", r.id, r.abbrev)) as tname, 
+      SELECT
+        r.id,
+        r.name,
+        r.abbrev,
+        LOWER(FORMAT("%s_%s", r.id, r.abbrev)) as tname,
         ARRAY_AGG( STRUCT(ro.name, ro.value) ) as opts
       FROM `variation_tracker.report` r
       LEFT JOIN `variation_tracker.report_option` ro
-      ON 
+      ON
         ro.report_id = r.id
-      WHERE 
+      WHERE
         (r.id IN UNNEST(reportIds))
-      GROUP BY 
-        r.id, 
-        r.name, 
+      GROUP BY
+        r.id,
+        r.name,
         r.abbrev
       ORDER BY
         r.id
@@ -33,27 +33,27 @@ BEGIN
   DO
 
     SET disable_out_of_date_alerts = (
-      SELECT 
+      SELECT
         CAST(
           IFNULL(
             (
-              SELECT 
-                opt.value 
-              FROM UNNEST(rec.opts) as opt 
+              SELECT
+                opt.value
+              FROM UNNEST(rec.opts) as opt
               WHERE opt.name = "DISABLE_OUT_OF_DATE_ALERTS"
-            ), 
+            ),
             "FALSE"
           ) AS BOOL
         )
     );
 
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `variation_tracker.%s_variation` 
+      CREATE OR REPLACE TABLE `variation_tracker.%s_variation`
       AS
       SELECT DISTINCT
         rv.report_id,
         cv.release_date as report_release_date,
-        rv.variation_id, 
+        rv.variation_id,
         vg.statement_type,
         vg.gks_proposition_type,
         vg.rank,
@@ -62,22 +62,22 @@ BEGIN
       JOIN `clinvar_ingest.all_releases`() cv
       ON
         TRUE
-      JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vg 
-      ON 
+      JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
+      ON
         vg.variation_id = rv.variation_id
         and
         cv.release_date BETWEEN vg.start_release_date AND vg.end_release_date
-      WHERE 
-        rv.report_id = "%s" 
+      WHERE
+        rv.report_id = "%s"
     """, rec.tname, rec.id);
 
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `variation_tracker.%s_scv` 
+      CREATE OR REPLACE TABLE `variation_tracker.%s_scv`
       AS
       SELECT DISTINCT
         rv.report_id,
         rv.report_release_date,
-        rv.variation_id, 
+        rv.variation_id,
         rv.statement_type,
         rv.gks_proposition_type,
         rv.rank,
@@ -88,36 +88,36 @@ BEGIN
         DATE_DIFF(rv.report_release_date, vs.submission_date, DAY) as submission_age,
         (rs.submitter_id is not NULL) as report_submitter_submission,
       FROM `variation_tracker.%s_variation` rv
-      JOIN `clinvar_ingest.clinvar_sum_scvs` vsg 
-      ON 
-        vsg.variation_id = rv.variation_id 
+      JOIN `clinvar_ingest.clinvar_sum_scvs` vsg
+      ON
+        vsg.variation_id = rv.variation_id
         AND
         vsg.statement_type IS NOT DISTINCT FROM rv.statement_type
         AND
         vsg.gks_proposition_type IS NOT DISTINCT FROM rv.gks_proposition_type
         AND
-        vsg.rank IS NOT DISTINCT FROM rv.rank 
+        vsg.rank IS NOT DISTINCT FROM rv.rank
         AND
         rv.report_release_date BETWEEN vsg.start_release_date AND vsg.end_release_date
-      JOIN `clinvar_ingest.clinvar_scvs` vs 
-      ON 
-        vs.variation_id = vsg.variation_id 
+      JOIN `clinvar_ingest.clinvar_scvs` vs
+      ON
+        vs.variation_id = vsg.variation_id
         AND
-        vs.id = vsg.id 
-        AND 
-        vs.version = vsg.version 
+        vs.id = vsg.id
+        AND
+        vs.version = vsg.version
         AND
         vs.statement_type IS NOT DISTINCT FROM vsg.statement_type
         AND
         vs.gks_proposition_type IS NOT DISTINCT FROM vsg.gks_proposition_type
         AND
-        vs.rank IS NOT DISTINCT FROM vsg.rank 
+        vs.rank IS NOT DISTINCT FROM vsg.rank
         AND
         rv.report_release_date BETWEEN vs.start_release_date AND vs.end_release_date
-      LEFT JOIN `variation_tracker.report_submitter` rs 
-      ON 
-        rs.report_id = rv.report_id 
-        AND 
+      LEFT JOIN `variation_tracker.report_submitter` rs
+      ON
+        rs.report_id = rv.report_id
+        AND
         vs.submitter_id = rs.submitter_id
     """, rec.tname, rec.tname);
 
@@ -128,36 +128,36 @@ BEGIN
       WHERE EXISTS (
         SELECT scv.variation_id
         FROM `variation_tracker.%s_scv` scv
-        WHERE 
-          scv.report_submitter_submission 
-          AND 
+        WHERE
+          scv.report_submitter_submission
+          AND
           scv.report_release_date IS NOT DISTINCT FROM v.report_release_date
-          AND 
+          AND
           v.variation_id = scv.variation_id
       )
     """, rec.tname, rec.tname);
 
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `variation_tracker.%s_alerts` 
+      CREATE OR REPLACE TABLE `variation_tracker.%s_alerts`
       AS
-      WITH x AS 
+      WITH x AS
       (
-        SELECT 
+        SELECT
           v.symbol as gene_symbol,
           v.name,
           scv.variation_id,
           vv.full_vcv_id,
           scv.statement_type,
           scv.gks_proposition_type,
-          scv.rank, 
+          scv.rank,
           scv.report_release_date,
-          scv.id, 
+          scv.id,
           scv.version,
           vs.full_scv_id,
           revstat.label as review_status,
-          vs.submitter_id, 
+          vs.submitter_id,
           vs.submission_date,
-          scv.submission_age, 
+          scv.submission_age,
           vs.last_evaluated,
           scv.last_eval_age,
           vs.start_release_date as released_date,
@@ -169,8 +169,8 @@ BEGIN
           vs.submitter_abbrev,
           scv.report_submitter_submission
         FROM `variation_tracker.%s_scv`  scv
-        JOIN `variation_tracker.%s_variation` var 
-        ON 
+        JOIN `variation_tracker.%s_variation` var
+        ON
           scv.variation_id = var.variation_id
           AND
           scv.report_release_date IS NOT DISTINCT FROM var.report_release_date
@@ -180,14 +180,14 @@ BEGIN
           scv.gks_proposition_type IS NOT DISTINCT FROM var.gks_proposition_type
           AND
           scv.rank IS NOT DISTINCT FROM var.rank
-        JOIN `clinvar_ingest.clinvar_status` revstat 
-        ON 
-          revstat.rank = scv.rank 
-          AND 
+        JOIN `clinvar_ingest.clinvar_status` revstat
+        ON
+          revstat.rank = scv.rank
+          AND
           revstat.scv = TRUE
           AND
           scv.report_release_date BETWEEN revstat.start_release_date AND revstat.end_release_date
-        JOIN `clinvar_ingest.clinvar_variations` v 
+        JOIN `clinvar_ingest.clinvar_variations` v
         ON
           v.id = scv.variation_id
           AND
@@ -197,7 +197,7 @@ BEGIN
           scv.variation_id = vv.variation_id
           AND
           scv.report_release_date BETWEEN vv.start_release_date AND vv.end_release_date
-        JOIN `clinvar_ingest.clinvar_scvs` vs 
+        JOIN `clinvar_ingest.clinvar_scvs` vs
         ON
           vs.variation_id = scv.variation_id
           AND
@@ -206,22 +206,22 @@ BEGIN
           vs.version = scv.version
           AND
           scv.report_release_date BETWEEN vs.start_release_date AND vs.end_release_date
-        WHERE 
+        WHERE
           var.report_submitter_variation
       )
-      SELECT 
+      SELECT
         vcep.gene_symbol,
         vcep.name,
-        vcep.variation_id, 
+        vcep.variation_id,
         vcep.full_vcv_id,
         vcep.report_release_date,
         vcep.statement_type,
         vcep.gks_proposition_type,
-        vcep.id as submitted_scv_id, 
+        vcep.id as submitted_scv_id,
         vcep.version as submitted_scv_version,
         vcep.full_scv_id as submitted_full_scv_id,
         vcep.rank as submitted_rank,
-        vcep.review_status as submitted_review_status, 
+        vcep.review_status as submitted_review_status,
         vcep.clinsig_type as submitted_clinsig_type,
         vcep.classif_type as submitted_classif_type,
         vcep.submitter_abbrev as submitted_submitter_abbrev,
@@ -265,38 +265,38 @@ BEGIN
         (vcep.last_eval_age - other.last_eval_age) as newer_last_eval_age,
         (vcep.released_age - other.released_age) as newer_released_age
       FROM x as vcep
-      JOIN x as other 
+      JOIN x as other
       ON
-        other.variation_id = vcep.variation_id 
-        AND 
+        other.variation_id = vcep.variation_id
+        AND
         other.statement_type IS NOT DISTINCT FROM vcep.statement_type
         AND
         other.gks_proposition_type IS NOT DISTINCT FROM vcep.gks_proposition_type
         AND
-        NOT other.report_submitter_submission 
+        NOT other.report_submitter_submission
         AND
-        other.report_release_date IS NOT DISTINCT FROM vcep.report_release_date 
+        other.report_release_date IS NOT DISTINCT FROM vcep.report_release_date
         AND
         other.clinsig_type IS DISTINCT FROM vcep.clinsig_type
-      -- -- find all other submissions that have a last eval that is newer than 1 year prior to the EPs submission's last eval date 
+      -- -- find all other submissions that have a last eval that is newer than 1 year prior to the EPs submission's last eval date
       WHERE
-        vcep.report_submitter_submission 
+        vcep.report_submitter_submission
         AND
         (vcep.last_eval_age - other.last_eval_age) >= 0
       UNION ALL
-      SELECT 
+      SELECT
         vcep.gene_symbol,
         vcep.name,
-        vcep.variation_id, 
+        vcep.variation_id,
         vcep.full_vcv_id,
         vcep.report_release_date,
         vcep.statement_type,
         vcep.gks_proposition_type,
-        vcep.id as submitted_scv_id, 
+        vcep.id as submitted_scv_id,
         vcep.version as submitted_scv_version,
         vcep.full_scv_id as submitted_full_scv_id,
         vcep.rank as submitted_rank,
-        vcep.review_status as submitted_review_status, 
+        vcep.review_status as submitted_review_status,
         vcep.clinsig_type as submitted_clinsig_type,
         vcep.classif_type as submitted_classif_type,
         vcep.submitter_abbrev as submitted_submitter_abbrev,
@@ -329,20 +329,20 @@ BEGIN
         null as newer_last_eval_age,
         null as newer_released_age
       FROM x as vcep
-      WHERE 
-        NOT %t 
+      WHERE
+        NOT %t
         AND
-        vcep.report_submitter_submission 
-        AND 
-        vcep.last_eval_age >= 730 
-        AND 
+        vcep.report_submitter_submission
+        AND
+        vcep.last_eval_age >= 730
+        AND
         vcep.classif_type NOT IN ('p','lb','b')
     """, rec.tname, rec.tname, rec.tname, disable_out_of_date_alerts);
 
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `variation_tracker.%s_var_priorities` 
+      CREATE OR REPLACE TABLE `variation_tracker.%s_var_priorities`
       AS
-      WITH x AS 
+      WITH x AS
       (
         SELECT DISTINCT
           v.variation_id,
@@ -372,30 +372,30 @@ BEGIN
             END as agg_sig_type,
           MAX(vg.rank) as max_rank
         FROM `variation_tracker.%s_variation` v
-        JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vg 
-        ON 
-          v.variation_id = vg.variation_id 
+        JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
+        ON
+          v.variation_id = vg.variation_id
           AND
           v.statement_type = vg.statement_type
           AND
           v.gks_proposition_type = vg.gks_proposition_type
           AND
-          v.rank = vg.rank 
+          v.rank = vg.rank
           AND
           v.report_release_date BETWEEN vg.start_release_date AND vg.end_release_date
-        WHERE 
-          NOT v.report_submitter_variation 
-          AND 
+        WHERE
+          NOT v.report_submitter_variation
+          AND
           v.statement_type = 'GermlineClassification'
           AND
-          v.gks_proposition_type = 'path' 
+          v.gks_proposition_type = 'path'
         GROUP BY
           v.variation_id,
           v.statement_type,
           v.gks_proposition_type,
           v.report_release_date
       )
-      SELECT 
+      SELECT
         x.variation_id,
         x.statement_type,
         x.gks_proposition_type,
@@ -410,19 +410,19 @@ BEGIN
           select IF(x.max_rank = 0 and x.agg_sig_type >= 4, 'No criteria PLP', NULL)),','),',') as priority_type
       FROM x
       WHERE (
-        (x.agg_sig_type = 2 AND x.unc_sig_cnt > 2) 
+        (x.agg_sig_type = 2 AND x.unc_sig_cnt > 2)
         OR
-        (x.agg_sig_type IN ( 3, 7 )) 
+        (x.agg_sig_type IN ( 3, 7 ))
         OR
-        (x.agg_sig_type > 4) 
+        (x.agg_sig_type > 4)
         OR
         (x.max_rank = 0 and x.agg_sig_type >= 4))
     """, rec.tname, rec.tname);
 
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `variation_tracker.%s_scv_priorities` 
+      CREATE OR REPLACE TABLE `variation_tracker.%s_scv_priorities`
       AS
-      SELECT DISTINCT  
+      SELECT DISTINCT
         vp.report_release_date,
         vp.variation_id,
         vp.statement_type,
@@ -433,7 +433,7 @@ BEGIN
         scv.id as scv_id,
         scv.version as scv_ver,
         sgrp.outlier_pct,
-        sgrp.scv_group_type, 
+        sgrp.scv_group_type,
         sgrp.scv_label,
         v.name,
         v.symbol as gene_symbol,
@@ -445,14 +445,14 @@ BEGIN
         IF(rel.next_release_date=DATE'9999-12-31', CURRENT_DATE(), rel.next_release_date) as next_release_date
       FROM `variation_tracker.%s_var_priorities` vp
       CROSS JOIN UNNEST(vp.priority_type) as p_type
-      JOIN `variation_tracker.%s_scv` scv 
-      ON 
-        vp.variation_id = scv.variation_id 
-        AND 
-        vp.report_release_date = scv.report_release_date 
-      JOIN `clinvar_ingest.clinvar_sum_scvs` sgrp 
+      JOIN `variation_tracker.%s_scv` scv
       ON
-        scv.id = sgrp.id 
+        vp.variation_id = scv.variation_id
+        AND
+        vp.report_release_date = scv.report_release_date
+      JOIN `clinvar_ingest.clinvar_sum_scvs` sgrp
+      ON
+        scv.id = sgrp.id
         AND
         scv.version = sgrp.version
         AND
@@ -465,24 +465,24 @@ BEGIN
         scv.report_release_date BETWEEN sgrp.start_release_date AND sgrp.end_release_date
       JOIN `clinvar_ingest.clinvar_variations` v
       ON
-        vp.variation_id = v.id 
+        vp.variation_id = v.id
         AND
         vp.report_release_date BETWEEN v.start_release_date AND v.end_release_date
       LEFT JOIN `clinvar_ingest.clinvar_vcvs` vv
       ON
-        vp.variation_id =vv.variation_id 
+        vp.variation_id =vv.variation_id
         AND
         vp.report_release_date BETWEEN vv.start_release_date AND vv.end_release_date
       LEFT JOIN `clinvar_ingest.clinvar_vcv_classifications` vvc
       ON
-        vp.variation_id = vvc.variation_id 
+        vp.variation_id = vvc.variation_id
         AND
         vp.report_release_date BETWEEN vvc.start_release_date AND vvc.end_release_date
       JOIN `clinvar_ingest.all_releases`() rel
-      ON  
+      ON
         vp.report_release_date = rel.release_date
-    """, rec.tname, rec.tname, rec.tname);    
-    
+    """, rec.tname, rec.tname, rec.tname);
+
   END FOR;
 
 END;

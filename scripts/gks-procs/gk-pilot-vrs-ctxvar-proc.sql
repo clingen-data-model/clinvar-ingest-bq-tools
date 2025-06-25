@@ -3,7 +3,7 @@ BEGIN
   FOR rec IN (select s.schema_name FROM clinvar_ingest.schema_on(on_date) as s)
   DO
     EXECUTE IMMEDIATE FORMAT("""
-      CREATE OR REPLACE TABLE `%s.gk_pilot_vrs_ctxvar` 
+      CREATE OR REPLACE TABLE `%s.gk_pilot_vrs_ctxvar`
       AS
       WITH ctxvar AS  (
         SELECT
@@ -24,7 +24,7 @@ BEGIN
         ON
           vi.id = gkv.in.id
         WHERE
-          gkv.out.id is not null 
+          gkv.out.id is not null
       ),
       ext AS (
         -- build assembly extension when available
@@ -34,7 +34,7 @@ BEGIN
           ctxvar.assembly AS value
         FROM ctxvar
         WHERE
-          ctxvar.assembly IS NOT NULL 
+          ctxvar.assembly IS NOT NULL
       ),
       exp AS (
         -- todo
@@ -44,15 +44,15 @@ BEGIN
           ctxvar.assembly AS value
         FROM ctxvar
         WHERE
-          ctxvar.assembly IS NOT NULL 
+          ctxvar.assembly IS NOT NULL
       )
       SELECT
         ctxvar.id,
         ctxvar.type,
         ctxvar.digest,
         (
-          SELECT AS STRUCT * 
-          FROM `%s.gk_pilot_vrs_seqloc` loc 
+          SELECT AS STRUCT *
+          FROM `%s.gk_pilot_vrs_seqloc` loc
           WHERE loc.id = ctxvar.location
         ) as location,
         ctxvar.start,
@@ -69,9 +69,8 @@ BEGIN
         seqloc.sequenceReference,
         seqloc.start,
         seqloc.end
-      ORDER BY 3 
+      ORDER BY 3
     """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
   END FOR;
 
 END;
-

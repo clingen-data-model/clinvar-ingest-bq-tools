@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseGeneLists`(json STRING)
 RETURNS ARRAY<STRUCT<symbol STRING, relationship_type STRING, name STRING>>
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""

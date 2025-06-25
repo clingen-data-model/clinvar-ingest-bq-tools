@@ -1,5 +1,5 @@
 -- README! There are 250 cvc annotated SCV records that pre-date Jan.07.2023. The
---     scripts to load them can be found BELOW the PROCEDURE definition. 
+--     scripts to load them can be found BELOW the PROCEDURE definition.
 --     This only needs to be performed if the clinvar_scvs table needs to be reinitialized.
 
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_scvs`(
@@ -23,33 +23,33 @@ BEGIN
   -- deletes
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_scvs` cs
-      SET 
+      SET
         deleted_release_date = %T
-    WHERE 
-      cs.deleted_release_date is NULL 
-      AND 
+    WHERE
+      cs.deleted_release_date is NULL
+      AND
       NOT EXISTS (
-        SELECT 
-          scv.id 
+        SELECT
+          scv.id
         FROM `%s.scv_summary` scv
-        WHERE 
-          scv.variation_id = cs.variation_id 
-          AND 
-          scv.id = cs.id 
-          AND 
-          scv.version = cs.version 
+        WHERE
+          scv.variation_id = cs.variation_id
           AND
-          scv.statement_type IS NOT DISTINCT FROM cs.statement_type 
+          scv.id = cs.id
           AND
-          scv.rank IS NOT DISTINCT FROM cs.rank 
+          scv.version = cs.version
           AND
-          scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type 
+          scv.statement_type IS NOT DISTINCT FROM cs.statement_type
           AND
-          scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type 
+          scv.rank IS NOT DISTINCT FROM cs.rank
           AND
-          scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance 
+          scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type
           AND
-          scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated 
+          scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type
+          AND
+          scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance
+          AND
+          scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated
           AND
           scv.significance IS NOT DISTINCT FROM cs.clinsig_type
           AND
@@ -60,12 +60,12 @@ BEGIN
   """, release_date, schema_name);
 
   -- updated scv id+ver
-  -- NOTE: Further investigation of handling cvc_actions is needed for collating the scv id+ver updates, 
+  -- NOTE: Further investigation of handling cvc_actions is needed for collating the scv id+ver updates,
   --       Simply overwriting the changes to last and pending cvc_actions appears to produce invalid outcomes
   --       The problem could be back in the building of the data in the scv_summary_proc?!
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_scvs` cs
-    SET 
+    SET
       cs.full_scv_id = scv.full_scv_id,
       cs.original_proposition_type = scv.original_proposition_type,
       cs.local_key = scv.local_key,
@@ -86,24 +86,24 @@ BEGIN
       cs.method_type = scv.method_type,
       cs.end_release_date = scv.release_date
     FROM `%s.scv_summary` scv
-    WHERE 
-      scv.variation_id = cs.variation_id 
-      AND 
-      scv.id = cs.id 
-      AND 
-      scv.version = cs.version 
+    WHERE
+      scv.variation_id = cs.variation_id
       AND
-      scv.statement_type IS NOT DISTINCT FROM cs.statement_type 
+      scv.id = cs.id
       AND
-      scv.rank IS NOT DISTINCT FROM cs.rank 
+      scv.version = cs.version
       AND
-      scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type 
+      scv.statement_type IS NOT DISTINCT FROM cs.statement_type
       AND
-      scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type 
+      scv.rank IS NOT DISTINCT FROM cs.rank
       AND
-      scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance 
+      scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type
       AND
-      scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated 
+      scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type
+      AND
+      scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance
+      AND
+      scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated
       AND
       scv.significance IS NOT DISTINCT FROM cs.clinsig_type
       AND
@@ -111,54 +111,54 @@ BEGIN
       AND
       scv.trait_set_id IS NOT DISTINCT FROM cs.trait_set_id
       AND
-      cs.deleted_release_date is NULL 
+      cs.deleted_release_date is NULL
   """, schema_name);
 
   -- new scv variation+id+version
   EXECUTE IMMEDIATE FORMAT("""
     INSERT INTO `clinvar_ingest.clinvar_scvs` (
-      variation_id, 
-      id, 
-      version, 
+      variation_id,
+      id,
+      version,
       full_scv_id,
       statement_type,
       original_proposition_type,
       gks_proposition_type,
       clinical_impact_assertion_type,
       clinical_impact_clinical_significance,
-      rank, 
+      rank,
       review_status,
-      last_evaluated, 
-      local_key, 
-      classif_type, 
-      clinsig_type, 
+      last_evaluated,
+      local_key,
+      classif_type,
+      clinsig_type,
       classification_label,
       classification_abbrev,
-      submitted_classification, 
+      submitted_classification,
       classification_comment,
       rcv_accession_id,
       trait_set_id,
-      submitter_id, 
+      submitter_id,
       submitter_name,
       submitter_abbrev,
-      submission_date, 
-      origin, 
-      affected_status, 
-      method_type, 
-      start_release_date, 
+      submission_date,
+      origin,
+      affected_status,
+      method_type,
+      start_release_date,
       end_release_date
     )
-    SELECT 
+    SELECT
       scv.variation_id,
-      scv.id, 
-      scv.version, 
+      scv.id,
+      scv.version,
       scv.full_scv_id,
       scv.statement_type,
       scv.original_proposition_type,
       scv.gks_proposition_type,
       scv.clinical_impact_assertion_type,
       scv.clinical_impact_clinical_significance,
-      scv.rank, 
+      scv.rank,
       scv.review_status,
       scv.last_evaluated,
       scv.local_key,
@@ -166,7 +166,7 @@ BEGIN
       scv.significance as clinsig_type,
       scv.classification_label,
       scv.classification_abbrev,
-      scv.submitted_classification, 
+      scv.submitted_classification,
       scv.classification_comment,
       scv.rcv_accession_id,
       scv.trait_set_id,
@@ -180,29 +180,29 @@ BEGIN
       scv.release_date as start_release_date,
       scv.release_date as end_release_date
     FROM `%s.scv_summary` scv
-    WHERE 
+    WHERE
       NOT EXISTS (
-        SELECT 
-          cs.id 
+        SELECT
+          cs.id
         FROM `clinvar_ingest.clinvar_scvs` cs
-        WHERE 
-          scv.variation_id = cs.variation_id 
-          AND 
-          scv.id = cs.id 
-          AND 
-          scv.version = cs.version 
+        WHERE
+          scv.variation_id = cs.variation_id
           AND
-          scv.statement_type IS NOT DISTINCT FROM cs.statement_type 
+          scv.id = cs.id
           AND
-          scv.rank IS NOT DISTINCT FROM cs.rank 
+          scv.version = cs.version
           AND
-          scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type 
+          scv.statement_type IS NOT DISTINCT FROM cs.statement_type
           AND
-          scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type 
+          scv.rank IS NOT DISTINCT FROM cs.rank
           AND
-          scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance 
+          scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type
           AND
-          scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated 
+          scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type
+          AND
+          scv.clinical_impact_clinical_significance IS NOT DISTINCT FROM cs.clinical_impact_clinical_significance
+          AND
+          scv.last_evaluated IS NOT DISTINCT FROM cs.last_evaluated
           AND
           scv.significance IS NOT DISTINCT FROM cs.clinsig_type
           AND
@@ -210,18 +210,18 @@ BEGIN
           AND
           scv.trait_set_id IS NOT DISTINCT FROM cs.trait_set_id
           AND
-          cs.deleted_release_date is NULL 
+          cs.deleted_release_date is NULL
       )
   """, schema_name);
 
-  SET result_message = "clinvar_scvs processed successfully."; 
+  SET result_message = "clinvar_scvs processed successfully.";
 
 END;
 
 
 
 ---*** ONLY APPLY THE SCRIPTS BELOW IF RE-INITIALIZING THE clinvar_scvs TABLE ***---
--- README! There are 250 cvc annotated SCV records that pre-date Jan.07.2023 in the 
+-- README! There are 250 cvc annotated SCV records that pre-date Jan.07.2023 in the
 --  clinvar_ingest.clinvar_scvs_curated_before_2023 table. These records need to be included
 --  in the clinvar_scvs table to support these older annotated scv records for the cvc project.
 
@@ -233,7 +233,7 @@ END;
 
 -- CREATE TABLE `clingen-dev.clinvar_ingest.clinvar_scvs_curated_before_2023`
 -- AS
--- WITH x AS 
+-- WITH x AS
 -- (
 --   SELECT
 --     SPLIT(a.scv_id,'.')[OFFSET(0)] AS scv_id,
@@ -292,9 +292,9 @@ END;
 --       STRUCT("SCV001736607", "RCV001526294", "8589")] AS data
 -- ),
 -- curated as (
---   select 
---     id.scv_id, 
---     id.rcv_id, 
+--   select
+--     id.scv_id,
+--     id.rcv_id,
 --     id.trait_set_id
 --   from curated_scv_rcv_trait_set csrts, unnest(csrts.data) as id
 -- )
@@ -303,7 +303,7 @@ END;
 --   scv.*,
 --   cs.label as review_status,
 --   curated.rcv_id,
---   curated.trait_set_id 
+--   curated.trait_set_id
 -- FROM x
 -- LEFT JOIN `clingen-stage.clinvar_ingest.historic_clinvar_scvs` scv
 -- ON
@@ -338,7 +338,7 @@ END;
 --   scv.statement_type is not distinct from 'GermlineClassification'
 --   AND
 --   scv.rank IS NOT DISTINCT from his.rank
---   AND 
+--   AND
 --   scv.last_evaluated is not distinct from his.last_evaluated
 --   AND
 --   scv.clinsig_type is not distinct from his.clinsig_type
@@ -353,51 +353,51 @@ END;
 
 -- -- if the clinvar_scvs table needs to be reinitialized then the following INSERT statement should be run, once
 -- -- in order to add any scvs that may have been annotated and deleted before Jan.07.2023:  (3 records)
--- INSERT INTO `clinvar_ingest.clinvar_scvs` 
+-- INSERT INTO `clinvar_ingest.clinvar_scvs`
 -- (
---   variation_id, 
---   id, 
---   version, 
+--   variation_id,
+--   id,
+--   version,
 --   full_scv_id,
 --   statement_type,
 --   original_proposition_type,
 --   gks_proposition_type,
 --   clinical_impact_assertion_type,
 --   clinical_impact_clinical_significance,
---   rank, 
+--   rank,
 --   review_status,
---   last_evaluated, 
---   local_key, 
---   classif_type, 
---   clinsig_type, 
+--   last_evaluated,
+--   local_key,
+--   classif_type,
+--   clinsig_type,
 --   classification_label,
 --   classification_abbrev,
---   submitted_classification, 
+--   submitted_classification,
 --   classification_comment,
 --   rcv_accession_id,
 --   trait_set_id,
---   submitter_id, 
+--   submitter_id,
 --   submitter_name,
 --   submitter_abbrev,
---   submission_date, 
---   origin, 
---   affected_status, 
---   method_type, 
---   start_release_date, 
+--   submission_date,
+--   origin,
+--   affected_status,
+--   method_type,
+--   start_release_date,
 --   end_release_date,
---   deleted_release_date 
--- ) 
--- SELECT 
+--   deleted_release_date
+-- )
+-- SELECT
 --   scv.variation_id,
---   scv.id, 
---   scv.version, 
+--   scv.id,
+--   scv.version,
 --   FORMAT('%s.%i', scv.id, scv.version) as full_scv_id,
 --   'GermlineClassification' as statement_type,
 --   scv.rpt_stmt_type as original_proposition_type,
 --   scv.rpt_stmt_type as gks_proposition_type,
 --   CAST(null AS STRING) as clinical_impact_assertion_type,
 --   CAST(null AS STRING) as clinical_impact_clinical_significance,
---   scv.rank, 
+--   scv.rank,
 --   scv.review_status,
 --   scv.last_evaluated,
 --   scv.local_key,
@@ -405,7 +405,7 @@ END;
 --   scv.clinsig_type,
 --   cst.classification_label,
 --   cst.classification_abbrev,
---   scv.submitted_classification, 
+--   scv.submitted_classification,
 --   '!SYSTEM:pre-2023 not available' as classification_comment,
 --   scv.rcv_id as rcv_accession_id,
 --   scv.trait_set_id as trait_set_id,
@@ -413,7 +413,7 @@ END;
 --   -- CAST(null AS STRING) as trait_set_id,
 --   scv.submitter_id,
 --   subm.current_name as submitter_name,
---   IFNULL(subm.current_abbrev, csa.current_abbrev) as submitter_abbrev,    
+--   IFNULL(subm.current_abbrev, csa.current_abbrev) as submitter_abbrev,
 --   scv.submission_date,
 --   scv.origin,
 --   scv.affected_status,
@@ -431,37 +431,37 @@ END;
 --   scv.submitter_id = subm.id
 --   AND
 --   DATE'2023-01-07' = subm.start_release_date
--- LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa 
--- ON 
---   csa.submitter_id = subm.id  
+-- LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa
+-- ON
+--   csa.submitter_id = subm.id
 -- LEFT JOIN (
 --   SELECT
 --     ca.id,
 --     ca.start_release_date,
 --     IFNULL(map.cv_clinsig_type, '-') as classif_type,
 --     cst.significance,
---     FORMAT( '%s, %s, %t', 
---         cst.label, 
---         if(ca.rank > 0,format("%i%s", ca.rank, CHR(9733)), IF(ca.rank = 0, format("%i%s", ca.rank, CHR(9734)), "n/a")), 
+--     FORMAT( '%s, %s, %t',
+--         cst.label,
+--         if(ca.rank > 0,format("%i%s", ca.rank, CHR(9733)), IF(ca.rank = 0, format("%i%s", ca.rank, CHR(9734)), "n/a")),
 --         if(ca.last_evaluated is null, "<n/a>", format("%t", ca.last_evaluated))) as classification_label,
---     FORMAT( '%s, %s, %t', 
---         UPPER(map.cv_clinsig_type), 
---         if(ca.rank > 0,format("%i%s", ca.rank, CHR(9733)), IF(ca.rank = 0, format("%i%s", ca.rank, CHR(9734)), "n/a")), 
+--     FORMAT( '%s, %s, %t',
+--         UPPER(map.cv_clinsig_type),
+--         if(ca.rank > 0,format("%i%s", ca.rank, CHR(9733)), IF(ca.rank = 0, format("%i%s", ca.rank, CHR(9734)), "n/a")),
 --         if(ca.last_evaluated is null, "<n/a>", format("%t", ca.last_evaluated))) as classification_abbrev
 --     FROM
 --       `clinvar_ingest.clinvar_scvs_curated_before_2023` ca
 --     LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
---     ON 
+--     ON
 --       map.scv_term = lower(IFNULL(ca.submitted_classification,'not provided'))
---     LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
---     ON 
---       cst.code = map.cv_clinsig_type 
+--     LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst
+--     ON
+--       cst.code = map.cv_clinsig_type
 --       AND
---       cst.statement_type = 'GermlineClassification'  
+--       cst.statement_type = 'GermlineClassification'
 --     WHERE ca.end_release_date < DATE'2023-01-07'
 -- ) cst
 -- ON
---   cst.id = scv.id  
+--   cst.id = scv.id
 --   and
 --   cst.start_release_date = scv.start_release_date
 -- WHERE

@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.normalizeHpId`(value STRING)
 RETURNS STRING
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/bq-utils.js'])
 AS r"""
@@ -24,5 +24,3 @@ FROM UNNEST([
   'HP:HP:0',
   'HP:HP:23'
 ]) AS hp_id;
-
-

@@ -1,13 +1,13 @@
 -- The schema table functions are also used to manage clinvar release dates.
 -- Since we are only planning on standing up the schemas for releases starting
--- on Jan.07.2023 we will need to supplement the release data information 
--- for the historic releases. This is needed because we have pulled in 
+-- on Jan.07.2023 we will need to supplement the release data information
+-- for the historic releases. This is needed because we have pulled in
 -- some historic data into the clinvar_ingest.clinvar_scvs table to address the
 -- need to have the data that was available for the cvc-curated annotations before
 -- Jan.07.2023, which ended up being about 289 records in the clinvar_scvs table.
--- In order to make sure clinvar's historic release dates are complete we will 
+-- In order to make sure clinvar's historic release dates are complete we will
 -- put all known release dates in based on previous historic analysis on the clinvar releases.
--- This historic release table will only be for the releases prior to Jan.07.2023, all 
+-- This historic release table will only be for the releases prior to Jan.07.2023, all
 -- release dates on or after that date will be inferred from the schemas in clingen-dev itself.
 
 -- the create table statement for the historic release dates and the insert statements for the release dates
@@ -20,13 +20,13 @@ AS (
         SELECT
             CAST(
                 REGEXP_REPLACE(
-                    iss.schema_name, 
-                    r'clinvar_(\d{4})_(\d{2})_(\d{2}).*', 
+                    iss.schema_name,
+                    r'clinvar_(\d{4})_(\d{2})_(\d{2}).*',
                     '\\1-\\2-\\3'
                 ) as DATE
             ) AS release_date
         FROM INFORMATION_SCHEMA.SCHEMATA iss
-        WHERE 
+        WHERE
             REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
         UNION ALL
         SELECT
@@ -34,7 +34,7 @@ AS (
             release_date
         FROM `clingen-dev.clinvar_ingest.historic_release_dates`
     )
-    SELECT 
+    SELECT
         r.release_date,
         LAG(r.release_date, 1, DATE('0001-01-01')) OVER (ORDER BY r.release_date ASC) AS prev_release_date,
         LEAD(r.release_date, 1, DATE('9999-12-31')) OVER (ORDER BY r.release_date ASC) AS next_release_date
@@ -64,16 +64,16 @@ AS (
             iss.schema_name,
             CAST(
                 REGEXP_REPLACE(
-                    iss.schema_name, 
-                    r'clinvar_(\d{4})_(\d{2})_(\d{2}).*', 
+                    iss.schema_name,
+                    r'clinvar_(\d{4})_(\d{2})_(\d{2}).*',
                     '\\1-\\2-\\3'
                 ) as DATE
             ) AS release_date
         FROM INFORMATION_SCHEMA.SCHEMATA iss
-        WHERE 
+        WHERE
             REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
     )
-    SELECT 
+    SELECT
         r.schema_name,
         r.release_date,
         x.prev_release_date,

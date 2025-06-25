@@ -1,7 +1,7 @@
--- CREATE OR REPLACE TABLE `clinvar_ingest.cvc_context_types` (code STRING, label STRING, display_order INT64);  
+-- CREATE OR REPLACE TABLE `clinvar_ingest.cvc_context_types` (code STRING, label STRING, display_order INT64);
 
--- INSERT INTO `clinvar_ingest.cvc_context_types` (code, label, display_order) 
--- VALUES 
+-- INSERT INTO `clinvar_ingest.cvc_context_types` (code, label, display_order)
+-- VALUES
 --     ('gd','Germline Disease', 10),
 --     ('sc','Somatic Cancer',   20),
 --     ('pg','Pharmacogenomic',  30),
@@ -9,39 +9,39 @@
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types` (
     statement_type STRING,
-    code STRING, 
-    label STRING, 
-    significance INT64,      
+    code STRING,
+    label STRING,
+    significance INT64,
     original_proposition_type STRING,
     original_code_order INT64,
     original_description_order INT64,
     gks_proposition_type STRING,
     gks_code_order INT64,
     gks_description_order INT64,
-    direction STRING, 
-    strength_code STRING, 
-    strength_label STRING, 
-    classification_code STRING, 
+    direction STRING,
+    strength_code STRING,
+    strength_label STRING,
+    classification_code STRING,
     penetrance_level STRING
-);  
+);
 INSERT INTO `clinvar_ingest.clinvar_clinsig_types` (
     statement_type,
-    code, 
-    label, 
-    significance, 
-    original_proposition_type, 
-    original_code_order, 
-    original_description_order, 
-    gks_proposition_type, 
-    gks_code_order, 
-    gks_description_order, 
-    direction, 
-    strength_code, 
-    strength_label, 
-    classification_code, 
+    code,
+    label,
+    significance,
+    original_proposition_type,
+    original_code_order,
+    original_description_order,
+    gks_proposition_type,
+    gks_code_order,
+    gks_description_order,
+    direction,
+    strength_code,
+    strength_label,
+    classification_code,
     penetrance_level
-) 
-VALUES 
+)
+VALUES
     -- Pathogenic statements
     ('GermlineClassification',    'b',       'Benign',                            0, 'path',    30,  30, 'path',  30,  30,  'refutes',   'cg000101', 'definitive',    'cg000001', null),
     ('GermlineClassification',    'lb',      'Likely benign',                     0, 'path',    31,  31, 'path',  31,  31,  'refutes',   'cg000102', 'likely',        'cg000002', null),
@@ -85,28 +85,28 @@ VALUES
 BEGIN
     DECLARE project_id STRING;
 
-    SET project_id = (SELECT 
+    SET project_id = (SELECT
         catalog_name as paroject_id
     FROM `INFORMATION_SCHEMA.SCHEMATA`
     WHERE schema_name = 'clinvar_ingest');
 
     IF (project_id = 'clingen-stage') THEN
-        CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types` 
+        CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types`
         AS
-        SELECT 
-            code, 
-            label, 
-            significance, 
-            original_proposition_type, 
-            original_code_order, 
-            original_description_order, 
-            gks_proposition_type, 
-            gks_code_order, 
-            gks_description_order, 
-            direction, 
-            strength_code, 
-            strength_label, 
-            classification_code, 
+        SELECT
+            code,
+            label,
+            significance,
+            original_proposition_type,
+            original_code_order,
+            original_description_order,
+            gks_proposition_type,
+            gks_code_order,
+            gks_description_order,
+            direction,
+            strength_code,
+            strength_label,
+            classification_code,
             penetrance_level
         FROM `clinvar_ingest.clinvar_clinsig_types`
         WHERE statement_type = 'GermlineClassification';
@@ -116,19 +116,19 @@ BEGIN
 END;
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_proposition_types` (
-    code STRING, 
-    label STRING, 
+    code STRING,
+    label STRING,
     display_order INT64
-);  
+);
 
 INSERT INTO `clinvar_ingest.clinvar_proposition_types` (
-    code, 
-    label, 
+    code,
+    label,
     display_order
-) 
-VALUES 
+)
+VALUES
     ('path', 'Pathogenicity', 10),
-    ('dr',   'DrugResponse', 11),  
+    ('dr',   'DrugResponse', 11),
     ('oth',  'Other', 12),
     ('somatic', 'SomaticClinicalImpact', 20),
     ('onco', 'Oncogenicity', 30);
@@ -143,15 +143,15 @@ VALUES
 
 
 CREATE OR REPLACE TABLE `clinvar_ingest.scv_clinsig_map` (
-    scv_term STRING, 
+    scv_term STRING,
     cv_clinsig_type STRING
-);  
+);
 
 INSERT INTO `clinvar_ingest.scv_clinsig_map` (
-    scv_term, 
+    scv_term,
     cv_clinsig_type
-) 
-VALUES 
+)
+VALUES
     ('affects', 'aff'),
     ('associated with leiomyomas', 'np'),
     ('association', 'assoc'),
@@ -185,7 +185,7 @@ VALUES
     ('pathogenic/likely pathogenic', 'p/lp'),
     ('pathologic', 'p'),
     ('poly', 'b'),
-    ('probable-non-pathogenic', 'lb'), 
+    ('probable-non-pathogenic', 'lb'),
     ('probable-pathogenic', 'lp'),
     ('probably not pathogenic', 'lb'),
     ('probably pathogenic', 'lp'),
@@ -214,22 +214,22 @@ VALUES
     ('na','oth');
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_status` (
-    rank INT64, 
-    label STRING, 
+    rank INT64,
+    label STRING,
     scv BOOL,
     start_release_date DATE,
     end_release_date DATE
 );
 
 INSERT INTO `clinvar_ingest.clinvar_status` (
-    rank, 
-    label, 
+    rank,
+    label,
     scv,
     start_release_date,
     end_release_date
-) 
+)
 VALUES
-    -- scv review statuses - MUST have unique rank values 
+    -- scv review statuses - MUST have unique rank values
     -- or downstream reporting will be wrong - THESE are NOT lossy
     (-3, 'flagged submission', TRUE, DATE'2023-11-21', DATE'9999-12-31'),
     (-1, 'no classification provided', TRUE, DATE'2024-01-26', DATE'9999-12-31'),
@@ -262,5 +262,3 @@ VALUES
 --    (1,  'classified by single submitter', FALSE),
 --   (-1, 'not classified by submitter', FALSE),
     -- (4,  'reviewed by professional society', FALSE) ;
-
- 

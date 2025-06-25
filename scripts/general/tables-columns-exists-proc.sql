@@ -6,7 +6,7 @@ CREATE OR REPLACE PROCEDURE `clinvar_ingest.check_table_exists`(
 BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     SELECT EXISTS(
-      SELECT 1 
+      SELECT 1
       FROM `%s.INFORMATION_SCHEMA.TABLES`
       WHERE table_name = '%s'
     )
@@ -39,8 +39,8 @@ BEGIN
   DECLARE last_processed_release_date DATE;
 
   EXECUTE IMMEDIATE FORMAT("""
-    SELECT 
-      MAX(end_release_date) 
+    SELECT
+      MAX(end_release_date)
     FROM `clinvar_ingest.%s`
   """, table_name) INTO last_processed_release_date;
 
@@ -48,17 +48,17 @@ BEGIN
   SET is_valid = (last_processed_release_date = previous_release_date);
   IF NOT is_valid THEN
       SET validation_message = FORMAT(
-        "%s was last processed for release date %t but the expected date is %t.", 
-        table_name, 
-        last_processed_release_date, 
+        "%s was last processed for release date %t but the expected date is %t.",
+        table_name,
+        last_processed_release_date,
         previous_release_date
       );
   ELSE
       SET validation_message = FORMAT(
-        "%s was last processed for release date %t as expected.", 
-        table_name, 
+        "%s was last processed for release date %t as expected.",
+        table_name,
         last_processed_release_date
       );
   END IF;
-  
+
 END;

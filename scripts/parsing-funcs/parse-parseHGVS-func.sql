@@ -23,8 +23,8 @@ CREATE OR REPLACE FUNCTION `clinvar_ingest.parseHGVS`(json STRING)
       molecular_consequence ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING>>,
       assembly STRING,
       type STRING>>
-LANGUAGE js 
-  OPTIONS (library=["gs://clinvar-ingest/bq-tools/parse-utils.js"]) 
+LANGUAGE js
+  OPTIONS (library=["gs://clinvar-ingest/bq-tools/parse-utils.js"])
 AS r"""
   return parseHGVS(json);
 """;

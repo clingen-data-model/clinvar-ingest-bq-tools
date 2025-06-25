@@ -19,22 +19,22 @@ BEGIN
   -- deleted rcvs (where it exists in clinvar_rcvs (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_rcvs` crcv
-      SET 
+      SET
         deleted_release_date = %T
-    WHERE 
-      crcv.deleted_release_date is NULL 
+    WHERE
+      crcv.deleted_release_date is NULL
       AND
       NOT EXISTS (
-        SELECT 
+        SELECT
           rcv.id
         FROM `%s.rcv_accession` rcv
-        WHERE  
-          rcv.variation_id = crcv.variation_id 
+        WHERE
+          rcv.variation_id = crcv.variation_id
           AND
           rcv.trait_set_id = crcv.trait_set_id
-          AND 
-          rcv.id = crcv.id 
-          AND 
+          AND
+          rcv.id = crcv.id
+          AND
           rcv.version = crcv.version
       )
   """, release_date, schema_name);
@@ -42,56 +42,56 @@ BEGIN
   -- updated rcv
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_rcvs` crcv
-      SET 
+      SET
         end_release_date = rcv.release_date
     FROM `%s.rcv_accession` rcv
-    WHERE 
-      rcv.variation_id = crcv.variation_id 
+    WHERE
+      rcv.variation_id = crcv.variation_id
       AND
       rcv.trait_set_id = crcv.trait_set_id
-      AND 
-      rcv.id = crcv.id 
-      AND 
+      AND
+      rcv.id = crcv.id
+      AND
       rcv.version = crcv.version
       AND
-      crcv.deleted_release_date is NULL 
+      crcv.deleted_release_date is NULL
   """, schema_name);
 
   -- new rcv_accession
   EXECUTE IMMEDIATE FORMAT("""
     INSERT INTO `clinvar_ingest.clinvar_rcvs` (
-      variation_id,  
+      variation_id,
       trait_set_id,
-      id, 
-      version, 
+      id,
+      version,
       full_rcv_id,
-      start_release_date, 
+      start_release_date,
       end_release_date
     )
-    SELECT 
-      rcv.variation_id, 
+    SELECT
+      rcv.variation_id,
       rcv.trait_set_id,
-      rcv.id, 
+      rcv.id,
       rcv.version,
-      FORMAT('%%s.%%i', rcv.id, rcv.version) as full_rcv_id, 
-      rcv.release_date as start_release_date, 
+      FORMAT('%%s.%%i', rcv.id, rcv.version) as full_rcv_id,
+      rcv.release_date as start_release_date,
       rcv.release_date as end_release_date
     FROM `%s.rcv_accession` rcv
-    WHERE 
+    WHERE
       NOT EXISTS (
-        SELECT 
-          crcv.id 
+        SELECT
+          crcv.id
         FROM `clinvar_ingest.clinvar_rcvs` crcv
-        WHERE 
-          rcv.variation_id = crcv.variation_id 
+        WHERE
+          rcv.variation_id = crcv.variation_id
           AND
           rcv.trait_set_id = crcv.trait_set_id
-          AND 
-          rcv.id = crcv.id 
-          AND 
+          AND
+          rcv.id = crcv.id
+          AND
           rcv.version = crcv.version
           AND
-          crcv.deleted_release_date is NULL 
+          crcv.deleted_release_date is NULL
       )
   """, schema_name);
 

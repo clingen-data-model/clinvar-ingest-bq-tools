@@ -42,7 +42,7 @@ GROUP BY
   ba.submission_date_month_year
 
 -- overall_as_of connected sheet comparing all annotations vs submitted annotations
-select 
+select
   CURRENT_DATE() as snapshot_date,
   "All" as category,
   count(bsa.annotation_id) as anno_count,
@@ -52,8 +52,8 @@ from `clinvar_curator.cvc_batch_scv_max_annotation_view` bsa
 join `clinvar_curator.cvc_annotations_view` av
 on
   av.annotation_id = bsa.annotation_id
-UNION ALL 
-select 
+UNION ALL
+select
   CURRENT_DATE() as snapshot_date,
   "Submitted" as category,
   count(av.annotation_id) as anno_total,
@@ -66,7 +66,7 @@ on
 ORDER BY 3 desc
 
 -- impact_results_as_of connected sheet
-WITH 
+WITH
 submitted_outcomes AS (
   SELECT
     scv_id,
@@ -79,7 +79,7 @@ submitted_outcomes AS (
   FROM `clinvar_curator.cvc_submitted_outcomes_view`
 ),
 flagged_vars AS (
-  SELECT 
+  SELECT
     batch_release_date,
     batch_id,
     submission_yy_mm,
@@ -100,9 +100,9 @@ actual_scvs as (
     fv.batch_id,
     fv.submission_yy_mm,
     fv.submission_month_year,
-    vs.variation_id, 
+    vs.variation_id,
     vs.statement_type,
-    vs.gks_proposition_type, 
+    vs.gks_proposition_type,
     vs.rank,
     vs.clinsig_type,
     vs.classif_type,
@@ -113,10 +113,10 @@ actual_scvs as (
     vs.submission_date
   FROM flagged_vars fv
   LEFT JOIN `clinvar_ingest.clinvar_scvs` vs
-  ON 
+  ON
     fv.variation_id = vs.variation_id
     AND
-    fv.batch_release_date BETWEEN vs.start_release_date AND vs.end_release_date  
+    fv.batch_release_date BETWEEN vs.start_release_date AND vs.end_release_date
   )
   ,
 derived_scvs as (
@@ -125,9 +125,9 @@ derived_scvs as (
     fv.batch_id,
     fv.submission_yy_mm,
     fv.submission_month_year,
-    vs.variation_id, 
+    vs.variation_id,
     vs.statement_type,
-    vs.gks_proposition_type, 
+    vs.gks_proposition_type,
     vs.rank,
     vs.clinsig_type,
     vs.classif_type,
@@ -138,10 +138,10 @@ derived_scvs as (
     vs.submission_date
   FROM flagged_vars fv
   LEFT JOIN `clinvar_ingest.clinvar_scvs` vs
-  ON 
+  ON
     fv.variation_id = vs.variation_id
     AND
-    fv.batch_release_date BETWEEN vs.start_release_date AND vs.end_release_date  
+    fv.batch_release_date BETWEEN vs.start_release_date AND vs.end_release_date
   LEFT JOIN submitted_outcomes so
   ON
     fv.variation_id = so.variation_id
@@ -149,71 +149,71 @@ derived_scvs as (
     fv.batch_id = so.batch_id
     AND
     vs.id = so.scv_id
-  WHERE (so.scv_id IS NULL) 
+  WHERE (so.scv_id IS NULL)
 ),
 actual_groups AS (
-  SELECT 
-    variation_id, 
+  SELECT
+    variation_id,
     batch_release_date,
     batch_id,
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type, 
+    gks_proposition_type,
     rank,
     clinsig_type,
     classif_type,
     (classif_type||'('||count(DISTINCT id)||')') as classif_type_w_count
   FROM actual_scvs
   GROUP BY
-    variation_id, 
+    variation_id,
     batch_release_date,
     batch_id,
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type, 
+    gks_proposition_type,
     rank,
     classif_type,
     clinsig_type
 )
 ,
 derived_groups AS (
-  SELECT 
-    variation_id, 
+  SELECT
+    variation_id,
     batch_release_date,
     batch_id,
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type, 
+    gks_proposition_type,
     rank,
     clinsig_type,
     classif_type,
     (classif_type||'('||count(DISTINCT id)||')') as classif_type_w_count
   FROM derived_scvs
   GROUP BY
-    variation_id, 
+    variation_id,
     batch_release_date,
     batch_id,
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type, 
+    gks_proposition_type,
     rank,
     classif_type,
     clinsig_type
 )
 ,
 calculated_results AS (
-  SELECT 
+  SELECT
     agrps.batch_release_date,
     agrps.batch_id,
     agrps.submission_yy_mm,
     agrps.submission_month_year,
     agrps.variation_id,
     agrps.statement_type,
-    agrps.gks_proposition_type, 
+    agrps.gks_proposition_type,
     agrps.rank,
     -- actual scvs
     COUNT(DISTINCT agrps.clinsig_type) as actual_unique_clinsig_type_count,
@@ -292,11 +292,11 @@ calculated_results AS (
     agrps.submission_month_year,
     agrps.variation_id,
     agrps.statement_type,
-    agrps.gks_proposition_type, 
+    agrps.gks_proposition_type,
     agrps.rank
 ),
 group_results AS (
-  SELECT 
+  SELECT
     (cr.rank = IF(cvc.rank=2,1,cvc.rank)) as is_top_rank,
     (cr.actual_agg_sig_type not in (1,2,4)) as actual_is_conflicting,
     (cr.derived_agg_sig_type not in (1,2,4)) as derived_is_conflicting,
@@ -308,7 +308,7 @@ group_results AS (
     cr.submission_month_year,
     cr.variation_id,
     cr.statement_type,
-    cr.gks_proposition_type, 
+    cr.gks_proposition_type,
     cr.rank,
     cr.actual_agg_sig_type,
     cr.actual_agg_classif_w_count,
@@ -341,7 +341,7 @@ group_results AS (
     cvc.statement_type = cr.statement_type
     AND
     cr.batch_release_date BETWEEN cvc.start_release_date AND cvc.end_release_date
-    
+
   ),
 final_results AS (
   select
@@ -364,7 +364,7 @@ final_results AS (
     MAX_BY(derived_is_conflicting, IF(is_modified,rank,null)) as modified_derived_conflicting,
     MAX_BY(derived_agg_classif_w_count, IF(is_modified,rank,null)) as modified_derived_agg_classif_w_count
   from group_results gr
-  group by 
+  group by
     batch_id,
     submission_yy_mm,
     submission_month_year,
@@ -404,7 +404,7 @@ SELECT
     -- all top scvs flagged
     IF((top_actual_conflicting),
       -- originally conflicting
-      "conflict removed",   
+      "conflict removed",
       -- originally non-conflicting
       "non-conflict removed"
     )
@@ -412,7 +412,7 @@ SELECT
     -- top_rank is not modified
     IF((top_actual_conflicting),
       -- originally conflicting
-      "conflict, no change",   
+      "conflict, no change",
       -- originally non-conflicting
       "non-conflict, no change"
     )
@@ -443,7 +443,7 @@ SELECT
       -- all secondary scvs flagged
       IF((modified_actual_conflicting),
         -- originally conflicting
-        "secondary conflict removed",   
+        "secondary conflict removed",
         -- originally non-conflicting
         "secondary non-conflict removed"
       ),

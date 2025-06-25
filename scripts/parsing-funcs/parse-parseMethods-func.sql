@@ -1,18 +1,18 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseMethods`(json STRING)
-RETURNS 
+RETURNS
   ARRAY<
     STRUCT<
-      name_platform STRING, 
-      type_platform STRING, 
+      name_platform STRING,
+      type_platform STRING,
       purpose STRING,
       result_type STRING,
-      min_rerported INT64, 
+      min_rerported INT64,
       max_reported INT64,
       reference_standard STRING,
-      description STRING, 
-      source_type STRING, 
+      description STRING,
+      source_type STRING,
       method_type STRING,
-      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>, 
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       software ARRAY<STRUCT<name STRING, version STRING, purpose STRING>>,
       method_attribute
@@ -26,7 +26,7 @@ RETURNS
         >
     >
   >
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""

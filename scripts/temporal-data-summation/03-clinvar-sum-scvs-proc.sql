@@ -1,23 +1,23 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_sum_scvs`()
-BEGIN  
+BEGIN
 
   -- clinvar_sum_scvs
   CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_sum_scvs`
   AS
-  SELECT 
+  SELECT
     vg.start_release_date,
     vg.end_release_date,
-    vs.variation_id, 
-    vs.id, 
-    vs.version, 
+    vs.variation_id,
+    vs.id,
+    vs.version,
     vs.statement_type,
     vs.gks_proposition_type,
-    vg.rank, 
+    vg.rank,
     vg.sig_type[OFFSET(vs.clinsig_type)].percent as outlier_pct,
-    FORMAT("%s (%s) %3.0f%% %s", 
-      IFNULL(vs.submitter_abbrev,LEFT(vs.submitter_name,15)), 
-      vs.classification_abbrev, 
-      vg.sig_type[OFFSET(vs.clinsig_type)].percent*100, 
+    FORMAT("%s (%s) %3.0f%% %s",
+      IFNULL(vs.submitter_abbrev,LEFT(vs.submitter_name,15)),
+      vs.classification_abbrev,
+      vg.sig_type[OFFSET(vs.clinsig_type)].percent*100,
       vs.full_scv_id) as scv_label,
     CASE vs.gks_proposition_type
     WHEN 'path' THEN
@@ -29,18 +29,18 @@ BEGIN
     WHEN 'dr' THEN "4-ADDT'L"
     ELSE "4-ADDT'L" END as scv_group_type
   FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
-  JOIN `clinvar_ingest.clinvar_scvs` vs 
-  ON 
-    vg.variation_id = vs.variation_id 
-    AND 
-    vg.statement_type IS NOT DISTINCT FROM vs.statement_type 
+  JOIN `clinvar_ingest.clinvar_scvs` vs
+  ON
+    vg.variation_id = vs.variation_id
     AND
-    vg.gks_proposition_type IS NOT DISTINCT FROM vs.gks_proposition_type 
+    vg.statement_type IS NOT DISTINCT FROM vs.statement_type
     AND
-    vg.rank IS NOT DISTINCT FROM vs.rank 
-    AND 
+    vg.gks_proposition_type IS NOT DISTINCT FROM vs.gks_proposition_type
+    AND
+    vg.rank IS NOT DISTINCT FROM vs.rank
+    AND
     vg.start_release_date <= vs.end_release_date
-    AND 
+    AND
     vg.end_release_date >= vs.start_release_date
   ;
 

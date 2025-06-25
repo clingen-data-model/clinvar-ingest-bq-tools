@@ -35,7 +35,7 @@ after editing it to ingest the correct bucket name and project
 
 ``` bash
 clinvar-ingest-bq-tools/gks-procs/create_gk_pilot_vrs_table.sh
-``` 
+```
 
 This script will create the `gk_pilot_vrs` table in the `clinvar_2025_03_23_v2_3_1` dataset
 
@@ -45,7 +45,7 @@ verify in the bq console with the following:
 select * from `clingen-dev.clinvar_2025_03_23_v2_3_1.gk_pilot_vrs` limit 100
 ```
 
-## STEP 5 
+## STEP 5
 
 @todo Still finalizaing....
 From the BQ console

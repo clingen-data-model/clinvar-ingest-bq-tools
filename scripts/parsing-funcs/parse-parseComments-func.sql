@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseComments`(json STRING)
 RETURNS ARRAY<STRUCT<text STRING, type STRING, source STRING>>
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -9,7 +9,7 @@ AS r"""
 
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseCommentItems`(json_comments ARRAY<STRING>)
 RETURNS ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING>>
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""

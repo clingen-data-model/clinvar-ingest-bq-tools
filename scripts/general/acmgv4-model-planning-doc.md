@@ -19,7 +19,7 @@ Here's my (Larry's) ideas on what parts we need to manage during the model devel
   - this will help provide feedback to the v4 team...(be as specific as possible)
     -- functional
     -- unaffected
-    -- 
+    --
 
 3. (later) assist with collaboration on the cspec internal model for the acmgv4 rules that will integrate with the vci
 
@@ -34,7 +34,3 @@ Here's my (Larry's) ideas on what parts we need to manage during the model devel
 
 
   As an Example of what that might look like is...
-
-
-
-    

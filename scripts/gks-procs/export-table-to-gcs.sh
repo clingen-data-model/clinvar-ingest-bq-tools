@@ -31,13 +31,13 @@ TABLES=(
 # # Loop over each table and export to JSON with GZIP compression
 # for TABLE in "${TABLES[@]}"; do
 #   EXPORT_URI="gs://${BUCKET_NAME}/${EXPORT_PATH}/${TABLE}-*.json.gz"
-  
+
 #   bq --location="${LOCATION}" extract \
 #     --destination_format=NEWLINE_DELIMITED_JSON \
 #     --compression=GZIP \
 #     "${PROJECT_ID}:${DATASET_ID}.${TABLE}" \
 #     "${EXPORT_URI}"
-    
+
 #   if [ $? -eq 0 ]; then
 #     echo "Exported ${TABLE} to ${EXPORT_URI}"
 #   else
@@ -52,22 +52,22 @@ for TABLE in "${TABLES[@]}"; do
   SCHEMA_FILE="${TABLE}_schema.json"
   LOCAL_SCHEMA_FILE="./${SCHEMA_FILE}"
   GCS_SCHEMA_FILE="gs://${BUCKET_NAME}/${SCHEMA_PATH}/${SCHEMA_FILE}"
-  
+
   # Export schema to a local JSON file
   bq show --format=prettyjson "${PROJECT_ID}:${DATASET_ID}.${TABLE}" > ${LOCAL_SCHEMA_FILE}
-  
+
   if [ $? -eq 0 ]; then
     echo "Exported schema for ${TABLE} to ${LOCAL_SCHEMA_FILE}"
-    
+
     # Upload the schema file to GCS
     gsutil cp ${LOCAL_SCHEMA_FILE} ${GCS_SCHEMA_FILE}
-    
+
     if [ $? -eq 0 ]; then
       echo "Uploaded schema for ${TABLE} to ${GCS_SCHEMA_FILE}"
     else
       echo "Failed to upload schema for ${TABLE}"
     fi
-    
+
     # Clean up local schema file
     rm ${LOCAL_SCHEMA_FILE}
   else
@@ -83,6 +83,6 @@ echo "All schema exports completed."
 bq extract \
   --destination_format NEWLINE_DELIMITED_JSON \
   --compression GZIP \
-  'clinvar_2024_09_08_v1_6_62.variation_identity' \
-  gs://clinvar-gk-pilot/2024-09-08/stage/vi.json.gz
+  'clinvar_2025_03_23_v2_3_1.variation_identity' \
+  gs://clinvar-gk-pilot/2025-03-23/dev/vi.json.gz
 #   # gs://clinvar-gk-pilot/20??-??-??/dev/vi.json.gz

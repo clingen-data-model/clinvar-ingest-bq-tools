@@ -15,5 +15,4 @@ both allow us to differntiate between versions of major version changes.
 
 This is only for the overall identifier not for the schema namespaces which will include precise versioning information in its url
 
-if some objects don't change digests between major releases then the identifer and digest wouldn't change. 
-
+if some objects don't change digests between major releases then the identifer and digest wouldn't change.

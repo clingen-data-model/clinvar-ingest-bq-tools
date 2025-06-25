@@ -1,13 +1,13 @@
 -- We want to be able to bring back any unreviewed annotations or annotations in the process of being reviewed.
--- to know whether a given annotation is unreviewed would mean that we need to compare it to all presisted reviewed annotations 
+-- to know whether a given annotation is unreviewed would mean that we need to compare it to all presisted reviewed annotations
 -- We want to be able to bring back any unreviewed annotations or annotations in the process of being reviewed.
--- to know whether a given annotation is unreviewed would mean that we need to compare it to all presisted reviewed annotations 
+-- to know whether a given annotation is unreviewed would mean that we need to compare it to all presisted reviewed annotations
 CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_baseline_annotations`(
   scope STRING
 )
-AS 
+AS
 (
-  WITH anno AS 
+  WITH anno AS
   (
     SELECT
       av.annotation_id,
@@ -39,7 +39,7 @@ AS
       av.review_label,
       UPPER(scope) as result_set_scope
     FROM `clinvar_curator.cvc_annotations_view` av
-    WHERE 
+    WHERE
       CASE UPPER(scope)
       WHEN "ALL" THEN
         TRUE -- return both reviewed and unreviewed annotations
@@ -55,7 +55,7 @@ AS
         FALSE
       END
     ),
-    anno_history AS 
+    anno_history AS
     (
       SELECT
         a.annotation_id,
@@ -66,10 +66,10 @@ AS
           FORMAT(
             'v%i %s %s',
             prior_a.scv_ver,
-            prior_a.annotation_label, 
+            prior_a.annotation_label,
             if(prior_a.review_label is not null, FORMAT('[ %s ]',prior_a.review_label), '')
           ),
-          '\n' 
+          '\n'
           ORDER BY prior_a.annotated_date DESC
         ) as prior_scv_annotations
 
@@ -80,9 +80,9 @@ AS
         AND
         prior_a.annotation_id < a.annotation_id
       GROUP BY
-        a.annotation_id 
+        a.annotation_id
     )
-    SELECT 
+    SELECT
       CURRENT_DATE() as as_of_date,
       a.annotation_release_date,
       a.annotation_id,
@@ -121,7 +121,7 @@ AS
       ah.has_prior_submission_batch_id,
       ah.prior_scv_annotations,
       a.result_set_scope
-    FROM anno as a 
+    FROM anno as a
     LEFT JOIN anno_history ah
     ON
       ah.annotation_id = a.annotation_id

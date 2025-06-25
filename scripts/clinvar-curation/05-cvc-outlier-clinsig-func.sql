@@ -1,7 +1,7 @@
 CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_outlier_clinsig`()
 AS
-WITH 
-scvs AS 
+WITH
+scvs AS
   (
     SELECT
       css.variation_id,
@@ -16,32 +16,32 @@ scvs AS
       rel.release_date
     FROM `clinvar_ingest.release_on`(CURRENT_DATE()) rel
     JOIN `clinvar_ingest.clinvar_sum_scvs` css
-    ON 
+    ON
       css.outlier_pct <= 0.333
       AND
-      rel.release_date BETWEEN css.start_release_date AND css.end_release_date 
+      rel.release_date BETWEEN css.start_release_date AND css.end_release_date
     JOIN `clinvar_ingest.clinvar_sum_vsp_top_rank_group_change` vtop
     ON
-      vtop.variation_id = css.variation_id 
+      vtop.variation_id = css.variation_id
       AND
       vtop.statement_type = css.statement_type
       AND
       vtop.gks_proposition_type = css.gks_proposition_type
       AND
-      vtop.top_rank = css.rank 
+      vtop.top_rank = css.rank
       AND
       rel.release_date BETWEEN vtop.start_release_date AND vtop.end_release_date
     JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` crg
-    ON 
-      crg.variation_id = vtop.variation_id 
+    ON
+      crg.variation_id = vtop.variation_id
       AND
-      crg.rank = vtop.top_rank 
+      crg.rank = vtop.top_rank
       AND
       crg.statement_type = vtop.statement_type
       AND
       crg.gks_proposition_type = crg.gks_proposition_type
-      AND 
-      rel.release_date between crg.start_release_date and crg.end_release_date 
+      AND
+      rel.release_date between crg.start_release_date and crg.end_release_date
       AND
       crg.agg_sig_type > 4
   ),
@@ -54,30 +54,30 @@ scvs AS
       vcv.full_vcv_id,
       vcv.id as vcv_id,
       vcv.version as vcv_ver,
-      var.name,         
+      var.name,
       var.gene_id,
       var.symbol as gene_symbol,
       scvs.release_date
     FROM scvs
     JOIN `clingen-dev.clinvar_ingest.clinvar_variations` var
     ON
-      var.id = scvs.variation_id 
-      AND 
+      var.id = scvs.variation_id
+      AND
       scvs.release_date between var.start_release_date and var.end_release_date
     JOIN `clinvar_ingest.clinvar_vcvs` vcv
     ON
-      vcv.variation_id = scvs.variation_id 
-      AND 
+      vcv.variation_id = scvs.variation_id
+      AND
       scvs.release_date between vcv.start_release_date and vcv.end_release_date
     GROUP BY
       scvs.variation_id,
       scvs.statement_type,
       scvs.gks_proposition_type,
       scvs.top_rank,
-      vcv.full_vcv_id,  
+      vcv.full_vcv_id,
       vcv.id,
       vcv.version,
-      var.name,         
+      var.name,
       var.gene_id,
       var.symbol,
       scvs.release_date
@@ -89,8 +89,8 @@ scvs AS
           a.variation_id,
           a.statement_type,
           a.gks_proposition_type,
-          a.scv_id, 
-          a.scv_ver, 
+          a.scv_id,
+          a.scv_ver,
           a.rank,
           a.action,
           a.curator,
@@ -99,13 +99,13 @@ scvs AS
       )
       OVER (
         PARTiTION BY scv_id
-        ORDER BY scv_id, annotation_id 
+        ORDER BY scv_id, annotation_id
         ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
       ) as last
     FROM vars
     JOIN `clinvar_curator.cvc_annotations`("REVIEWED") a
     ON
-      a.is_latest_annotation 
+      a.is_latest_annotation
       AND
       NOT a.is_deleted_scv
       AND
@@ -114,7 +114,7 @@ scvs AS
       a.rank = vars.top_rank
   ),
   latest_variation_anno AS (
-    select 
+    select
       lrsa.last.variation_id,
       lrsa.last.statement_type,
       lrsa.last.gks_proposition_type,
@@ -122,7 +122,7 @@ scvs AS
       COUNTIF(lrsa.last.action='flagging candidate') as flagging_candidate_cnt,
       COUNTIF(lrsa.last.action = "no change") as no_change_cnt
     from last_reviewed_scv_anno lrsa
-    group by 
+    group by
       lrsa.last.variation_id,
       lrsa.last.statement_type,
       lrsa.last.gks_proposition_type,
@@ -153,20 +153,20 @@ scvs AS
     anno.last.action,              --
     anno.last.annotated_date,      --
     CASE
-    WHEN IFNULL(ci.agg_cvc_sig_type,0) IN (1,2,4) THEN 
+    WHEN IFNULL(ci.agg_cvc_sig_type,0) IN (1,2,4) THEN
       STRUCT("fully resolved" as name, 4 as index)
-    WHEN var_anno.variation_id is NULL THEN 
+    WHEN var_anno.variation_id is NULL THEN
       STRUCT("no annotations" as name, 1 as index)
-    WHEN IFNULL(var_anno.flagging_candidate_cnt, 0) > 0 THEN 
+    WHEN IFNULL(var_anno.flagging_candidate_cnt, 0) > 0 THEN
       STRUCT("partially resolved" as name, 2 as index)
-    ELSE 
+    ELSE
       STRUCT("no change only" as name, 3 as index)
     END as annotation_status,     --
     anno.last.curator            --
   FROM scvs
   JOIN `clinvar_ingest.clinvar_scvs` cs
   ON
-    cs.id = scvs.scv_id 
+    cs.id = scvs.scv_id
     AND
     cs.version = scvs.scv_ver
     AND
@@ -193,13 +193,11 @@ scvs AS
     AND
     var_anno.rank = vars.top_rank
   LEFT JOIN `clinvar_curator.cvc_annotations_impact`() ci
-  ON 
-    ci.variation_id = vars.variation_id 
+  ON
+    ci.variation_id = vars.variation_id
     AND
-    ci.statement_type = vars.statement_type 
+    ci.statement_type = vars.statement_type
     AND
     ci.gks_proposition_type = vars.gks_proposition_type
     AND
     ci.rank = vars.top_rank
-
-    

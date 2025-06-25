@@ -29,25 +29,25 @@ BEGIN
       FROM `variation_tracker.report_submitter` rs
       JOIN `%s.scv_summary` scv
       ON
-        rs.submitter_id = scv.submitter_id 
+        rs.submitter_id = scv.submitter_id
         AND
         rs.type = 'GC'
       CROSS JOIN UNNEST(scv.clinical_assertion_observation_ids) as cao_id
-      JOIN `%s.clinical_assertion_observation` cao 
-      ON 
+      JOIN `%s.clinical_assertion_observation` cao
+      ON
         cao.id = cao_id
       LEFT JOIN `%s.clinical_assertion_trait_set` caots
       ON
         caots.id = cao.clinical_assertion_trait_set_id
       LEFT JOIN `%s.single_gene_variation` sgv
       ON
-        sgv.variation_id = scv.variation_id    
+        sgv.variation_id = scv.variation_id
       LEFT JOIN `%s.gene` g
       ON
-        sgv.gene_id = g.id 
+        sgv.gene_id = g.id
       JOIN `%s.variation` v
       ON
-        v.id = scv.variation_id      
+        v.id = scv.variation_id
       JOIN `%s.variation_archive` vcv
       ON
         vcv.variation_id = scv.variation_id
@@ -56,12 +56,12 @@ BEGIN
         vac.vcv_id = vcv.id
         AND
         vac.statement_type = scv.statement_type
-      LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
-      ON 
+      LEFT JOIN `clinvar_ingest.clinvar_status` cvs1
+      ON
         cvs1.label = vac.review_status
         AND
         vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
-      WHERE 
+      WHERE
         -- these are the dupe gc submissions that are older
         scv.id NOT IN (
           "SCV000607136","SCV000986740",
@@ -95,7 +95,7 @@ BEGIN
         AND
         (
           oma.attribute.value IS NOT NULL
-          OR 
+          OR
           oma.attribute.integer_value IS NOT NULL
           OR
           oma.comment.text IS NOT NULL
@@ -112,14 +112,14 @@ BEGIN
       JOIN gc_scv_obs_testing gsot
       ON
         gsot.scv_obs_id = gso.scv_obs_id
-      GROUP BY 
+      GROUP BY
         gso.id
     ),
     gc_scv_obs_attribs AS (
-      SELECT 
+      SELECT
         gso.scv_obs_id,
         MAX(
-          IF( 
+          IF(
             od.attribute.type = 'SampleLocalID', od.attribute.value, NULL
           )
         ) AS sample_id,
@@ -130,7 +130,7 @@ BEGIN
         ) AS sample_variant_id
       FROM gc_scv_obs as gso
       JOIN UNNEST( `clinvar_ingest.parseObservedData`(gso.obs_content) ) as od
-      GROUP BY 
+      GROUP BY
         gso.scv_obs_id
     ),
     gc_scv_obs_patient_prep AS (
@@ -170,7 +170,7 @@ BEGIN
         gsopp.scv_obs_id
     ),
     patient_co_occurring_same_gene AS (
-      SELECT 
+      SELECT
         patient_id,
         gso.gene_id,
         ARRAY_AGG(DISTINCT gso.scv_obs_id) as scv_obs_ids
@@ -179,7 +179,7 @@ BEGIN
       ON
         gso.scv_obs_id = gsop.scv_obs_id
       CROSS JOIN UNNEST(gsop.patient_ids) as patient_id
-      WHERE 
+      WHERE
         gso.gene_id IS NOT NULL
       GROUP BY
         patient_id,
@@ -213,7 +213,7 @@ BEGIN
         pcosg_this.patient_id
     ),
     clinical_feature AS (
-      SELECT 
+      SELECT
         gso.scv_obs_id,
         xref.id as xref_id,
         IFNULL(obs_trait.name, hpo.lbl) as name,
@@ -227,15 +227,15 @@ BEGIN
       LEFT JOIN `clinvar_ingest.hpo_terms` hpo
       ON
         hpo.id = xref.id
-      GROUP BY  
+      GROUP BY
         gso.scv_obs_id,
         xref.id,
-        obs_trait.name, 
+        obs_trait.name,
         hpo.lbl,
         obs_trait.content
     ),
     gc_clinical_feature_set AS (
-      select 
+      select
         cf.scv_obs_id,
         ARRAY_TO_STRING(ARRAY_AGG(cf.name ORDER BY cf.name), ',\\n') as clinical_features
       FROM clinical_feature cf
@@ -243,12 +243,12 @@ BEGIN
         cf.scv_obs_id
     )
 
-    -- filter out any records that don't have at least one of the 
+    -- filter out any records that don't have at least one of the
     -- following properties: lab_name, lab_id, lab_classification
-    SELECT 
+    SELECT
       gso.scv_obs_id,
-      gso.variation_id, 
-      gso.id, 
+      gso.variation_id,
+      gso.id,
       gso.version,
       FORMAT("%%s.%%i", gso.id, gso.version) as scv_acxn,
       gso.submitter_id,
@@ -276,7 +276,7 @@ BEGIN
       cfs.clinical_features,
       opcos.co_occuring,
       gsop.patient_ids,
-      gso.gene_id    
+      gso.gene_id
     FROM gc_scv_obs gso
     JOIN gc_scv_obs_testing gsot
     ON

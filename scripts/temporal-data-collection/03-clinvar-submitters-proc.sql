@@ -4,7 +4,7 @@
 -- select release_date from `clinvar_ingest.clinvar_submitters` group by release_date order by 1 desc;
 
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_submitters`(
-  schema_name STRING, 
+  schema_name STRING,
   release_date DATE,
   previous_release_date DATE,
   OUT result_message STRING
@@ -24,16 +24,16 @@ BEGIN
   -- deleted submitters (where it exists in clinvar_submitters (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_submitters` cs
-      SET 
+      SET
         deleted_release_date = %T
-    WHERE 
+    WHERE
       cs.deleted_release_date is NULL
-      AND 
+      AND
       NOT EXISTS (
-        SELECT 
-          s.id 
+        SELECT
+          s.id
         FROM `%s.submitter` s
-        WHERE 
+        WHERE
           s.id = cs.id
       )
   """, release_date, schema_name);
@@ -41,15 +41,15 @@ BEGIN
   -- updated submitters
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_submitters` cs
-      SET 
-        current_name = s.current_name, 
-        all_names = s.all_names, 
-        all_abbrevs = s.all_abbrevs, 
-        current_abbrev = s.current_abbrev, 
+      SET
+        current_name = s.current_name,
+        all_names = s.all_names,
+        all_abbrevs = s.all_abbrevs,
+        current_abbrev = s.current_abbrev,
         org_category = s.org_category,
         end_release_date = s.release_date
     FROM `%s.submitter` s
-    WHERE 
+    WHERE
       s.id = cs.id
       AND
       cs.deleted_release_date is NULL
@@ -58,36 +58,36 @@ BEGIN
   -- new variations
   EXECUTE IMMEDIATE FORMAT("""
     INSERT INTO `clinvar_ingest.clinvar_submitters` (
-      id, 
-      current_name, 
-      current_abbrev, 
-      cvc_abbrev, 
-      org_category, 
-      all_names, 
-      all_abbrevs, 
-      start_release_date, 
+      id,
+      current_name,
+      current_abbrev,
+      cvc_abbrev,
+      org_category,
+      all_names,
+      all_abbrevs,
+      start_release_date,
       end_release_date
     )
-    SELECT 
-      s.id, 
+    SELECT
+      s.id,
       s.current_name,
       s.current_abbrev,
       IFNULL(s.current_abbrev, csa.current_abbrev) as cvc_abbrev,
-      s.org_category,  
-      s.all_names, 
-      s.all_abbrevs, 
-      s.release_date as start_release_date, 
+      s.org_category,
+      s.all_names,
+      s.all_abbrevs,
+      s.release_date as start_release_date,
       s.release_date as end_release_date
     FROM `%s.submitter` s
-    LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa 
-    ON 
+    LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa
+    ON
       csa.submitter_id = s.id
-    WHERE 
+    WHERE
       NOT EXISTS (
-        SELECT 
-          cs.id 
+        SELECT
+          cs.id
         FROM `clinvar_ingest.clinvar_submitters` cs
-        WHERE 
+        WHERE
           cs.id = s.id
           AND
           cs.deleted_release_date is NULL
@@ -100,7 +100,7 @@ END;
 
 
 -- -- initialize submitter info by release based on clinical_assertion release info,
--- --  36 very old submitter ids existed before 2019-07-01 which need to be manually 
+-- --  36 very old submitter ids existed before 2019-07-01 which need to be manually
 -- --  loaded and provided to create the full submitter table pre-2019-07-01
 
 -- CREATE or REPLACE TABLE `clinvar_2019_06_01_v0.pre_2019_07_01_submitter`
@@ -158,33 +158,33 @@ END;
 -- create or replace table `clinvar_2019_06_01_v0.submitter`
 -- as
 -- with ca as (
---   select 
---     ca.release_date, 
---     ca.submitter_id 
---   from `clinvar_2019_06_01_v0.clinical_assertion` ca 
+--   select
+--     ca.release_date,
+--     ca.submitter_id
+--   from `clinvar_2019_06_01_v0.clinical_assertion` ca
 --   group by ca.release_date, ca.submitter_id
 -- )
--- select 
+-- select
 --   ca.release_date,
 --   ca.submitter_id,
 --   s.current_name,
 --   s.current_abbrev,
 --   s.org_category,
 --   s.all_names,
---   s.all_abbrevs  
+--   s.all_abbrevs
 -- from ca
 -- join `clinvar_2019_06_01_v0.pre_2019_07_01_submitter` s
 -- on
 --   s.id = ca.submitter_id
 -- union all
--- select 
+-- select
 --   ca.release_date,
 --   ca.submitter_id,
 --   s.current_name,
 --   s.current_abbrev,
 --   s.org_category,
 --   s.all_names,
---   s.all_abbrevs  
+--   s.all_abbrevs
 -- from ca
 -- join `clinvar_2019_07_01_v1_1_0_m2.submitter` s
 -- on
@@ -206,7 +206,7 @@ END;
 -- order by 1
 
 -- -- repair bad submitter ids pre-201907
--- UPDATE `clinvar_2019_06_01_v0.scv_summary` 
+-- UPDATE `clinvar_2019_06_01_v0.scv_summary`
 -- SET scv.submitter_id = vals.good_id
 -- FROM (
 --   SELECT '1' bad_id, '500139' good_id UNION ALL
@@ -255,9 +255,9 @@ END;
 -- SELECT id, submitter_ids
 -- FROM (
 --   SELECT id, array_agg(distinct submitter_id) as submitter_ids
---   FROM `clinvar_ingest.clinvar_scvs` 
+--   FROM `clinvar_ingest.clinvar_scvs`
 --   group by id
---   HAVING COUNT(distinct submitter_id) > 1 
+--   HAVING COUNT(distinct submitter_id) > 1
 -- )
 -- ;
 
@@ -277,31 +277,31 @@ END;
 --   SELECT scv1.id, scv1.submitter_id
 --   FROM `clinvar_ingest.clinvar_scvs` scv1
 --   where scv1.submitter_id not in ("500029", "500062")
---   and exists 
+--   and exists
 --   (
---     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2 
+--     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2
 --     where scv2.id = scv1.id and scv2.submitter_id in ("500029", "500062")
 --   )
 --   group by scv1.id, scv1.submitter_id
 -- ) scv
--- WHERE ss.submitter_id in ("500029", "500062") and scv.id = ss.id 
--- ; 
+-- WHERE ss.submitter_id in ("500029", "500062") and scv.id = ss.id
+-- ;
 
 -- update `clinvar_ingest.clinvar_scvs` cs
 -- SET cs.submitter_id = scv.submitter_id
 -- FROM (
 --   SELECT scv1.id, scv1.submitter_id
 --   FROM `clinvar_ingest.clinvar_scvs` scv1
---   where scv1.submitter_id not in ("500029", "500062") 
---   and exists 
+--   where scv1.submitter_id not in ("500029", "500062")
+--   and exists
 --   (
---     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2 
+--     select scv2.id from `clinvar_ingest.clinvar_scvs` scv2
 --     where scv2.id = scv1.id and scv2.submitter_id in ("500029", "500062")
 --   )
 --   group by scv1.id, scv1.submitter_id
 -- ) scv
--- WHERE cs.submitter_id in ("500029", "500062") and scv.id = cs.id 
--- ; 
+-- WHERE cs.submitter_id in ("500029", "500062") and scv.id = cs.id
+-- ;
 
 -- CREATE OR REPLACE TABLE `clinvar_2019_06_01_v0.submitter`
 -- (
@@ -325,4 +325,3 @@ END;
 --   (id, current_name, org_category)
 -- VALUES ("505239", "ISCA site 13", "other")
 -- ;
-

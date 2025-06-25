@@ -1,5 +1,5 @@
 
--- 2024-03-11 x 
+-- 2024-03-11 x
 -- 2024-03-17 m clinvar_2024_03_17_v1_6_62
 -- 2024-03-24 m clinvar_2024_03_24_v1_6_62
 -- 2024-03-31 x
@@ -20,39 +20,39 @@
 -- repair missing rcv_mapping "RCV003883131" in the 2024-03-06, 2024-03-31 datasets by copying the missing entry from the 2024-05-02 dataset
 
 -- first for the Mar.11.2024 dataset
-INSERT INTO `clingen-dev.clinvar_2024_03_11_v2_1_0.rcv_mapping` 
+INSERT INTO `clingen-dev.clinvar_2024_03_11_v2_1_0.rcv_mapping`
 (
-  rcv_accession, 
-  scv_accessions, 
-  trait_set_id, 
-  trait_set_content, 
+  rcv_accession,
+  scv_accessions,
+  trait_set_id,
+  trait_set_content,
   release_date
 )
 SELECT
-  rcv_accession, 
-  scv_accessions, 
-  trait_set_id, 
-  trait_set_content, 
+  rcv_accession,
+  scv_accessions,
+  trait_set_id,
+  trait_set_content,
   DATE'2024-03-11'
 from `clingen-dev.clinvar_2024_05_02_v2_1_0.rcv_mapping`
-where 
+where
   rcv_accession = "RCV003883131";
 
 -- now for the Mar.31.2024 dataset
-INSERT INTO `clingen-dev.clinvar_2024_03_31_v2_1_0.rcv_mapping` 
+INSERT INTO `clingen-dev.clinvar_2024_03_31_v2_1_0.rcv_mapping`
 (
-  rcv_accession, 
-  scv_accessions, 
-  trait_set_id, 
-  trait_set_content, 
+  rcv_accession,
+  scv_accessions,
+  trait_set_id,
+  trait_set_content,
   release_date
 )
 SELECT
-  rcv_accession, 
-  scv_accessions, 
-  trait_set_id, 
-  trait_set_content, 
+  rcv_accession,
+  scv_accessions,
+  trait_set_id,
+  trait_set_content,
   DATE'2024-03-11'
 from `clingen-dev.clinvar_2024_05_02_v2_1_0.rcv_mapping`
-where 
+where
   rcv_accession = "RCV003883131";

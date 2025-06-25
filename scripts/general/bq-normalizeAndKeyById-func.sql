@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.normalizeAndKeyById`(json JSON)
 RETURNS JSON
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/bq-utils.js'])
 AS r"""
@@ -18,7 +18,7 @@ WITH x as (
   UNION ALL
   SELECT JSON '{"id": "300", "extensions": [{"name": "label3.1", "value_string": "test"}], "location": {"id": "loc1", "extensions": [{"name": "label3.1.1", "value_coding": {"code": "mycode", "system": "mysystem", "label": "value_label"}}]}}' as json_data
 )
-select 
+select
   x.json_data as before,
-  `clinvar_ingest.normalizeAndKeyById`(json_data) as after 
+  `clinvar_ingest.normalizeAndKeyById`(json_data) as after
 from x;

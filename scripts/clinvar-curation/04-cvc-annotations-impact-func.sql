@@ -1,6 +1,6 @@
-CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_annotations_impact`() 
+CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_annotations_impact`()
 AS (
-  WITH 
+  WITH
   last_submitted_annos AS (
     SELECT DISTINCT
       LAST_VALUE(
@@ -15,11 +15,11 @@ AS (
           a.annotation_release_date,
           rel.release_date
         )
-      ) 
+      )
       OVER(
         PARTITION BY a.variation_id, a.scv_id
-        ORDER BY a.variation_id, a.scv_id, a.annotated_date  
-        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING      
+        ORDER BY a.variation_id, a.scv_id, a.annotated_date
+        ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
       ) last
     FROM `clinvar_ingest.release_on`(CURRENT_DATE()) rel
     JOIN `clinvar_curator.cvc_annotations`("SUBMITTED") a
@@ -34,7 +34,7 @@ AS (
       last.rank,
       last.release_date
     FROM last_submitted_annos
-    GROUP BY 
+    GROUP BY
       last.variation_id,
       last.statement_type,
       last.gks_proposition_type,
@@ -43,8 +43,8 @@ AS (
   ),
   var_counts AS (
     SELECT
-      av.variation_id, 
-      av.statement_type, 
+      av.variation_id,
+      av.statement_type,
       av.gks_proposition_type,
       av.rank,
       vs.classif_type,
@@ -53,40 +53,40 @@ AS (
       vsc.end_release_date,
       av.release_date,
       IF(
-        count(DISTINCT IF(sa.last.variation_id is null, vs.id, null)) > 0, 
-        vs.classif_type, 
+        count(DISTINCT IF(sa.last.variation_id is null, vs.id, null)) > 0,
+        vs.classif_type,
         null
       ) as cvc_classif_type,
       IF(
-        count(DISTINCT IF(sa.last.variation_id is null, vs.id, null)) > 0, 
-        (vs.classif_type||'('||(count(DISTINCT IF(sa.last.variation_id is null, vs.id, null)))||')'), 
+        count(DISTINCT IF(sa.last.variation_id is null, vs.id, null)) > 0,
+        (vs.classif_type||'('||(count(DISTINCT IF(sa.last.variation_id is null, vs.id, null)))||')'),
         null
       ) AS cvc_classif_type_w_count
     FROM anno_voi av
     JOIN `clinvar_ingest.clinvar_sum_variation_scv_change` vsc
     ON
-      av.variation_id = vsc.variation_id 
+      av.variation_id = vsc.variation_id
       AND
       av.release_date between vsc.start_release_date AND vsc.end_release_date
     JOIN `clinvar_ingest.clinvar_scvs` vs
     ON
-      av.variation_id = vs.variation_id 
-      AND 
-      av.statement_type = vs.statement_type 
+      av.variation_id = vs.variation_id
+      AND
+      av.statement_type = vs.statement_type
       AND
       av.gks_proposition_type = vs.gks_proposition_type
       AND
-      av.rank = vs.rank 
+      av.rank = vs.rank
       AND
       av.release_date between vs.start_release_date AND vs.end_release_date
     LEFT JOIN last_submitted_annos sa
-    ON 
-      vs.id = sa.last.scv_id 
+    ON
+      vs.id = sa.last.scv_id
       AND
-      vs.version = sa.last.scv_ver 
+      vs.version = sa.last.scv_ver
     GROUP BY
-      av.variation_id, 
-      av.statement_type, 
+      av.variation_id,
+      av.statement_type,
       av.gks_proposition_type,
       av.rank,
       vs.classif_type,
@@ -95,13 +95,13 @@ AS (
       vsc.end_release_date,
       av.release_date
   )
-  SELECT 
+  SELECT
     vc.start_release_date,
     vc.end_release_date,
     vc.variation_id,
-    vc.statement_type, 
+    vc.statement_type,
     vc.gks_proposition_type,
-    vc.rank,      
+    vc.rank,
     vc.release_date,
     COUNT(DISTINCT IF(cvc.last.variation_id is null,vs.clinsig_type,null)) as cvc_unique_clinsig_type_count,
     SUM(DISTINCT IF(cvc.last.variation_id is null,IF(vs.clinsig_type=2,4,IF(vs.clinsig_type=1,2,1)),null)) as agg_cvc_sig_type,
@@ -119,23 +119,23 @@ AS (
   from var_counts as vc
   JOIN `clinvar_ingest.clinvar_scvs` vs
   ON
-    vs.variation_id = vc.variation_id 
+    vs.variation_id = vc.variation_id
     AND
-    vs.statement_type = vc.statement_type 
+    vs.statement_type = vc.statement_type
     AND
-    vs.rank = vc.rank 
+    vs.rank = vc.rank
     AND
     release_date BETWEEN vs.start_release_date AND vs.end_release_date
   LEFT JOIN last_submitted_annos cvc
   ON
-    cvc.last.variation_id = vc.variation_id 
+    cvc.last.variation_id = vc.variation_id
     AND
-    cvc.last.scv_id = vs.id 
+    cvc.last.scv_id = vs.id
   group by
-    vc.variation_id, 
+    vc.variation_id,
     vc.start_release_date,
     vc.end_release_date,
-    vc.statement_type, 
+    vc.statement_type,
     vc.gks_proposition_type,
     vc.rank,
     vc.release_date

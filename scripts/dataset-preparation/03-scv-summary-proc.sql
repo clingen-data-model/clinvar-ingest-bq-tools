@@ -7,66 +7,66 @@ BEGIN
   DECLARE project_id STRING;
 
   SET project_id = (
-    SELECT 
+    SELECT
       catalog_name as paroject_id
     FROM `INFORMATION_SCHEMA.SCHEMATA`
-    WHERE 
+    WHERE
       schema_name = 'clinvar_ingest'
   );
 
   -- NOTE: This will no longer work on clingen-stage based on recent changes to support clingen-dev.
 
   EXECUTE IMMEDIATE FORMAT("""
-    CREATE OR REPLACE TABLE `%s.scv_summary` 
+    CREATE OR REPLACE TABLE `%s.scv_summary`
     AS
     WITH obs_sample AS (
       SELECT
-        REGEXP_EXTRACT(id, r'^SCV[0-9]+') as id, 
+        REGEXP_EXTRACT(id, r'^SCV[0-9]+') as id,
         `clinvar_ingest.parseSample`(obs.content) as s
-      FROM 
+      FROM
         `%s.clinical_assertion_observation` obs
     ),
     obs_method AS (
       SELECT
-        REGEXP_EXTRACT(id, r'^SCV[0-9]+') as id, 
+        REGEXP_EXTRACT(id, r'^SCV[0-9]+') as id,
         m.description as method_desc,
         m.method_type
-      FROM 
+      FROM
         `%s.clinical_assertion_observation` obs,
         UNNEST(`clinvar_ingest.parseMethods`(obs.content)) as m
     ),
     assertion_method AS (
-      SELECT 
-        ca.id, 
+      SELECT
+        ca.id,
         a.attribute.type,
         a.attribute.value,
-        STRING_AGG(DISTINCT c.url,';') as url 
+        STRING_AGG(DISTINCT c.url,';') as url
       FROM `%s.clinical_assertion` ca,
       UNNEST(`clinvar_ingest.parseAttributeSet`(ca.content)) as a,
       UNNEST(a.citation) as c
-      WHERE 
-        a.attribute.type = "AssertionMethod" 
-        and 
+      WHERE
+        a.attribute.type = "AssertionMethod"
+        and
         c.url is not null
-      GROUP BY 
-        ca.id, 
-        a.attribute.type, 
+      GROUP BY
+        ca.id,
+        a.attribute.type,
         a.attribute.value
     ),
     obs AS (
-      SELECT 
+      SELECT
         ca.id,
         STRING_AGG(DISTINCT os.s.origin, ", " ORDER BY os.s.origin) as origin,
         STRING_AGG(DISTINCT os.s.affected_status, ", " ORDER BY os.s.affected_status) as affected_status,
         STRING_AGG(DISTINCT om.method_desc, ", " ORDER BY om.method_desc) as method_desc,
         STRING_AGG(DISTINCT om.method_type, ", " ORDER BY om.method_type) as method_type
-      FROM 
+      FROM
         `%s.clinical_assertion` ca
-      LEFT JOIN obs_sample os 
-      ON 
+      LEFT JOIN obs_sample os
+      ON
         os.id = ca.id
-      LEFT JOIN obs_method om 
-      ON 
+      LEFT JOIN obs_method om
+      ON
         om.id = ca.id
       GROUP BY
         ca.id
@@ -78,7 +78,7 @@ BEGIN
       FROM
         `%s.clinical_assertion` ca
       LEFT JOIN UNNEST(ca.interpretation_comments) as c
-      WHERE 
+      WHERE
         ARRAY_LENGTH(ca.interpretation_comments) > 0
       GROUP BY
         id
@@ -91,24 +91,24 @@ BEGIN
         cvs.rank,
         IFNULL(map.cv_clinsig_type, '-') as classif_type,
         cst.significance,
-        FORMAT( '%%s, %%s, %%t', 
-            cst.label, 
-            if(cvs.rank > 0,format("%%i%%s", cvs.rank, CHR(9733)), IF(cvs.rank = 0, format("%%i%%s", cvs.rank, CHR(9734)), "n/a")), 
+        FORMAT( '%%s, %%s, %%t',
+            cst.label,
+            if(cvs.rank > 0,format("%%i%%s", cvs.rank, CHR(9733)), IF(cvs.rank = 0, format("%%i%%s", cvs.rank, CHR(9734)), "n/a")),
             if(ca.interpretation_date_last_evaluated is null, "<n/a>", format("%%t", ca.interpretation_date_last_evaluated))) as classification_label,
-        FORMAT( '%%s, %%s, %%t', 
-            UPPER(map.cv_clinsig_type), 
-            if(cvs.rank > 0,format("%%i%%s", cvs.rank, CHR(9733)), IF(cvs.rank = 0, format("%%i%%s", cvs.rank, CHR(9734)), "n/a")), 
+        FORMAT( '%%s, %%s, %%t',
+            UPPER(map.cv_clinsig_type),
+            if(cvs.rank > 0,format("%%i%%s", cvs.rank, CHR(9733)), IF(cvs.rank = 0, format("%%i%%s", cvs.rank, CHR(9734)), "n/a")),
             if(ca.interpretation_date_last_evaluated is null, "<n/a>", format("%%t", ca.interpretation_date_last_evaluated))) as classification_abbrev
       FROM
         `%s.clinical_assertion` ca
       LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-      ON 
+      ON
         map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
-      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
-      ON 
-        cst.code = map.cv_clinsig_type 
+      LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst
+      ON
+        cst.code = map.cv_clinsig_type
         AND
-        cst.statement_type = ca.statement_type  
+        cst.statement_type = ca.statement_type
       LEFT JOIN `clinvar_ingest.clinvar_status` cvs
       ON
         cvs.label = ca.review_status
@@ -117,21 +117,21 @@ BEGIN
         AND
         ca.release_date between cvs.start_release_date and cvs.end_release_date
     )
-    SELECT 
+    SELECT
       ca.release_date,
-      ca.id, 
-      ca.version, 
+      ca.id,
+      ca.version,
       FORMAT('%%s.%%i', ca.id, ca.version) as full_scv_id,
       ca.variation_id,
       ca.local_key,
-      ca.interpretation_date_last_evaluated as last_evaluated, 
+      ca.interpretation_date_last_evaluated as last_evaluated,
       ca.statement_type,
       cst.original_proposition_type,
       cst.gks_proposition_type,
       ca.clinical_impact_assertion_type,
       ca.clinical_impact_clinical_significance,
       cst.rank,
-      ca.review_status, 
+      ca.review_status,
       cst.classif_type,
       cst.significance,
       cst.classification_label,
@@ -147,7 +147,7 @@ BEGIN
       ca.submitter_id,
       subr.current_name as submitter_name,
       IFNULL(IFNULL(subr.current_abbrev, csa.current_abbrev),LEFT(subr.current_name,25)||"...") as submitter_abbrev,
-      subm.submission_date, 
+      subm.submission_date,
       obs.origin,
       obs.affected_status,
       obs.method_desc,
@@ -159,7 +159,7 @@ BEGIN
     LEFT JOIN clinsig cst
     ON
       cst.id = ca.id
-    LEFT JOIN scv_classification_comment scc 
+    LEFT JOIN scv_classification_comment scc
     ON
       scc.id = ca.id
     LEFT JOIN obs
@@ -169,13 +169,13 @@ BEGIN
     ON
       am.id = ca.id
     LEFT JOIN `%s.submitter` subr
-    ON 
+    ON
       subr.id = ca.submitter_id
-    LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa 
-    ON 
+    LEFT JOIN `clinvar_ingest.clinvar_submitter_abbrevs` csa
+    ON
       csa.submitter_id = subr.id
-    LEFT JOIN `%s.submission` subm 
-    ON 
+    LEFT JOIN `%s.submission` subm
+    ON
       subm.id = ca.submission_id
     LEFT JOIN `%s.rcv_accession` rcv
     ON

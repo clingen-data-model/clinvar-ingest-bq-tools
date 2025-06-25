@@ -1,10 +1,10 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.clinvar_genes`(
-  schema_name STRING, 
+  schema_name STRING,
   release_date DATE,
   previous_release_date DATE,
   OUT result_message STRING
 )
-BEGIN 
+BEGIN
   DECLARE is_valid BOOL DEFAULT TRUE;
   DECLARE validation_message STRING DEFAULT '';
 
@@ -19,17 +19,17 @@ BEGIN
   -- deleted genes (where it exists in clinvar_genes (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_genes` cg
-    SET 
+    SET
       deleted_release_date = %T
-    WHERE 
-      cg.deleted_release_date is NULL 
-      AND 
-      NOT EXISTS 
+    WHERE
+      cg.deleted_release_date is NULL
+      AND
+      NOT EXISTS
       (
-        SELECT 
-          g.id 
+        SELECT
+          g.id
         FROM `%s.gene` g
-        WHERE 
+        WHERE
           g.id = cg.id
       )
   """, release_date, schema_name);
@@ -37,41 +37,41 @@ BEGIN
   -- updated genes
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_genes` cg
-    SET 
+    SET
       hgnc_id = g.hgnc_id,
       symbol = g.symbol,
       end_release_date = g.release_date
     FROM `%s.gene` g
-    WHERE 
+    WHERE
       g.id = cg.id
-      AND 
+      AND
       deleted_release_date is NULL
   """, schema_name);
 
   -- new genes
   EXECUTE IMMEDIATE FORMAT("""
     INSERT `clinvar_ingest.clinvar_genes` (
-      id, 
-      symbol, 
-      hgnc_id, 
-      start_release_date, 
+      id,
+      symbol,
+      hgnc_id,
+      start_release_date,
       end_release_date
     )
-    SELECT 
-      g.id, 
-      g.symbol, 
-      g.hgnc_id, 
-      g.release_date as start_release_date, 
+    SELECT
+      g.id,
+      g.symbol,
+      g.hgnc_id,
+      g.release_date as start_release_date,
       g.release_date as end_release_date
     FROM `%s.gene` g
-    WHERE 
-      NOT EXISTS 
+    WHERE
+      NOT EXISTS
       (
-        SELECT 
-          cg.id 
+        SELECT
+          cg.id
         FROM `clinvar_ingest.clinvar_genes` cg
-        WHERE 
-          cg.id = g.id 
+        WHERE
+          cg.id = g.id
           AND
           cg.deleted_release_date is NULL
       )

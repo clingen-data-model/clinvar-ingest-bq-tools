@@ -32,7 +32,7 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     end: '[null, null]',
     value_test: 'value1',
     objectCondition_complex: 'condition1',
-    definingContext_location: 
+    definingContext_location:
       {
         locationId: 'prefix:123',
         locationName: 'test'

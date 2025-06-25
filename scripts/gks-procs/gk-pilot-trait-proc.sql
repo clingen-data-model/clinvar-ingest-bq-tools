@@ -5,7 +5,7 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.gk_pilot_trait`
       as
-        select 
+        select
           scv.id as scv_id,
           scv.version as scv_ver,
           FORMAT('%%s.%%i', scv.id, scv.version) as full_scv_id,
@@ -26,7 +26,7 @@ BEGIN
                 -- for now just do medgen, leave the other xrefs for later
                 STRUCT(
                     STRUCT (
-                    t.medgen_id as code, 
+                    t.medgen_id as code,
                     "https://www.ncbi.nlm.nih.gov/medgen/" as system
                     ) as coding,
                   "exactMatch" as relation
@@ -57,7 +57,7 @@ END;
 
 -- CREATE OR REPLACE TABLE `%s.gk_pilot_ts_lookup`
 -- as
--- select 
+-- select
 --   ts.id as trait_set_id, ts.type as trait_set_type,
 --   ARRAY_TO_STRING((ARRAY_AGG(trait_id RESPECT NULLS ORDER BY trait_id)), '|','NULL') as traits
 -- from `%s.trait_set` ts
@@ -78,12 +78,12 @@ END;
 -- --   tslu.*
 -- UPDATE `%s.clinical_assertion` ca
 -- set ca.trait_set_id = tslu.trait_set_id
--- from 
+-- from
 -- (
---   select 
+--   select
 --     gkt.scv_id, gkt.trait_set_id,
 --     ARRAY_TO_STRING((ARRAY_AGG(gkt.trait_id RESPECT NULLS ORDER BY gkt.trait_id)), '|','NULL') as traits
---   from `%s.gk_pilot_traits` gkt  
+--   from `%s.gk_pilot_traits` gkt
 --   group by gkt.scv_id, gkt.trait_set_id
 
 --   -- 250,023 of  are null trait_set_ids
@@ -97,11 +97,11 @@ END;
 -- ) x
 -- left join `%s.gk_pilot_ts_lookup` tslu
 -- on
---   tslu.traits = x.traits 
+--   tslu.traits = x.traits
 -- -- join `clinvar_2024_08_05_v1_6_62.clinical_assertion` ca
 -- -- on x.scv_id = ca.id
--- where 
---   x.trait_set_id is null 
+-- where
+--   x.trait_set_id is null
 --   and tslu.trait_set_id is not null
 --   and x.scv_id = ca.id
 --   -- and ca.trait_set_id is  null

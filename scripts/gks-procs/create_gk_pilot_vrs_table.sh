@@ -1,20 +1,20 @@
 #!/bin/bash
 
 # Set the project id
-PROJECT_ID='clingen-stage'
+PROJECT_ID='clingen-dev'
 
 # Date of release
-RELEASE_DATE='2024-09-08'
+RELEASE_DATE='2025-03-23'
 
 # Set the dataset id
-DATASET_ID='clinvar_2024_09_08_v1_6_62'
+DATASET_ID='clinvar_2025_03_23_v2_3_1'
 
 # Set the table id
 TABLE_ID='gk_pilot_vrs'
 
 # Set the Google Cloud Storage path
 # GCS_JSON_PATH='gs://clinvar-gk-pilot/2024-04-07/dev/2024-04-07_dev_output-vi2.ndjson'
-GCS_JSON_PATH='gs://clinvar-gk-pilot/${RELEASE_DATE}/stage/output-vi.json.gz'
+GCS_JSON_PATH="gs://clinvar-gk-pilot/${RELEASE_DATE}/dev/processed-vi.json.gz"
 
 # Set the BigQuery schema
 SCHEMA_FILE_PATH='vrs_output_2_0.schema.json'

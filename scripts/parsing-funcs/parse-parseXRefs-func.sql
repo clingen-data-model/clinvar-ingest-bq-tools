@@ -1,6 +1,6 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseXRefs`(json STRING)
 RETURNS ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING, ref_field STRING>>
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -9,7 +9,7 @@ AS r"""
 
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseXRefItems`(json_xrefs ARRAY<STRING>)
 RETURNS ARRAY<STRUCT<db STRING, id STRING, type STRING, status STRING, url STRING, ref_field STRING>>
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -19,15 +19,15 @@ AS r"""
 
 -- test
 WITH xrefs as (
-  SELECT 
+  SELECT
     1 as key,
     """{"@DB": "OMIM","@ID": "123456","@Type": "MIM number","@URL": "https://omim.org/entry/123456","@Status": "current"}""" as c,
     """{"db": "MedGen","id": "9678","type": null,"url": "https://omim.org/entry/9678","status": "old"}""" as i
   UNION ALL
-    SELECT 
+    SELECT
     1 as key,
     """{"@DB": "MONDO","@ID": "223234","@Type": "MONDO ID","@URL": "https://mondo/223234","@Status": "alternate"}""" as c,
-    """{"db": "ORPHA","id": "72473","type": "Orphanet","url": null,"status": "foo"}""" as i  
+    """{"db": "ORPHA","id": "72473","type": "Orphanet","url": null,"status": "foo"}""" as i
 ),
 recs as (
   SELECT

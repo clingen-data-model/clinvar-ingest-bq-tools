@@ -1,27 +1,27 @@
 -- rcv-accession cleanup from DSP datasets 2023-01-07 thru 2024-01-07
 -- used 2023-01 for previous and 2023-02 for next month with datasets 12/31/2022:
-  -- clinvar_2023_01_07_v1_6_57 
+  -- clinvar_2023_01_07_v1_6_57
   -- clinvar_2023_01_15_v1_6_57
   -- clinvar_2023_01_21_v1_6_57
 -- used 2023-02 for previous and 2023-03 for next month with datasets 2/08/2023:
-  -- clinvar_2023_02_08_v1_6_57 
+  -- clinvar_2023_02_08_v1_6_57
   -- clinvar_2023_02_13_v1_6_57
   -- clinvar_2023_02_18_v1_6_57
 -- used 2023-03 for previous and 2023-04 for next month with datasets 2/26/2023:
   -- clinvar_2023_02_26_v1_6_57
-  -- clinvar_2023_03_06_v1_6_57 
+  -- clinvar_2023_03_06_v1_6_57
   -- clinvar_2023_03_11_v1_6_57
   -- clinvar_2023_03_18_v1_6_57
   -- clinvar_2023_03_26_v1_6_57
 -- used 2023-04 for previous and 2023-05 for next month with datasets 4/4/2023:
   -- clinvar_2023_04_04_v1_6_58
   -- clinvar_2023_04_10_v1_6_58
-  -- clinvar_2023_04_16_v1_6_58 
+  -- clinvar_2023_04_16_v1_6_58
   -- clinvar_2023_04_24_v1_6_58
 -- used 2023-05 for previous and 2023-06 for next month with datasets 4/30/2023:
   -- clinvar_2023_04_30_v1_6_58
   -- clinvar_2023_05_07_v1_6_59
-  -- clinvar_2023_05_14_v1_6_59 
+  -- clinvar_2023_05_14_v1_6_59
   -- clinvar_2023_05_20_v1_6_60
 -- used 2023-06 for previous and 2023-07 for next month with datasets 5/27/2023:
   -- clinvar_2023_05_27_v1_6_60
@@ -50,18 +50,18 @@
   -- clinvar_2023_10_07_v1_6_61
   -- clinvar_2023_10_15_v1_6_61
   -- clinvar_2023_10_21_v1_6_61
--- used 2023-11 for previous and 2023-12 for next month with datasets 2023-10-28 :  
+-- used 2023-11 for previous and 2023-12 for next month with datasets 2023-10-28 :
   -- clinvar_2023_10_28_v1_6_61
   -- clinvar_2023_11_04_v1_6_61
   -- clinvar_2023_11_12_v1_6_61
   -- clinvar_2023_11_21_v1_6_61
   -- clinvar_2023_11_26_v1_6_61
--- used 2023-12 for previous and 2024-01 for next month with datasets 2023-12-03 :  
+-- used 2023-12 for previous and 2024-01 for next month with datasets 2023-12-03 :
   -- clinvar_2023_12_03_v1_6_61
   -- clinvar_2023_12_09_v1_6_61
   -- clinvar_2023_12_17_v1_6_61
   -- clinvar_2023_12_26_v1_6_61
--- used 2024-01 for previous and 2024-02 for next month with datasets 2023-12-30 :  
+-- used 2024-01 for previous and 2024-02 for next month with datasets 2023-12-30 :
   -- clinvar_2023_12_30_v1_6_61
   -- clinvar_2024_01_07_v1_6_61
 --
@@ -82,26 +82,26 @@ where true
 update `clingen-dev.clinvar_2024_01_07_v1_6_61.rcv_accession` rcv
 set
   rcv.trait_set_id = (
-    SELECT 
+    SELECT
       old_rcv.trait_set_id
     FROM `clingen-dev.clinvar_000.2024-01-rcv` old_rcv
-    WHERE 
+    WHERE
       rcv.id = old_rcv.rcv_accession
   )
-where 
+where
     rcv.trait_set_id is null
 ;
 
 update `clingen-dev.clinvar_2024_01_07_v1_6_61.rcv_accession` rcv
 set
   rcv.trait_set_id = (
-    SELECT 
+    SELECT
       old_rcv.trait_set_id
     FROM `clingen-dev.clinvar_000.2024-02-rcv` old_rcv
-    WHERE 
+    WHERE
       rcv.id = old_rcv.rcv_accession
   )
-where 
+where
     rcv.trait_set_id is null
 ;
 
@@ -109,13 +109,13 @@ where
 update `clingen-dev.clinvar_2024_01_07_v1_6_61.rcv_accession` rcv
 set
   rcv.trait_set_id = (
-    SELECT 
+    SELECT
       bu_rcv.trait_set_id
     FROM `clinvar_2024_01_07_v1_6_61.backup_rcv_accession_2` bu_rcv
-    WHERE 
+    WHERE
       bu_rcv.id = rcv.id
   )
-where 
+where
   rcv.trait_set_id is null
 ;
 
@@ -129,12 +129,12 @@ from `clingen-dev.clinvar_2024_01_07_v1_6_61.rcv_accession` rcv
 left join `clinvar_2024_01_07_v1_6_61.backup_rcv_accession_2` bu_rcv
 on
   bu_rcv.id = rcv.id
-where 
+where
   rcv.trait_set_id is null
 order by 1
 ;
 
--- backup clinical_assertion, 
+-- backup clinical_assertion,
 create table `clinvar_2024_01_07_v1_6_61.backup_clinical_assertion_2`
 as
 select
@@ -155,7 +155,7 @@ where
 update `clingen-dev.clinvar_2024_01_07_v1_6_61.clinical_assertion` scv
 set
   rcv_accession_id = (
-    select 
+    select
       old_scv.rcv_accession
     from `clingen-dev.clinvar_000.2024-01-scv` old_scv
     join `clingen-dev.clinvar_2024_01_07_v1_6_61.rcv_accession` rcv
@@ -169,7 +169,7 @@ set
 where
   rcv_accession_id is null
 ;
--- 2,666,170 updated 
+-- 2,666,170 updated
 -- 2,668,077 updated
 -- 2,670,944 updated
 -- 3,257,231 updated
@@ -187,7 +187,7 @@ where
 update `clingen-dev.clinvar_2024_01_07_v1_6_61.clinical_assertion` scv
 set
   rcv_accession_id = (
-    select 
+    select
       old_scv.rcv_accession
     from `clingen-dev.clinvar_000.2024-02-scv` old_scv
     join  `clingen-dev.clinvar_2024_01_07_v1_6_61.rcv_accession` rcv
@@ -200,7 +200,7 @@ where
   rcv_accession_id is null
 ;
 
-select 
+select
   scv.id
 from `clingen-dev.clinvar_2024_01_07_v1_6_61.clinical_assertion` scv
 where
@@ -210,9 +210,9 @@ where
 update `clingen-dev.clinvar_2024_01_07_v1_6_61.clinical_assertion` scv
 set
   scv.rcv_accession_id = (
-    select 
+    select
       bu_scv.rcv_accession_id as orig_rcv
-    from `clingen-dev.clinvar_2024_01_07_v1_6_61.backup_clinical_assertion_2` bu_scv 
+    from `clingen-dev.clinvar_2024_01_07_v1_6_61.backup_clinical_assertion_2` bu_scv
     where
       scv.id = bu_scv.id
   )

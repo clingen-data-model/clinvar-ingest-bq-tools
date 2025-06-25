@@ -29,7 +29,7 @@ table_definitions=(
 for table_def in "${table_definitions[@]}"; do
   # Split the tuple into table name and dataset
   IFS=',' read -r table_name dataset <<< "$table_def"
-  
+
   # Construct the external table definition file and the corresponding table name
   definition_file="${table_name}.def"
   target_table="${dataset}.${table_name}"
@@ -37,10 +37,10 @@ for table_def in "${table_definitions[@]}"; do
   # Check if the table exists
   if bq show --format=none "$target_table"; then
       echo "Table $target_table exists. Replacing..."
-      
+
       # Delete the existing table
       bq rm -f -t "$target_table"
-      
+
       # Ensure deletion was successful
       if bq show --format=none "$target_table"; then
           echo "Error: Failed to delete table $target_table"
@@ -49,10 +49,10 @@ for table_def in "${table_definitions[@]}"; do
   else
       echo "Table $target_table does not exist. Creating a new table..."
   fi
-  
+
   # Create the google sheet external table
   bq mk --external_table_definition="$definition_file" "$target_table"
-  
+
   echo "Created table $target_table using definition $definition_file"
 done
 

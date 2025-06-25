@@ -3,13 +3,13 @@
  * Formats a given date or string into the nearest month in the format "Month Year".
  * If the day of the month is 15 or greater, it rounds up to the next month.
  * If the month is December, it transitions to the next year.
- * 
+ *
  * @param date - The date or string to be formatted.
  * @returns The formatted date in the format "Month Year".
  */
 function formatNearestMonth(date: Date | string): string {
   const inputDate = typeof date === 'string' ? new Date(date) : date;
-  
+
   // Get the year, month, and day from the date
   let year = inputDate.getFullYear();
   let month = inputDate.getMonth(); // getMonth() returns month from 0-11
@@ -47,7 +47,7 @@ function formatMonthYear(date: Date): string {
 
 /**
  * Determines the month based on a date range.
- * 
+ *
  * @param startDate - The start date of the range.
  * @param endDate - The end date of the range.
  * @returns The month in the format "MM/YYYY" that has more days in the range, or the prior month if the days are equal.
@@ -66,7 +66,7 @@ function determineMonthBasedOnRange(startDate: Date, endDate: Date): { yymm: str
   // Check if the last day of the prior month is greater than the start date
   const lastDayOfPriorMonth = new Date(firstDayOfPriorMonth.getFullYear(), firstDayOfPriorMonth.getMonth() + 1, 0);
   firstDayOfPriorMonth = firstDayOfPriorMonth > startDate ? firstDayOfPriorMonth : startDate;
-  
+
   // Calculate days in prior and current month within the range
   const daysInPriorMonth = (lastDayOfPriorMonth.getTime() - firstDayOfPriorMonth.getTime()) / (1000 * 60 * 60 * 24) + 1;
   const daysInLastMonth = (lastDayOfLastMonth.getTime() - firstDayOfLastMonth.getTime()) / (1000 * 60 * 60 * 24) + 1;
@@ -232,7 +232,7 @@ type SigType = {
  * - Percentages are rounded to three decimal places.
  */
 function createSigType(nosig_count: number, unc_count: number, sig_count: number): SigType[] {
-  
+
   // Convert inputs to numbers (integers) to avoid concatenation when used in SQL function
   nosig_count = Number(nosig_count);
   unc_count = Number(unc_count);

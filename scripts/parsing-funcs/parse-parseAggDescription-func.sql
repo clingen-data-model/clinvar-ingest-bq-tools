@@ -8,7 +8,7 @@ RETURNS STRUCT<
     interp_description STRING
   >>
 >
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -22,21 +22,21 @@ WITH x as (
   {
     "Description": [
     {
-      "@ClinicalImpactAssertionType": "diagnostic", 
-      "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
-      "@DateLastEvaluated": "2024-01-24", 
-      "@SubmissionCount": "1", 
+      "@ClinicalImpactAssertionType": "diagnostic",
+      "@ClinicalImpactClinicalSignificance": "supports diagnosis",
+      "@DateLastEvaluated": "2024-01-24",
+      "@SubmissionCount": "1",
       "$": "Tier I - Strong"
-    }, 
+    },
     {
-      "@ClinicalImpactAssertionType": "prognostic", 
-      "@ClinicalImpactClinicalSignificance": "better outcome", 
-      "@DateLastEvaluated": "2024-01-23", 
-      "@SubmissionCount": "1", 
+      "@ClinicalImpactAssertionType": "prognostic",
+      "@ClinicalImpactClinicalSignificance": "better outcome",
+      "@DateLastEvaluated": "2024-01-23",
+      "@SubmissionCount": "1",
       "$": "Tier I - Strong"
     }
   ]}
-  """ as content  
+  """ as content
 ),
 aggDescriptions as (
   select `clinvar_ingest.parseAggDescription`(x.content) as aggDescription from x

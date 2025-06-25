@@ -4,7 +4,7 @@ RETURNS STRUCT<
     description STRUCT<
       element_value STRING,
       type STRING,
-      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>, 
+      citation ARRAY<STRUCT<id ARRAY<STRUCT<id STRING,source STRING, curie STRING>>,url STRING,type STRING,abbrev STRING, text STRING>>,
       xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >,
@@ -133,7 +133,7 @@ RETURNS STRUCT<
   xref ARRAY<STRUCT<db STRING, id STRING, url STRING, type STRING, status STRING>>,
   comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>,
   source_type STRING>
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -163,7 +163,7 @@ WITH x as (
     """ as content
 ),
 samples as (
-select 
+select
   `clinvar_ingest.parseSample`(x.content) as sample
 from x
 )

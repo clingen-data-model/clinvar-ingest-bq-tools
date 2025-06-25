@@ -16,46 +16,46 @@ BEGIN
     RETURN;
   END IF;
 
-  -- deleted rcv_classifications (where it exists in clinvar_rcv_classifications (for deleted_release_date is null), 
+  -- deleted rcv_classifications (where it exists in clinvar_rcv_classifications (for deleted_release_date is null),
   -- but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_rcv_classifications` crcvc
-      SET 
+      SET
         deleted_release_date = %T
-    WHERE 
-      crcvc.deleted_release_date is NULL 
+    WHERE
+      crcvc.deleted_release_date is NULL
       AND
       NOT EXISTS (
-        SELECT 
+        SELECT
           rcvc.rcv_id
         FROM `%s.rcv_accession_classification` rcvc
         CROSS JOIN UNNEST(rcvc.agg_classification) as cx
         JOIN `%s.rcv_accession` rcv
         ON
           rcvc.rcv_id = rcv.id
-        LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
-        ON 
+        LEFT JOIN `clinvar_ingest.clinvar_status` cvs1
+        ON
           cvs1.label = rcvc.review_status
           AND
           rcvc.release_date between cvs1.start_release_date and cvs1.end_release_date
-        WHERE       
+        WHERE
           rcv.variation_id = crcvc.variation_id
           AND
           rcv.trait_set_id = crcvc.trait_set_id
           AND
-          rcvc.rcv_id = crcvc.rcv_id 
-          AND 
-          rcvc.statement_type IS NOT DISTINCT FROM crcvc.statement_type 
+          rcvc.rcv_id = crcvc.rcv_id
           AND
-          cvs1.rank IS NOT DISTINCT FROM crcvc.rank 
+          rcvc.statement_type IS NOT DISTINCT FROM crcvc.statement_type
           AND
-          cx.date_last_evaluated IS NOT DISTINCT FROM crcvc.last_evaluated 
+          cvs1.rank IS NOT DISTINCT FROM crcvc.rank
           AND
-          cx.interp_description IS NOT DISTINCT FROM crcvc.agg_classification_description 
+          cx.date_last_evaluated IS NOT DISTINCT FROM crcvc.last_evaluated
           AND
-          cx.num_submissions IS NOT DISTINCT FROM crcvc.num_submissions 
+          cx.interp_description IS NOT DISTINCT FROM crcvc.agg_classification_description
           AND
-          cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type 
+          cx.num_submissions IS NOT DISTINCT FROM crcvc.num_submissions
+          AND
+          cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type
           AND
           cx.clinical_impact_clinical_significance IS NOT DISTINCT FROM crcvc.clinical_impact_clinical_significance
       )
@@ -64,7 +64,7 @@ BEGIN
   -- updated variations
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_rcv_classifications` crcvc
-      SET 
+      SET
         end_release_date = %T,
         review_status = rcvc.review_status
     FROM `%s.rcv_accession_classification` rcvc
@@ -72,33 +72,33 @@ BEGIN
     JOIN `%s.rcv_accession` rcv
     ON
       rcvc.rcv_id = rcv.id
-    LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
-    ON 
+    LEFT JOIN `clinvar_ingest.clinvar_status` cvs1
+    ON
       cvs1.label = rcvc.review_status
       AND
       rcvc.release_date between cvs1.start_release_date and cvs1.end_release_date
-    WHERE 
+    WHERE
       rcv.variation_id = crcvc.variation_id
       AND
       rcv.trait_set_id = crcvc.trait_set_id
       AND
-      rcvc.rcv_id = crcvc.rcv_id 
-      AND 
-      rcvc.statement_type IS NOT DISTINCT FROM crcvc.statement_type 
+      rcvc.rcv_id = crcvc.rcv_id
       AND
-      cvs1.rank IS NOT DISTINCT FROM crcvc.rank 
+      rcvc.statement_type IS NOT DISTINCT FROM crcvc.statement_type
       AND
-      cx.date_last_evaluated IS NOT DISTINCT FROM crcvc.last_evaluated 
+      cvs1.rank IS NOT DISTINCT FROM crcvc.rank
       AND
-      cx.interp_description IS NOT DISTINCT FROM crcvc.agg_classification_description 
+      cx.date_last_evaluated IS NOT DISTINCT FROM crcvc.last_evaluated
       AND
-      cx.num_submissions IS NOT DISTINCT FROM crcvc.num_submissions 
+      cx.interp_description IS NOT DISTINCT FROM crcvc.agg_classification_description
       AND
-      cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type 
+      cx.num_submissions IS NOT DISTINCT FROM crcvc.num_submissions
+      AND
+      cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type
       AND
       cx.clinical_impact_clinical_significance IS NOT DISTINCT FROM crcvc.clinical_impact_clinical_significance
       AND
-      crcvc.deleted_release_date is NULL 
+      crcvc.deleted_release_date is NULL
   """, release_date, schema_name, schema_name);
 
   -- new rcv_accession_classification
@@ -108,29 +108,29 @@ BEGIN
       trait_set_id,
       rcv_id,
       statement_type,
-      rank, 
+      rank,
       review_status,
-      last_evaluated, 
-      agg_classification_description, 
+      last_evaluated,
+      agg_classification_description,
       num_submissions,
       clinical_impact_assertion_type,
       clinical_impact_clinical_significance,
-      start_release_date, 
+      start_release_date,
       end_release_date
     )
-    SELECT 
+    SELECT
       rcv.variation_id,
       rcv.trait_set_id,
       rcvc.rcv_id,
       rcvc.statement_type,
-      cvs1.rank, 
+      cvs1.rank,
       rcvc.review_status,
       cx.date_last_evaluated as last_evaluated,
       cx.interp_description as agg_classification_description,
       cx.num_submissions,
       cx.clinical_impact_assertion_type,
       cx.clinical_impact_clinical_significance,
-      %T as start_release_date, 
+      %T as start_release_date,
       %T as end_release_date
     FROM `%s.rcv_accession_classification` rcvc
     CROSS JOIN UNNEST(rcvc.agg_classification) as cx
@@ -138,42 +138,42 @@ BEGIN
     ON
       rcvc.rcv_id = rcv.id
     -- dataset term check in dataset-preparation scripts should assure all statuses are present
-    -- just in case we should keep outer join to allow null 'rank' to be produced to assure no 
+    -- just in case we should keep outer join to allow null 'rank' to be produced to assure no
     -- records are skipped in the final result set.
-    LEFT JOIN `clinvar_ingest.clinvar_status` cvs1 
-    ON 
+    LEFT JOIN `clinvar_ingest.clinvar_status` cvs1
+    ON
       cvs1.label = rcvc.review_status
       AND
       rcvc.release_date between cvs1.start_release_date and cvs1.end_release_date
-    WHERE 
+    WHERE
       NOT EXISTS (
-      SELECT crcvc.rcv_id 
+      SELECT crcvc.rcv_id
       FROM `clinvar_ingest.clinvar_rcv_classifications` crcvc
-      WHERE 
+      WHERE
         rcv.variation_id = crcvc.variation_id
         AND
         rcv.trait_set_id = crcvc.trait_set_id
         AND
-        rcvc.rcv_id = crcvc.rcv_id 
-        AND 
-        rcvc.statement_type IS NOT DISTINCT FROM crcvc.statement_type 
+        rcvc.rcv_id = crcvc.rcv_id
         AND
-        cvs1.rank IS NOT DISTINCT FROM crcvc.rank 
+        rcvc.statement_type IS NOT DISTINCT FROM crcvc.statement_type
         AND
-        cx.date_last_evaluated IS NOT DISTINCT FROM crcvc.last_evaluated 
+        cvs1.rank IS NOT DISTINCT FROM crcvc.rank
         AND
-        cx.interp_description IS NOT DISTINCT FROM crcvc.agg_classification_description 
+        cx.date_last_evaluated IS NOT DISTINCT FROM crcvc.last_evaluated
         AND
-        cx.num_submissions IS NOT DISTINCT FROM crcvc.num_submissions 
+        cx.interp_description IS NOT DISTINCT FROM crcvc.agg_classification_description
         AND
-        cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type 
+        cx.num_submissions IS NOT DISTINCT FROM crcvc.num_submissions
+        AND
+        cx.clinical_impact_assertion_type IS NOT DISTINCT FROM crcvc.clinical_impact_assertion_type
         AND
         cx.clinical_impact_clinical_significance IS NOT DISTINCT FROM crcvc.clinical_impact_clinical_significance
         AND
-        crcvc.deleted_release_date is NULL 
+        crcvc.deleted_release_date is NULL
       )
   """, release_date, release_date, schema_name, schema_name);
 
-  SET result_message = "clinvar_rcv_classifications processed successfully."; 
+  SET result_message = "clinvar_rcv_classifications processed successfully.";
 
 END;

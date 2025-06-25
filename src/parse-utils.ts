@@ -1,6 +1,6 @@
 /**
  * This module provides utility functions for parsing the `content` JSON objects
- * in the clinvar bigquery schema. 
+ * in the clinvar bigquery schema.
  * The module exports functions for parsing the following content types:
  * - AttributeSet, Citation, Comment, XRef, Attribute, HGVS, SequenceLocation, Software,
  * - NucleotideExpression, ProteinExpression, Method, Sample, and FamilyInfo,
@@ -32,7 +32,7 @@ interface GeneListInput {
       $: string;
     };
   };
-} 
+}
 
 /**
  * Represents the output structure for a gene list.
@@ -159,7 +159,7 @@ function buildCommentsOutput(items: CommentInput | CommentInput[]): CommentOutpu
  * @param json - The JSON input string.
  * @returns An array of CommentOutput objects.
  * @throws {Error} If the JSON input is invalid.
- */ 
+ */
 function parseComments(json: string): CommentOutput[] {
   let data: CommentData;
   try {
@@ -191,7 +191,7 @@ function parseComments(json: string): CommentOutput[] {
 //   ],
 //   "URL": {"$": "https://pubmed/entry/20301418"},
 //   "CitationText": { "$": "This is a citation." },
-// } 
+// }
 // a second example
 // "Citation": {
 //   "@Type": "review",
@@ -239,7 +239,7 @@ function buildCitationOutput(item: CitationInput): CitationOutput {
     id: item.ID ? (Array.isArray(item.ID) ? item.ID.map((id) => ({ source: id['@Source'], id: id.$, curie: `${id['@Source']}:${id.$}`})) : [{ source: item.ID['@Source'], id: item.ID.$, curie: `${item.ID['@Source']}:${item.ID.$}` }]) : null,
     url: item.URL ? item.URL.$ : null,
     text: item.CitationText ? item.CitationText.$ : null
-  };  
+  };
 }
 
 /**
@@ -286,7 +286,7 @@ function parseCitations(json: string): CitationOutput[] {
 //   "@Type": "MIM number",
 //   "@URL": "https://omim.org/entry/123456",
 //   "@Status": "current"
-// }] 
+// }]
 
 /**
  * Represents the input structure for a xref.
@@ -296,7 +296,7 @@ interface XRefInput {
   '@ID'?: string;
   '@Type'?: string;
   '@URL'?: string;
-  '@Status'?: string; 
+  '@Status'?: string;
 }
 
 /**
@@ -559,7 +559,7 @@ function buildAttributeSetsOutput(items: AttributeSetInput | AttributeSetInput[]
 
 interface AttributeSetData {
   AttributeSet?: AttributeSetInput | AttributeSetInput[];
-} 
+}
 
 /**
  * Parses the JSON input and returns an array of AttrCitXRefCmntOutput objects.
@@ -578,12 +578,12 @@ function parseAttributeSet(json: string): AttributeSetOutput[] {
   let attributeSets = data && data.AttributeSet ? data.AttributeSet : [];
 
   return buildAttributeSetsOutput(attributeSets);
-} 
+}
 
-/* 
+/*
  * Below are the HGVS structure parsers that parse out HGVS lists
- * from the clinvar variation and clinical_assertion_variation 
- * content fields 
+ * from the clinvar variation and clinical_assertion_variation
+ * content fields
  */
 
 // -- Nucleotide Expression interfaces and functions --
@@ -720,7 +720,7 @@ interface ProteinExpressionData {
  * Builds a ProteinExpressionOutput object based on the provided ProteinExpressionInput.
  * @param item - The ProteinExpressionInput object.
  * @returns The corresponding ProteinExpressionOutput object.
- */ 
+ */
 function buildProteinExpressionOutput(item: ProteinExpressionInput): ProteinExpressionOutput {
   return {
     expression: item.Expression ? item.Expression.$ : null,
@@ -735,7 +735,7 @@ function buildProteinExpressionOutput(item: ProteinExpressionInput): ProteinExpr
  * Parses the JSON input and returns a ProteinExpressionOutput object.
  * @param json - The JSON input string.
  * @returns A ProteinExpressionOutput object.
- * @throws {Error}  If the JSON input is invalid. 
+ * @throws {Error}  If the JSON input is invalid.
  */
 function parseProteinExpression(json: string): ProteinExpressionOutput {
   let data: ProteinExpressionData;
@@ -834,7 +834,7 @@ function parseHGVS(json: string): HGVSOutput[] {
 
   return buildHGVSArrayOutput(hgvs);
 }
-  
+
 // -- Sequence Location interfaces and functions --
 
 // below is an example of a JSON object that represents a sequence location object
@@ -1253,14 +1253,14 @@ function parseObsMethodAttributes(json: string): ObsMethodAttributeOutput[] {
 //     },
 //     "@Type": "PMID",
 //     "@Abbrev": "PubMed"
-    
+
 //   }],
 //   "XRef": [{
 //     "@DB": "OMIM",
 //     "@ID": "123456",
 //     "@Type": "MIM number",
 //     "@URL": "https://omim.org/entry/123456",
-//     "@Status": "current"    
+//     "@Status": "current"
 //   }],
 //   "Software": [{
 //     "@name": "GenomeStudio",
@@ -1322,7 +1322,7 @@ interface MethodInput {
   XRef?: XRefInput[];
   Software?: SoftwareInput[];
   MethodAttribute?: MethodAttributeInput[];
-  ObsMethodAttribute?: ObsMethodAttributeInput[]; 
+  ObsMethodAttribute?: ObsMethodAttributeInput[];
 }
 
 /**
@@ -1372,7 +1372,7 @@ function buildMethodOutput(item: MethodInput): MethodOutput {
     software: item.Software ? buildSoftwaresOutput(item.Software) : null,
     method_attribute: item.MethodAttribute ? buildMethodAttributesOutput(item.MethodAttribute) : null,
     obs_method_attribute: item.ObsMethodAttribute ? buildObsMethodAttributesOutput(item.ObsMethodAttribute) : null
-  }; 
+  };
 }
 
 function buildMethodsOutput(items: MethodInput | MethodInput[]): MethodOutput[] {
@@ -1431,7 +1431,7 @@ function parseMethods(json: string): MethodOutput[] {
 
 /**
  * Represents the input structure for a observed data.
- */ 
+ */
 interface ObservedDataInput {
   Attribute?: AttributeInput;
   Severity?: string;
@@ -1517,10 +1517,10 @@ function parseObservedData(json: string): ObservedDataOutput[] {
 //       "@DB": "PubMed",
 //       "@ID": "25741868",
 //       "@Type": "PMID"
-//     }], 
+//     }],
 //     "Comment": [{
 //       "$": "This is a comment."
-//     }]  
+//     }]
 //   }]
 // }
 
@@ -1550,7 +1550,7 @@ interface SetElementOutput {
 
 interface SetElementData {
   SetElement?: SetElementInput | SetElementInput[];
-} 
+}
 
 /**
  * Builds a SetElementOutput object based on the provided SetElementInput.
@@ -1561,9 +1561,9 @@ function buildSetElementOutput(item: SetElementInput): SetElementOutput {
   return {
     element_value: item.ElementValue && item.ElementValue.$ ? item.ElementValue.$ : null,
     type: item.ElementValue && item.ElementValue['@Type'] ? item.ElementValue['@Type'] : null,
-    citation: item.Citation ? buildCitationsOutput(item.Citation) : null, 
+    citation: item.Citation ? buildCitationsOutput(item.Citation) : null,
     xref: item.XRef ? buildXRefsOutput(item.XRef) : null,
-    comment: item.Comment ? buildCommentsOutput(item.Comment) : null  
+    comment: item.Comment ? buildCommentsOutput(item.Comment) : null
   };
 }
 
@@ -1587,7 +1587,7 @@ function buildSetElementsOutput(items: SetElementInput | SetElementInput[]): Set
  * @param json - The JSON input string.
  * @returns An array of SetElementOutput objects.
  * @throws {Error} If the JSON input is invalid.
- */ 
+ */
 function parseSetElement(json: string): SetElementOutput[] {
   let data: SetElementData;
   try {
@@ -1698,10 +1698,10 @@ function parseFamilyInfo(json: string): FamilyInfoOutput {
 //         "@DB": "PubMed",
 //         "@ID": "25741868",
 //         "@Type": "PMID"
-//       }], 
+//       }],
 //       "Comment": [{
 //         "$": "This is a comment."
-//       }]  
+//       }]
 //     }],
 //     "Symbol": [{
 //       "ElementValue": {
@@ -1717,10 +1717,10 @@ function parseFamilyInfo(json: string): FamilyInfoOutput {
 //         "@DB": "PubMed",
 //         "@ID": "25741868",
 //         "@Type": "PMID"
-//       }], 
+//       }],
 //       "Comment": [{
 //         "$": "This is a comment."
-//       }]  
+//       }]
 //     }],
 //     "AttributeSet": [{
 //       "Attribute": {
@@ -1824,7 +1824,7 @@ function buildTraitRelationshipsOutput(items: TraitRelationshipInput | TraitRela
  * @param json - The JSON input string.
  * @returns An array of TraitRelationshipOutput objects.
  * @throws {Error} If the JSON input is invalid.
- */ 
+ */
 function parseTraitRelationships(json: string): TraitRelationshipOutput[] {
   let data: TraitRelationshipData;
   try {
@@ -1857,10 +1857,10 @@ function parseTraitRelationships(json: string): TraitRelationshipOutput[] {
 //       "@DB": "PubMed",
 //       "@ID": "25741868",
 //       "@Type": "PMID"
-//     }], 
+//     }],
 //     "Comment": [{
 //       "$": "This is a comment."
-//     }]  
+//     }]
 //   }],
 //   "Symbol": [{
 //     "ElementValue": {
@@ -1876,10 +1876,10 @@ function parseTraitRelationships(json: string): TraitRelationshipOutput[] {
 //       "@DB": "PubMed",
 //       "@ID": "25741868",
 //       "@Type": "PMID"
-//     }], 
+//     }],
 //     "Comment": [{
 //       "$": "This is a comment."
-//     }]  
+//     }]
 //   }],
 //   "AttributeSet": [{
 //     "Attribute": {
@@ -1916,10 +1916,10 @@ function parseTraitRelationships(json: string): TraitRelationshipOutput[] {
 //         "@DB": "PubMed",
 //         "@ID": "25741868",
 //         "@Type": "PMID"
-//       }], 
+//       }],
 //       "Comment": [{
 //         "$": "This is a comment."
-//       }]  
+//       }]
 //     }],
 //     "Symbol": [{
 //       "ElementValue": {
@@ -1935,10 +1935,10 @@ function parseTraitRelationships(json: string): TraitRelationshipOutput[] {
 //         "@DB": "PubMed",
 //         "@ID": "25741868",
 //         "@Type": "PMID"
-//       }], 
+//       }],
 //       "Comment": [{
 //         "$": "This is a comment."
-//       }]  
+//       }]
 //     }],
 //     "AttributeSet": [{
 //       "Attribute": {
@@ -1982,7 +1982,7 @@ function parseTraitRelationships(json: string): TraitRelationshipOutput[] {
 //     "@DB": "PubMed",
 //     "@ID": "25741868",
 //     "@Type": "PMID"
-//   }], 
+//   }],
 //   "Comment": [{
 //     "$": "This is a comment."
 //   }],
@@ -2053,7 +2053,7 @@ function buildClinicalAsserTraitOutput(item: ClinicalAsserTraitInput): ClinicalA
  * @param items - The ClinicalAsserTraitInput object or an array of ClinicalAsserTraitInput objects.
  * @returns An array of ClinicalAsserTraitOutput objects.
  */
-function buildClinicalAsserTraitsOutput(items: ClinicalAsserTraitInput | ClinicalAsserTraitInput[]): ClinicalAsserTraitOutput[] { 
+function buildClinicalAsserTraitsOutput(items: ClinicalAsserTraitInput | ClinicalAsserTraitInput[]): ClinicalAsserTraitOutput[] {
   if (!Array.isArray(items)) {
     items = [items];
   }
@@ -2100,10 +2100,10 @@ function parseClinicalAsserTraits(json: string): ClinicalAsserTraitOutput[] {
 //       "@DB": "PubMed",
 //       "@ID": "25741868",
 //       "@Type": "PMID"
-//     }], 
+//     }],
 //     "Comment": [{
 //       "$": "This is a comment."
-//     }]  
+//     }]
 //   }],
 //   "Symbol": [{
 //     "ElementValue": {
@@ -2119,10 +2119,10 @@ function parseClinicalAsserTraits(json: string): ClinicalAsserTraitOutput[] {
 //       "@DB": "PubMed",
 //       "@ID": "25741868",
 //       "@Type": "PMID"
-//     }], 
+//     }],
 //     "Comment": [{
 //       "$": "This is a comment."
-//     }]  
+//     }]
 //   }],
 //   "AttributeSet": {
 //     "Attribute": {
@@ -2422,7 +2422,7 @@ function parseAges(json: string): AgeOutput[] {
 //     }],
 //     "Comment": [{
 //       "$": "This is a comment."
-//     }]  
+//     }]
 //     "SourceType": {
 //       "$": "submitter-generated"
 //     }
@@ -2439,7 +2439,7 @@ interface SampleInput {
   };
   Origin?: {
     $?: string;
-  }; 
+  };
   Ethnicity?: {
     $?: string;
   };
@@ -2568,7 +2568,7 @@ function buildSampleOutput(item: SampleInput): SampleOutput {
  * @param json - The JSON input string.
  * @returns A SampleOutput object.
  * @throws {Error} If the JSON input is invalid.
- */ 
+ */
 function parseSample(json: string): SampleOutput {
   let data: SampleData;
   try {
@@ -3368,11 +3368,11 @@ function parseTraits(json: string): TraitOutput[] {
 
 /**
  * Represents the input structure for a trait set.
- */ 
+ */
 interface TraitSetInput {
   '@Type'?: string;
   '@ID'?: string;
-  Trait?: TraitInput | TraitInput[]; 
+  Trait?: TraitInput | TraitInput[];
 }
 
 /**
@@ -3381,7 +3381,7 @@ interface TraitSetInput {
 interface TraitSetOutput {
   type: string | null;
   id: string | null;
-  trait: Array<TraitOutput> | null; 
+  trait: Array<TraitOutput> | null;
 }
 
 interface TraitSetData {
@@ -3417,7 +3417,7 @@ function parseTraitSet(json: string): TraitSetOutput {
 
   let traitSet = data && data.TraitSet ? data.TraitSet : {};
 
-  return buildTraitSetOutput(traitSet); 
+  return buildTraitSetOutput(traitSet);
 }
 
 
@@ -3425,10 +3425,10 @@ function parseTraitSet(json: string): TraitSetOutput {
 // -- Classification Description interfaces and functions --
 
 //    {
-//       "@ClinicalImpactAssertionType": "diagnostic", 
-//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
-//       "@DateLastEvaluated": "2024-01-24", 
-//       "@SubmissionCount": "1", 
+//       "@ClinicalImpactAssertionType": "diagnostic",
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis",
+//       "@DateLastEvaluated": "2024-01-24",
+//       "@SubmissionCount": "1",
 //       "$": "Tier I - Strong"
 //     }
 // }
@@ -3513,30 +3513,30 @@ function parseDescriptionItems(json: string): DescriptionItemOutput[] {
 // {
 //   "Description":
 //    {
-//       "@ClinicalImpactAssertionType": "diagnostic", 
-//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
-//       "@DateLastEvaluated": "2024-01-24", 
-//       "@SubmissionCount": "1", 
+//       "@ClinicalImpactAssertionType": "diagnostic",
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis",
+//       "@DateLastEvaluated": "2024-01-24",
+//       "@SubmissionCount": "1",
 //       "$": "Tier I - Strong"
 //     }
 // }
 //
 // a second example of an aggregate classification description object as an array input
 //
-// {"Description": 
+// {"Description":
 //   [
 //     {
-//       "@ClinicalImpactAssertionType": "diagnostic", 
-//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
-//       "@DateLastEvaluated": "2024-01-24", 
-//       "@SubmissionCount": "1", 
+//       "@ClinicalImpactAssertionType": "diagnostic",
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis",
+//       "@DateLastEvaluated": "2024-01-24",
+//       "@SubmissionCount": "1",
 //       "$": "Tier I - Strong"
-//     }, 
+//     },
 //     {
-//       "@ClinicalImpactAssertionType": "prognostic", 
-//       "@ClinicalImpactClinicalSignificance": "better outcome", 
-//       "@DateLastEvaluated": "2024-01-24", 
-//       "@SubmissionCount": "1", 
+//       "@ClinicalImpactAssertionType": "prognostic",
+//       "@ClinicalImpactClinicalSignificance": "better outcome",
+//       "@DateLastEvaluated": "2024-01-24",
+//       "@SubmissionCount": "1",
 //       "$": "Tier I - Strong"
 //     }
 //   ]
@@ -3583,4 +3583,3 @@ function parseAggDescription(json: string): AggDescriptionOutput {
 
   return buildAggDescriptionOutput(data);
 }
-

@@ -5,7 +5,7 @@
 * clinvar_sum_variation_scv_change > `clinvar_var_scv_change`
 
 * clinvar_sum_vsp_rank_group > `voi_and_voi_scv_group`
-  - clinvar_sum_vsp_rank_group > `voi_group`  
+  - clinvar_sum_vsp_rank_group > `voi_group`
 
 * clinvar_sum_scvs > `voi_and_voi_scv_group`
   - clinvar_sum_scvs > `voi_scv_group`

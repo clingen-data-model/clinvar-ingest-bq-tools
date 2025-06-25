@@ -1,11 +1,11 @@
 CREATE OR REPLACE TABLE FUNCTION `clinvar_curator.cvc_annotations`(
   scope STRING
-) 
-AS 
+)
+AS
 (
-  WITH anno AS 
+  WITH anno AS
   (
-    select 
+    select
       a.*,
       -- originally annotated scv id+ver assertion data
       cs.statement_type,
@@ -19,50 +19,50 @@ AS
     from `clinvar_curator.cvc_baseline_annotations`(scope) a
     LEFT JOIN `clinvar_ingest.clinvar_scvs` cs
     ON
-      cs.id = a.scv_id 
+      cs.id = a.scv_id
       AND
       a.annotation_release_date between cs.start_release_date and cs.end_release_date
   ),
-  scv_latest AS 
+  scv_latest AS
   (
     -- find the newest scv info that has a larger scv version # for the latest unreviewed annotation's scv version #
     select DISTINCT
       (
-        LAST_VALUE(STRUCT(cs.id, cs.version, cs.variation_id, cs.classif_type, cs.rank, cs.start_release_date, cs.end_release_date, cs.deleted_release_date)) 
+        LAST_VALUE(STRUCT(cs.id, cs.version, cs.variation_id, cs.classif_type, cs.rank, cs.start_release_date, cs.end_release_date, cs.deleted_release_date))
         OVER (
-          PARTITION BY a.batch_id, a.scv_id 
+          PARTITION BY a.batch_id, a.scv_id
           ORDER BY cs.end_release_date
           ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
         )
       ) as latest_scv
     from anno a
     JOIN `clinvar_ingest.clinvar_scvs` cs
-    ON 
+    ON
       a.scv_id = cs.id
       AND
       a.scv_ver < cs.version
-    WHERE 
+    WHERE
       (a.result_set_scope <> "REVIEWED")
       AND
-      NOT a.is_reviewed 
+      NOT a.is_reviewed
       AND
       a.is_latest
   ),
-  vcv_latest AS 
+  vcv_latest AS
   (
     -- find the newest vcv info that has a larger vcv version # for the latest unreviewed annotation's vcv version #
     select DISTINCT
       (
-        LAST_VALUE(STRUCT(vs.id, vs.version, vs.variation_id, vcs.agg_classification_description, vcs.rank, vcs.start_release_date, vcs.end_release_date, vcs.deleted_release_date)) 
+        LAST_VALUE(STRUCT(vs.id, vs.version, vs.variation_id, vcs.agg_classification_description, vcs.rank, vcs.start_release_date, vcs.end_release_date, vcs.deleted_release_date))
         OVER (
-          PARTITION BY a.batch_id, a.vcv_id 
+          PARTITION BY a.batch_id, a.vcv_id
           ORDER BY vcs.end_release_date
           ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
         )
       ) as latest_vcv
     from anno a
     JOIN `clinvar_ingest.clinvar_vcvs` vs
-    ON 
+    ON
       a.vcv_id = vs.id
       AND
       a.vcv_ver < vs.version
@@ -72,25 +72,25 @@ AS
       AND
       a.statement_type = vcs.statement_type
 
-    WHERE 
+    WHERE
       (a.result_set_scope <> "REVIEWED")
       AND
-      NOT a.is_reviewed 
+      NOT a.is_reviewed
       AND
       a.is_latest
   )
-  SELECT 
+  SELECT
     a.as_of_date,
     a.annotation_release_date,
-    a.annotation_id, 
+    a.annotation_id,
     -- variant and vcv
     a.variation_id,
     a.vcv_axn,
     a.vcv_id,
-    a.vcv_ver, 
-    -- scv   
-    a.scv_id, 
-    a.scv_ver, 
+    a.vcv_ver,
+    -- scv
+    a.scv_id,
+    a.scv_ver,
     a.clinvar_review_status,
     -- annotation assessment record
     a.curator,
@@ -110,7 +110,7 @@ AS
     a.submitter_name,
     a.submitter_abbrev,
 
-    a.annotation_label, 
+    a.annotation_label,
 
     a.has_prior_scv_id_annotation,
     a.has_prior_scv_ver_annotation,

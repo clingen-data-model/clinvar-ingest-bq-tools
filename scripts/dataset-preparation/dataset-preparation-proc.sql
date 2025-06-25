@@ -3,13 +3,13 @@ CREATE OR REPLACE PROCEDURE `clinvar_ingest.dataset_preparation`(
 )
 BEGIN
   DECLARE rec STRUCT<schema_name STRING, release_date DATE, prev_release_date DATE, next_release_date DATE>;
-  
+
   -- Declare a cursor to fetch the row
   SET rec = (
     SELECT AS STRUCT
-      s.schema_name, 
-      s.release_date, 
-      s.prev_release_date, 
+      s.schema_name,
+      s.release_date,
+      s.prev_release_date,
       s.next_release_date
     FROM clinvar_ingest.schema_on(on_date) AS s
   );

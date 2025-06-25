@@ -11,10 +11,10 @@ BEGIN
   DECLARE trait_set_id_mismatch INT64;
 
   SET project_id = (
-    SELECT 
+    SELECT
       catalog_name as paroject_id
     FROM `INFORMATION_SCHEMA.SCHEMATA`
-    WHERE 
+    WHERE
       schema_name = 'clinvar_ingest'
   );
 
@@ -27,24 +27,24 @@ BEGIN
     IF NOT statement_type_column_exists THEN
       -- backup the original clinical_assertion table
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE TABLE `%s.backup_clinical_assertion` 
-        AS 
-        SELECT 
-          * 
+        CREATE TABLE `%s.backup_clinical_assertion`
+        AS
+        SELECT
+          *
         FROM `%s.clinical_assertion`
       """, schema_name, schema_name);
 
       -- create or replace the clinical_assertion table from the backup
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE OR REPLACE TABLE `%s.clinical_assertion` 
+        CREATE OR REPLACE TABLE `%s.clinical_assertion`
         AS
-        SELECT 
+        SELECT
           *,
           'GermlineClassification' as statement_type,
           CAST(NULL as STRING) as clinical_impact_assertion_type,
           CAST(NULL as STRING) as clinical_impact_clinical_significance
         FROM `%s.backup_clinical_assertion`
-      """, schema_name, schema_name);  
+      """, schema_name, schema_name);
     END IF;
 
     -- TABLE 2. RCV Accession & RCV Accession Classification (with corrections for v2 rcv_accession_classification.agg_classification column)
@@ -55,16 +55,16 @@ BEGIN
     IF NOT rcv_accession_classification_table_exists THEN
       -- backup the original rcv_accession table
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE TABLE `%s.backup_rcv_accession` 
-        AS 
-        SELECT 
-          * 
+        CREATE TABLE `%s.backup_rcv_accession`
+        AS
+        SELECT
+          *
         FROM `%s.rcv_accession`
       """, schema_name, schema_name);
 
       -- create the rcv_accession_classification table from the backup
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE TABLE %s.rcv_accession_classification 
+        CREATE TABLE %s.rcv_accession_classification
         AS
         SELECT
           release_date,
@@ -79,15 +79,15 @@ BEGIN
               CAST(NULL as STRING) as clinical_impact_assertion_type,
               CAST(NULL as STRING) as clinical_impact_clinical_significance
             )
-          ] as agg_classification        
+          ] as agg_classification
         FROM `%s.backup_rcv_accession`
       """, schema_name, schema_name);
 
       -- create or replace the rcv_accession_classification table from the backup
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE OR REPLACE TABLE `%s.rcv_accession` 
+        CREATE OR REPLACE TABLE `%s.rcv_accession`
         AS
-        SELECT 
+        SELECT
           release_date,
           id,
           variation_id,
@@ -108,16 +108,16 @@ BEGIN
       IF NOT agg_classification_column_exists THEN
         -- backup the original rcv_accession_classification table
         EXECUTE IMMEDIATE FORMAT("""
-          CREATE TABLE `%s.backup_rcv_accession_classification` 
-          AS 
-          SELECT 
-            * 
+          CREATE TABLE `%s.backup_rcv_accession_classification`
+          AS
+          SELECT
+            *
           FROM `%s.rcv_accession_classification`
         """, schema_name, schema_name);
 
         -- create or replace the rcv_accession_classification table from the backup
         EXECUTE IMMEDIATE FORMAT("""
-          CREATE OR REPLACE TABLE `%s.rcv_accession_classification` 
+          CREATE OR REPLACE TABLE `%s.rcv_accession_classification`
           AS
           SELECT
             release_date,
@@ -127,14 +127,14 @@ BEGIN
             `clinvar_ingest.parseAggDescription`(content).description as agg_classification,
           IF(
             REGEXP_CONTAINS(content, r'^{\\s*"Description"\\s*\\:\\s*"[^"]+"\\s*}'),
-              NULL, 
+              NULL,
               REGEXP_REPLACE(content, r'"Description"\\s*\\:\\s*"[^"]+"\\s*,*\\s*', "")
           ) as content
           FROM `%s.rcv_accession_classification`
-          WHERE 
+          WHERE
             content is not null
           UNION ALL
-          SELECT 
+          SELECT
             release_date,
             rcv_id,
             statement_type,
@@ -150,10 +150,10 @@ BEGIN
             ] as agg_classification,
             content
           FROM `%s.rcv_accession_classification`
-          WHERE 
+          WHERE
             content is null
         """, schema_name, schema_name, schema_name);
-      END IF; 
+      END IF;
 
     END IF;
 
@@ -165,16 +165,16 @@ BEGIN
     IF NOT variation_archive_classification_table_exists THEN
       -- backup the original variation_archive table
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE TABLE `%s.backup_variation_archive` 
-        AS 
-        SELECT 
-          * 
+        CREATE TABLE `%s.backup_variation_archive`
+        AS
+        SELECT
+          *
         FROM `%s.variation_archive`
       """, schema_name, schema_name);
 
       -- create the variation_archive_classification table from the backup
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE TABLE %s.variation_archive_classification 
+        CREATE TABLE %s.variation_archive_classification
         AS
         SELECT
           id as vcv_id,
@@ -195,16 +195,16 @@ BEGIN
 
       -- create or replace the variation_archive table from the backup
       EXECUTE IMMEDIATE FORMAT("""
-        CREATE OR REPLACE TABLE `%s.variation_archive` 
+        CREATE OR REPLACE TABLE `%s.variation_archive`
         AS
-        SELECT 
+        SELECT
           date_created,
           record_status,
           variation_id,
           release_date,
           IF(
             REGEXP_CONTAINS(content, r'^{\\s*"@MostRecentSubmission"\\s*\\:\\s*"[^"]+"\\s*}'),
-              NULL, 
+              NULL,
               REGEXP_REPLACE(content, r'"@MostRecentSubmission"\\s*\\:\\s*"[^"]+"\\s*,*\\s*', "")
           ) as content,
           species,
@@ -223,19 +223,19 @@ BEGIN
     CALL `clinvar_ingest.check_table_exists`(schema_name, 'rcv_mapping', rcv_mapping_table_exists);
 
     -- if the table exist, update the fks
-    IF rcv_mapping_table_exists THEN  
+    IF rcv_mapping_table_exists THEN
       -- update the clinical_assertion table with the rcv_accession_id values
       EXECUTE IMMEDIATE FORMAT("""
         UPDATE `%s.clinical_assertion` ca
-        SET 
+        SET
           ca.rcv_accession_id = rm.rcv_accession
         FROM `%s.rcv_mapping` rm
         CROSS JOIN UNNEST(rm.scv_accessions) as scv_id
-        WHERE 
+        WHERE
           ca.id = scv_id
       """, schema_name, schema_name);
-    END IF;    
-    
+    END IF;
+
   END IF;
 
 END;

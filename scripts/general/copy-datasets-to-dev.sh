@@ -15,7 +15,7 @@ DATASETS=(
     # clinvar_2024_05_13_v1_6_62
     # clinvar_2024_05_19_v1_6_62
     # clinvar_2024_05_27_v1_6_62
-    
+
     # "clinvar_2023_01_07_v1_6_57"
     # "clinvar_2023_01_15_v1_6_57"
     # "clinvar_2023_01_21_v1_6_57"
@@ -100,7 +100,7 @@ copy_dataset() {
 
     # Ensure the destination dataset exists before copying tables
     ensure_dataset_exists "$dataset"
-    
+
     # List all tables in the source dataset
     tables=$(bq ls -n 1000 "${SOURCE_PROJECT}:${dataset}" | awk '{print $1}' | tail -n +3)
 
@@ -108,7 +108,7 @@ copy_dataset() {
     for table in $tables; do
       echo "Copying table:  bq cp --location=US ${SOURCE_PROJECT}:${dataset}.${table} ${DEST_PROJECT}:${dataset}.${table}"
       bq cp --location=US "${SOURCE_PROJECT}:${dataset}.${table}" "${DEST_PROJECT}:${dataset}.${table}"
-      
+
       if [ $? -eq 0 ]; then
           echo "Successfully copied table: $table"
       else

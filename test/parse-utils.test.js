@@ -4,7 +4,7 @@ const { text } = require('stream/consumers');
 const parseUtils = rewire('../dist/parse-utils.js');
 
 // Get the functions to test
-const buildGeneListOutput = parseUtils.__get__('buildGeneListOutput');  
+const buildGeneListOutput = parseUtils.__get__('buildGeneListOutput');
 const buildGeneListsOutput = parseUtils.__get__('buildGeneListsOutput');
 const parseGeneLists = parseUtils.__get__('parseGeneLists');
 const buildCommentOutput = parseUtils.__get__('buildCommentOutput');
@@ -213,7 +213,7 @@ test('buildAttributeSetOutput should build AttributeSetOutput correctly', () => 
   const expectedOutput = {
     attribute: { type: 'type1', value: 'value1', integer_value: 123, date_value: new Date('2023-01-01T00:00:00Z') },
     citation: [{
-      id: [{id: '123', source: 'Source1', curie: 'Source1:123'}], 
+      id: [{id: '123', source: 'Source1', curie: 'Source1:123'}],
       url: 'http://example.com',
       text: 'Citation text',
       type: 'Type1',
@@ -843,7 +843,7 @@ test('buildTraitsOutput should build an array of TraitOutput correctly', () => {
         comment: null,
         xref: [
           { id: 'Brachydactyly+type+B1/7857', db: 'Genetic Alliance', status: null, type: null, url: null },
-          { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null } 
+          { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null }
         ]
       }],
       symbol: [
@@ -882,7 +882,7 @@ test('buildTraitsOutput should build an array of TraitOutput correctly', () => {
           element_value: 'Autosomal recessive Robinow syndrome',
           type: 'Preferred',
           citation: null,
-          comment: null,          
+          comment: null,
           xref: [{ id: 'MONDO:0009999', db: 'MONDO', status: null, type: null, url: null }]
         },
         {
@@ -990,7 +990,7 @@ test('parseTraits should parse JSON input correctly', () => {
       ],
       citation: null,
       comment: null,
-      trait_relationship: { type: 'co-occurring condition', id: '70' },  
+      trait_relationship: { type: 'co-occurring condition', id: '70' },
       xref: [
         { id: 'MONDO:0007220', db: 'MONDO', status: null, type: null, url: null },
         { id: 'C1862112', db: 'MedGen', status: null, type: null, url: null },
@@ -1119,13 +1119,13 @@ test('buildTraitSetOutput should build TraitSetOutput correctly', () => {
         }],
         symbol: [
           { element_value: 'BDB1', type: 'Preferred', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] },
-          { element_value: 'BDB', type: 'Alternate', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] }  
+          { element_value: 'BDB', type: 'Alternate', citation: null, comment: null, xref: [{ type: 'MIM', id: '113000', db: 'OMIM', status: null, url: null }] }
         ],
         attribute_set: [
-          {attribute: { type: 'keyword', value: 'ROR2-Related Disorders', date_value: null, integer_value: null }, citation: null, comment: null, xref: null},  
-          {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value: null }, citation: null, comment: null, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }]} 
+          {attribute: { type: 'keyword', value: 'ROR2-Related Disorders', date_value: null, integer_value: null }, citation: null, comment: null, xref: null},
+          {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value: null }, citation: null, comment: null, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }]}
         ],
-        trait_relationship: { type: 'co-occurring condition', id: '70' },  
+        trait_relationship: { type: 'co-occurring condition', id: '70' },
         citation: null,
         comment: null,
         xref: [
@@ -1223,7 +1223,7 @@ test('parseTraitSet should parse JSON input correctly', () => {
         ],
         attribute_set: [
           {attribute: { type: 'keyword', value: 'ROR2-Related Disorders', date_value: null, integer_value: null}, xref: null, citation: null, comment: null },
-          {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value:null }, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }], citation: null, comment: null } 
+          {attribute: { type: 'GARD id', integer_value: 18009, date_value: null, value:null }, xref: [{ id: '18009', db: 'Office of Rare Diseases', status: null, type: null, url: null }], citation: null, comment: null }
         ],
         citation: null,
         comment: null,
@@ -1237,7 +1237,7 @@ test('parseTraitSet should parse JSON input correctly', () => {
       }
     ]
   };
-  
+
   expect(parseTraitSet(json)).toEqual(expectedOutput);
 });
 
@@ -1248,18 +1248,18 @@ test('parseTraitSet should throw error for invalid JSON input', () => {
 
 
 //    {
-//       "@ClinicalImpactAssertionType": "diagnostic", 
-//       "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
-//       "@DateLastEvaluated": "2024-01-24", 
-//       "@SubmissionCount": "1", 
+//       "@ClinicalImpactAssertionType": "diagnostic",
+//       "@ClinicalImpactClinicalSignificance": "supports diagnosis",
+//       "@DateLastEvaluated": "2024-01-24",
+//       "@SubmissionCount": "1",
 //       "$": "Tier I - Strong"
 //     }
 test('buildDescriptionItemsOutput should build DescriptionItemsOutput correctly', () => {
   const json = {
-    '@ClinicalImpactAssertionType': 'diagnostic', 
-    '@ClinicalImpactClinicalSignificance': 'supports diagnosis', 
-    '@DateLastEvaluated': '2024-01-24', 
-    '@SubmissionCount': '1', 
+    '@ClinicalImpactAssertionType': 'diagnostic',
+    '@ClinicalImpactClinicalSignificance': 'supports diagnosis',
+    '@DateLastEvaluated': '2024-01-24',
+    '@SubmissionCount': '1',
     '$': 'Tier I - Strong'
   };
   const expectedOutput = [{
@@ -1277,17 +1277,17 @@ test('buildAggDescriptionOutput should build AggDescriptionOutput correctly', ()
   const json = {
     "Description": [
     {
-      "@ClinicalImpactAssertionType": "diagnostic", 
-      "@ClinicalImpactClinicalSignificance": "supports diagnosis", 
-      "@DateLastEvaluated": "2024-01-24", 
-      "@SubmissionCount": "1", 
+      "@ClinicalImpactAssertionType": "diagnostic",
+      "@ClinicalImpactClinicalSignificance": "supports diagnosis",
+      "@DateLastEvaluated": "2024-01-24",
+      "@SubmissionCount": "1",
       "$": "Tier I - Strong"
-    }, 
+    },
     {
-      "@ClinicalImpactAssertionType": "prognostic", 
-      "@ClinicalImpactClinicalSignificance": "better outcome", 
-      "@DateLastEvaluated": "2024-01-23", 
-      "@SubmissionCount": "1", 
+      "@ClinicalImpactAssertionType": "prognostic",
+      "@ClinicalImpactClinicalSignificance": "better outcome",
+      "@DateLastEvaluated": "2024-01-23",
+      "@SubmissionCount": "1",
       "$": "Tier I - Strong"
     }
   ]};

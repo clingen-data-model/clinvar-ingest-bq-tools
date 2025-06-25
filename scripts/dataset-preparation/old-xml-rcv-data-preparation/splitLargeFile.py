@@ -43,15 +43,15 @@ def split_clinvarset_file(file_path, output_prefix):
 
             # Write each split to a new file
             for split_content in splits:
-                
+
                 # Add back the pattern to the start of the next split
                 if split_content.strip():
-                    
-                    # Print the progress 
+
+                    # Print the progress
                     # progress = ((large_file.tell() - len(chunk)) / file_size) * 100
                     # print(f'\rProcessed records: {record_counter} - {progress:.2f}% complete', end='', flush=True)
                     print(f'\rProcessed records: {record_counter}', end='', flush=True)
-                    
+
                     xml_content = split_content.strip() + '\n</ClinVarSet>'
 
                     if file_counter > 9:
@@ -65,7 +65,7 @@ def split_clinvarset_file(file_path, output_prefix):
 
                     # Write the record to a csv file every 100,000 records
                     if record_counter % 100000 == 0:
-                        
+
                         if file_counter > 9:
                             save_records_to_csv(records, file_counter, output_prefix)
 
@@ -85,7 +85,7 @@ def split_clinvarset_file(file_path, output_prefix):
         #     with open(output_file, 'w', encoding='utf-8') as output:
         #         output.write(buffer.strip())
 
-        # Save the remaining records to a CSV file  
+        # Save the remaining records to a CSV file
         save_records_to_csv(records, file_counter, output_prefix)
 
 # Usage example

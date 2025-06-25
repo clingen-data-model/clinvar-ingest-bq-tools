@@ -1,5 +1,5 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseAttributeSet`(json STRING)
-RETURNS 
+RETURNS
   ARRAY<
     STRUCT<
       attribute STRUCT<type STRING, value STRING, integer_value INT64, date_value DATE>,
@@ -8,7 +8,7 @@ RETURNS
       comment ARRAY<STRUCT<text STRING, type STRING, source STRING>>
     >
   >
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""

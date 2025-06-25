@@ -22,9 +22,9 @@ BEGIN
     SELECT ARRAY_AGG(DISTINCT IFNULL(ca.interpretation_description,'null'))
     FROM `%s.clinical_assertion` ca
     LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-    ON 
+    ON
       map.scv_term = LOWER(IFNULL(ca.interpretation_description,'not provided'))
-    WHERE 
+    WHERE
       map.scv_term IS NULL
   """, schema_name) INTO scv_classification_terms;
 
@@ -36,20 +36,20 @@ BEGIN
         ARRAY_TO_STRING(scv_classification_terms, ', '),
         "].\nNOTE: Add scv_clinsig_map records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
-    );   
+    );
   END IF;
 
   -- Check for interpretation_description+statement_type combos not available in clinvar_clinsig_types
   EXECUTE IMMEDIATE FORMAT("""
-    SELECT 
+    SELECT
       ARRAY_AGG(DISTINCT IFNULL(ca.interpretation_description,'null') || ' + ' || ca.statement_type)
     FROM `%s.clinical_assertion` ca
     LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
-    ON 
+    ON
       map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
-    LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst 
-    ON 
-      cst.code = map.cv_clinsig_type 
+    LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst
+    ON
+      cst.code = map.cv_clinsig_type
       AND
       cst.statement_type = ca.statement_type
     WHERE
@@ -60,38 +60,38 @@ BEGIN
     SET all_validation_errors = ARRAY_CONCAT(
       all_validation_errors,
       [CONCAT(
-        all_validation_errors, 
+        all_validation_errors,
         "New SCV classification+statement_type combos found: [",
         ARRAY_TO_STRING(scv_classification_statement_combo_terms, ', '),
         "].\nNOTE: Add clinvar_clinsig_types records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
     );
-  END IF; 
+  END IF;
 
   -- Check for new review_status terms in clinical_assertion
   EXECUTE IMMEDIATE FORMAT("""
     SELECT ARRAY_AGG(DISTINCT IFNULL(ca.review_status,'null'))
     FROM `%s.clinical_assertion` ca
     LEFT JOIN `clinvar_ingest.clinvar_status` cs
-    ON 
+    ON
       cs.label = LOWER(ca.review_status)
       AND
       ca.release_date between cs.start_release_date and cs.end_release_date
       AND
       cs.scv = TRUE
-    WHERE 
+    WHERE
       cs.label IS NULL
   """, schema_name) INTO scv_review_status_terms;
 
   IF scv_review_status_terms IS NOT NULL AND ARRAY_LENGTH(scv_review_status_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(
-      all_validation_errors, 
+      all_validation_errors,
       [CONCAT(
-        "New SCV review status terms found: [", 
+        "New SCV review status terms found: [",
         ARRAY_TO_STRING(scv_review_status_terms, ', '),
         "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
-    ); 
+    );
   END IF;
 
   -- Check for new review_status terms in rcv_accession_classification
@@ -99,23 +99,23 @@ BEGIN
     SELECT ARRAY_AGG(DISTINCT IFNULL(rcvc.review_status,'null'))
     FROM `%s.rcv_accession_classification` rcvc
     LEFT JOIN `clinvar_ingest.clinvar_status` cs
-    ON 
+    ON
       cs.label = LOWER(rcvc.review_status)
       AND
       rcvc.release_date between cs.start_release_date and cs.end_release_date
-    WHERE 
+    WHERE
       cs.label IS NULL
   """, schema_name) INTO rcv_classification_review_status_terms;
 
   IF rcv_classification_review_status_terms IS NOT NULL AND ARRAY_LENGTH(rcv_classification_review_status_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(
-      all_validation_errors, 
+      all_validation_errors,
       [CONCAT(
-        "New RCV classification review status terms found: [", 
+        "New RCV classification review status terms found: [",
         ARRAY_TO_STRING(rcv_classification_review_status_terms, ', '),
         "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
-    ); 
+    );
   END IF;
 
   -- Check for new review_status terms in variation_archive_classification
@@ -123,32 +123,32 @@ BEGIN
     SELECT ARRAY_AGG(DISTINCT IFNULL(vcvc.review_status,'null'))
     FROM `%s.variation_archive_classification` vcvc
     JOIN `%s.variation_archive` va
-    ON 
+    ON
       va.id = vcvc.vcv_id
     LEFT JOIN `clinvar_ingest.clinvar_status` cs
-    ON 
+    ON
       cs.label = LOWER(vcvc.review_status)
       AND
       va.release_date between cs.start_release_date and cs.end_release_date
-    WHERE 
+    WHERE
       cs.label IS NULL
   """, schema_name, schema_name) INTO vcv_classification_review_status_terms;
 
   IF vcv_classification_review_status_terms IS NOT NULL AND ARRAY_LENGTH(vcv_classification_review_status_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(
-      all_validation_errors, 
+      all_validation_errors,
       [CONCAT(
-        "New VCV classification review status terms found: [", 
+        "New VCV classification review status terms found: [",
         ARRAY_TO_STRING(vcv_classification_review_status_terms, ', '),
         "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
-    ); 
-  END IF;  
+    );
+  END IF;
 
   CALL `clinvar_ingest.check_table_exists`(schema_name, 'rcv_mapping', rcv_mapping_exists);
 
   -- if the table exist, update the fks
-   IF rcv_mapping_exists THEN  
+   IF rcv_mapping_exists THEN
 
     -- throw an exception if any of the rcv_mapping.trait_set_id values do not match the rcv_accession.trait_set_id values
     EXECUTE IMMEDIATE FORMAT("""
@@ -156,11 +156,11 @@ BEGIN
         COUNT(*)
       FROM `%s.rcv_mapping` rm
       JOIN `%s.rcv_accession` ra
-      ON 
+      ON
         ra.id = rm.rcv_accession
-      WHERE 
+      WHERE
         ra.trait_set_id != rm.trait_set_id
-    """, schema_name, schema_name) INTO trait_set_id_mismatch; 
+    """, schema_name, schema_name) INTO trait_set_id_mismatch;
 
     IF trait_set_id_mismatch > 0 THEN
       SET all_validation_errors = ARRAY_CONCAT(
@@ -245,14 +245,14 @@ BEGIN
 
   IF ARRAY_LENGTH(all_validation_errors) > 0 THEN
     -- raise an exception with the error messages in a user friendly listed format
-    SET error_message = 
-      'One or more validation all_validation_errors occurred:\n' || 
+    SET error_message =
+      'One or more validation all_validation_errors occurred:\n' ||
       ARRAY_TO_STRING(
         ARRAY(
-          SELECT 
-            '- ' || validation_error 
+          SELECT
+            '- ' || validation_error
           FROM UNNEST(all_validation_errors) AS validation_error
-        ), 
+        ),
         '\n'
       );
     RAISE USING MESSAGE = error_message;

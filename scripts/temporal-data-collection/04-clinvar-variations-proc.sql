@@ -20,41 +20,41 @@ BEGIN
   -- deleted variations (where it exists in clinvar_variations (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_variations` cv
-      SET 
+      SET
         deleted_release_date = %T
-    WHERE 
+    WHERE
       cv.deleted_release_date is NULL
-      AND 
+      AND
       NOT EXISTS (
-        SELECT 
-          v.id 
+        SELECT
+          v.id
         FROM `%s.variation` v
-        WHERE  
+        WHERE
           v.id = cv.id
       )
   """, release_date, schema_name);
 
-  -- The clinvar_variations is designed to only have one record per variation_id, 
+  -- The clinvar_variations is designed to only have one record per variation_id,
   -- and it will use the latest variation name or single_gene_variation record to update the gene_id and symbol
   -- in the event that any of those values change over the life of the variation_id record.
 
   -- updated variations
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_variations` cv
-      SET 
-        name = v.name, 
+      SET
+        name = v.name,
         mane_select = sgv.mane_select,
         gene_id = sgv.gene_id,
         symbol = g.symbol,
         end_release_date = v.release_date
     FROM `%s.variation` v
-    LEFT JOIN `%s.single_gene_variation` sgv 
-    ON 
-      v.id = sgv.variation_id 
-    LEFT JOIN `%s.gene`  g 
-    ON 
+    LEFT JOIN `%s.single_gene_variation` sgv
+    ON
+      v.id = sgv.variation_id
+    LEFT JOIN `%s.gene`  g
+    ON
       g.id = sgv.gene_id
-    WHERE 
+    WHERE
       v.id = cv.id
       AND
       cv.deleted_release_date is NULL
@@ -63,36 +63,36 @@ BEGIN
   -- new variations
   EXECUTE IMMEDIATE FORMAT("""
     INSERT INTO `clinvar_ingest.clinvar_variations` (
-      id, 
-      name, 
+      id,
+      name,
       mane_select,
       gene_id,
       symbol,
-      start_release_date, 
+      start_release_date,
       end_release_date
     )
-    SELECT 
-      v.id, 
-      v.name, 
+    SELECT
+      v.id,
+      v.name,
       sgv.mane_select,
       sgv.gene_id,
       g.symbol,
-      v.release_date as start_release_date, 
+      v.release_date as start_release_date,
       v.release_date as end_release_date
     FROM `%s.variation` v
-    LEFT JOIN `%s.single_gene_variation` sgv 
-    ON 
-      v.id = sgv.variation_id 
-    LEFT JOIN `%s.gene`  g 
-    ON 
+    LEFT JOIN `%s.single_gene_variation` sgv
+    ON
+      v.id = sgv.variation_id
+    LEFT JOIN `%s.gene`  g
+    ON
       g.id = sgv.gene_id
-    WHERE 
+    WHERE
       NOT EXISTS (
-        SELECT 
-          cv.id 
+        SELECT
+          cv.id
         FROM `clinvar_ingest.clinvar_variations` cv
-        WHERE 
-          cv.id = v.id 
+        WHERE
+          cv.id = v.id
           AND
           cv.deleted_release_date is NULL
       )

@@ -13,19 +13,19 @@ BEGIN
       field.table_name,
       field.field_name
     FROM UNNEST(table_fields) AS field
-  ) 
+  )
   DO
     EXECUTE IMMEDIATE FORMAT("""
       SELECT
         COUNT(*)
       FROM `%s.%s` t
-      WHERE 
+      WHERE
         t.%s IS NULL
-    """, schema_name, field.table_name, field.field_name) INTO required_nulls; 
+    """, schema_name, field.table_name, field.field_name) INTO required_nulls;
 
     IF required_nulls > 0 THEN
-      SET validation_errors = ARRAY_CONCAT(validation_errors, [CONCAT('Required field ', schema_name, '.', field.table_name, '.', field.field_name, 
-                                  ' has ', required_nulls, ' NULL records.')]);                     
+      SET validation_errors = ARRAY_CONCAT(validation_errors, [CONCAT('Required field ', schema_name, '.', field.table_name, '.', field.field_name,
+                                  ' has ', required_nulls, ' NULL records.')]);
     END IF;
 
   END FOR;

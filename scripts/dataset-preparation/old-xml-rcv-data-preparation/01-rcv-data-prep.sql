@@ -3,29 +3,29 @@ BEGIN
   DECLARE mmyy_array ARRAY<STRING>;
 
   SET mmyy_array = [
-    '2023-01', 
-    '2023-02', 
-    '2023-03', 
-    '2023-04', 
-    '2023-05', 
-    '2023-06', 
-    '2023-07', 
-    '2023-08', 
-    '2023-09', 
-    '2023-10', 
-    '2023-11', 
-    '2023-12', 
-    '2024-01', 
+    '2023-01',
+    '2023-02',
+    '2023-03',
+    '2023-04',
+    '2023-05',
+    '2023-06',
+    '2023-07',
+    '2023-08',
+    '2023-09',
+    '2023-10',
+    '2023-11',
+    '2023-12',
+    '2024-01',
     '2024-02'];
 
   -- Loop through the array
   FOR rec IN (SELECT mmyy FROM UNNEST(mmyy_array) as mmyy)
   DO
-    
+
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `clingen-dev.clinvar_000.%s-rcv`
       AS
-      SELECT 
+      SELECT
         id,
         JSON_EXTRACT_SCALAR(content, "$.ClinVarSet.ReferenceClinVarAssertion.ClinVarAccession['@Acc']") as rcv_accession,
         JSON_EXTRACT_SCALAR(content, "$.ClinVarSet.ReferenceClinVarAssertion.ClinVarAccession['@Version']") as rcv_version,
@@ -46,14 +46,14 @@ BEGIN
           JSON_EXTRACT_ARRAY(content, "$.ClinVarSet.ClinVarAssertion"),
           [JSON_EXTRACT(content, "$.ClinVarSet.ClinVarAssertion")]
         ) as scv_content
-      FROM `clingen-dev.clinvar_000.%s-rcv-source` 
+      FROM `clingen-dev.clinvar_000.%s-rcv-source`
     """, rec.mmyy, rec.mmyy);
 
     EXECUTE IMMEDIATE FORMAT(
       """
       CREATE OR REPLACE TABLE `clingen-dev.clinvar_000.%s-scv`
       AS
-      SELECT 
+      SELECT
         rcv.rcv_accession,
         rcv.rcv_version,
         JSON_EXTRACT_SCALAR(scv_content, "$.ClinVarAccession['@Acc']") as scv_id,
@@ -66,7 +66,7 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `clingen-dev.clinvar_000.%s-trait-extract`
       AS
-      SELECT 
+      SELECT
         rcv.rcv_accession,
         rcv.rcv_version,
         rcv.trait_set_id,
@@ -96,7 +96,7 @@ BEGIN
           JSON_EXTRACT_SCALAR(name_content, "$.ElementValue['#text']") as name
         FROM `clingen-dev.clinvar_000.%s-trait-extract` trait
         CROSS JOIN UNNEST(trait.trait_name_content) as name_content
-        WHERE 
+        WHERE
           JSON_EXTRACT_SCALAR(name_content, "$.ElementValue['@Type']") = 'Preferred'
       ),
       trait_symbol AS (
@@ -105,7 +105,7 @@ BEGIN
           JSON_EXTRACT_SCALAR(symbol_content, "$.ElementValue['#text']") as symbol
         FROM `clingen-dev.clinvar_000.%s-trait-extract` trait
         LEFT JOIN UNNEST(trait.trait_symbol_content) as symbol_content
-        WHERE 
+        WHERE
           JSON_EXTRACT_SCALAR(symbol_content, "$.ElementValue['@Type']") = 'Preferred'
       ),
       trait_xref_id AS (
@@ -120,10 +120,10 @@ BEGIN
         SELECT
           trait.trait_id
         from `clingen-dev.clinvar_000.%s-trait-extract` trait
-        group by 
+        group by
           trait.trait_id
       )
-      select 
+      select
         trait.trait_id,
         trait_name.name,
         trait_symbol.symbol,
@@ -147,11 +147,11 @@ BEGIN
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `clingen-dev.clinvar_000.%s-trait-set-mapping`
       AS
-      SELECT 
+      SELECT
           trait.trait_set_id,
           trait.trait_id
       from `clingen-dev.clinvar_000.%s-trait-extract` trait
-      group by 
+      group by
           trait.trait_set_id,
           trait.trait_id
     """, rec.mmyy, rec.mmyy);

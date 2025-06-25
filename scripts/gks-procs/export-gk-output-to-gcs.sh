@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Set variables
-PROJECT_ID="clingen-stage"
-DATASET_ID="clinvar_2024_09_08_v1_6_62"
+PROJECT_ID="clingen-dev"
+DATASET_ID="clinvar_2025_03_23_v2_3_1"
 BUCKET_NAME="clinvar-gk-pilot"  # Replace with your bucket name
-EXPORT_PATH="2024-09-08/stage"
+EXPORT_PATH="2025-03-23/dev"
 TABLES=(
-  # "gk_pilot_catvar"
-  "gk_pilot_statement_scv"
+  "temp_catvar_final"
+  # "gk_pilot_statement_scv"
 )
 FORMATS=(
   "NEWLINE_DELIMITED_JSON"
@@ -28,13 +28,13 @@ for TABLE in "${TABLES[@]}"; do
     FORMAT="${FORMATS[$i]}"
     TYPE="${TYPES[$i]}"
     EXPORT_URI="gs://${BUCKET_NAME}/${EXPORT_PATH}/${LAST_PART}_out/${TYPE}/${LAST_PART}-*.${TYPE}.gz"
-    
+
     bq extract \
       --destination_format="${FORMAT}" \
       --compression=GZIP \
       "${PROJECT_ID}:${DATASET_ID}.${TABLE}" \
       "${EXPORT_URI}"
-    
+
     if [ $? -eq 0 ]; then
       echo "Exported ${TABLE} to ${EXPORT_URI} in format ${FORMAT}"
     else
@@ -52,9 +52,9 @@ echo "All exports completed."
 #   'gs://clinvar-gk-pilot/2024-09-08/stage/catvar_output_v2/ndjson/catvars-*.ndjson.gz'
 
 # bq extract --compression GZIP \
-#   --destination_format CSV \                   
+#   --destination_format CSV \
 #   'clingen-stage:clinvar_2024_09_08_v1_6_62.gk_pilot_catvar' \
-#   'gs://clinvar-gk-pilot/2024-09-08/stage/catvar_output_v2/csv/catvars-*.csv.gz'   
+#   'gs://clinvar-gk-pilot/2024-09-08/stage/catvar_output_v2/csv/catvars-*.csv.gz'
 
 # # SCV Statement Output to GCS
 # bq extract --compression GZIP \
@@ -63,6 +63,6 @@ echo "All exports completed."
 #   'gs://clinvar-gk-pilot/2024-09-08/stage/scv_output_v2/ndjson/scvs-*.ndjson.gz'
 
 # bq extract --compression GZIP \
-#   --destination_format CSV \                   
+#   --destination_format CSV \
 #   'clingen-stage:clinvar_2024_09_08_v1_6_62.gk_pilot_statement' \
-#   'gs://clinvar-gk-pilot/2024-09-08/stage/scv_output_v2/csv/scvs-*.csv.gz'   
+#   'gs://clinvar-gk-pilot/2024-09-08/stage/scv_output_v2/csv/scvs-*.csv.gz'

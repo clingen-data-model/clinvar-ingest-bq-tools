@@ -19,20 +19,20 @@ BEGIN
   -- deleted vcvs (where it exists in clinvar_vcvs (for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_vcvs` cvcv
-      SET 
+      SET
         deleted_release_date = %T
-    WHERE 
-      cvcv.deleted_release_date is NULL 
+    WHERE
+      cvcv.deleted_release_date is NULL
       AND
       NOT EXISTS (
-        SELECT 
+        SELECT
           vcv.id
         FROM `%s.variation_archive` vcv
-        WHERE  
-          vcv.variation_id = cvcv.variation_id 
-          AND 
-          vcv.id = cvcv.id 
-          AND 
+        WHERE
+          vcv.variation_id = cvcv.variation_id
+          AND
+          vcv.id = cvcv.id
+          AND
           vcv.version = cvcv.version
       )
   """, release_date, schema_name);
@@ -40,14 +40,14 @@ BEGIN
   -- updated vcv
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_vcvs` cvcv
-      SET 
+      SET
         end_release_date = vcv.release_date
     FROM `%s.variation_archive` vcv
-    WHERE 
-      vcv.variation_id = cvcv.variation_id 
-      AND 
-      vcv.id = cvcv.id 
-      AND 
+    WHERE
+      vcv.variation_id = cvcv.variation_id
+      AND
+      vcv.id = cvcv.id
+      AND
       vcv.version = cvcv.version
       AND
       cvcv.deleted_release_date is NULL
@@ -56,31 +56,31 @@ BEGIN
   -- new variation_archive
   EXECUTE IMMEDIATE FORMAT("""
     INSERT INTO `clinvar_ingest.clinvar_vcvs` (
-      variation_id,  
-      id, 
-      version, 
+      variation_id,
+      id,
+      version,
       full_vcv_id,
-      start_release_date, 
+      start_release_date,
       end_release_date
     )
-    SELECT 
-      vcv.variation_id, 
-      vcv.id, 
+    SELECT
+      vcv.variation_id,
+      vcv.id,
       vcv.version,
-      FORMAT('%%s.%%i', vcv.id, vcv.version) as full_vcv_id, 
-      vcv.release_date as start_release_date, 
+      FORMAT('%%s.%%i', vcv.id, vcv.version) as full_vcv_id,
+      vcv.release_date as start_release_date,
       vcv.release_date as end_release_date
     FROM `%s.variation_archive` vcv
-    WHERE 
+    WHERE
       NOT EXISTS (
-        SELECT 
-          cvcv.id 
+        SELECT
+          cvcv.id
         FROM `clinvar_ingest.clinvar_vcvs` cvcv
-        WHERE 
-          vcv.variation_id = cvcv.variation_id 
-          AND 
-          vcv.id = cvcv.id 
-          AND 
+        WHERE
+          vcv.variation_id = cvcv.variation_id
+          AND
+          vcv.id = cvcv.id
+          AND
           vcv.version = cvcv.version
           AND
           cvcv.deleted_release_date is NULL

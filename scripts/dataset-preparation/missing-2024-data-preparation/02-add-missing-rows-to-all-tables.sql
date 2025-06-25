@@ -1,7 +1,7 @@
 -- STEP 2
--- this script copies all non-GermlineClassification records 
--- from the 2024-03-11, 2024-03-31, 2024-05-02 datasets 
--- to the 2024-03-17, 2024-03-24, 2024-04-07, 2024-04-16, 
+-- this script copies all non-GermlineClassification records
+-- from the 2024-03-11, 2024-03-31, 2024-05-02 datasets
+-- to the 2024-03-17, 2024-03-24, 2024-04-07, 2024-04-16,
 -- 2024-04-21, 2024-05-09, 2024-05-13, 2024-05-19, 2024-05-27 datasets
 -- since the target datasets were copied from the old xml ingest due
 -- to the fact that NCBI could not get us these missing xml files for the
@@ -17,24 +17,24 @@ BEGIN
     STRUCT(
       'clinvar_2024_03_11_v2_1_0',
       [
-        'clinvar_2024_03_17_v1_6_62', 
+        'clinvar_2024_03_17_v1_6_62',
         'clinvar_2024_03_24_v1_6_62'
       ]
     ),
     STRUCT(
       'clinvar_2024_03_31_v2_1_0',
       [
-        'clinvar_2024_04_07_v1_6_62', 
-        'clinvar_2024_04_16_v1_6_62', 
+        'clinvar_2024_04_07_v1_6_62',
+        'clinvar_2024_04_16_v1_6_62',
         'clinvar_2024_04_21_v1_6_62'
       ]
     ),
     STRUCT(
       'clinvar_2024_05_02_v2_1_0',
       [
-        'clinvar_2024_05_09_v1_6_62', 
-        'clinvar_2024_05_13_v1_6_62', 
-        'clinvar_2024_05_19_v1_6_62', 
+        'clinvar_2024_05_09_v1_6_62',
+        'clinvar_2024_05_13_v1_6_62',
+        'clinvar_2024_05_19_v1_6_62',
         'clinvar_2024_05_27_v1_6_62'
       ]
     )
@@ -43,17 +43,17 @@ BEGIN
   -- update review_status values on old datasets that are being useds to replace missing 2024 Mar/Apr/May datasets
   CREATE TEMP TABLE revstat
   AS
-    SELECT 
+    SELECT
       'criteria provided, conflicting interpretations' as cur_label,
       'criteria provided, conflicting classifications' as new_label
-    UNION ALL 
-    SELECT 
-      'no interpretation for the single variant', 
-      'no classification for the single variant' 
     UNION ALL
-    SELECT 
-      'no assertion provided', 
-      'no classification provided' 
+    SELECT
+      'no interpretation for the single variant',
+      'no classification for the single variant'
+    UNION ALL
+    SELECT
+      'no assertion provided',
+      'no classification provided'
   ;
 
   -- Loop through the top-level schemas array of structs
@@ -62,7 +62,7 @@ BEGIN
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TEMP TABLE rcv_map
-      AS 
+      AS
       SELECT DISTINCT
         rcvc.rcv_id,
         rcv.version,
@@ -106,7 +106,7 @@ BEGIN
         rcv.variation_archive_id = vcvc.vcv_id
         AND
         vcvc.statement_type <> 'GermlineClassification'
-      WHERE 
+      WHERE
         rcvc.statement_type <> 'GermlineClassification'
       group by
         rcvc.rcv_id,
@@ -122,7 +122,7 @@ BEGIN
         ca.submitter_id,
         rcv_map.trait_set_id,
         ts.trait_ids
-      """, 
+      """,
       src.schema,
       src.schema,
       src.schema,
@@ -136,7 +136,7 @@ BEGIN
     -- copy source schema records for each target schema table that are missing
     FOR tgt IN (SELECT schema FROM UNNEST(src.targets) as schema)
     DO
-      
+
       -- trait_set table
       EXECUTE IMMEDIATE FORMAT("""
         INSERT INTO `%s.trait_set` (
@@ -159,7 +159,7 @@ BEGIN
           LEFT JOIN `%s.trait_set` ts
           ON
             rcv_map.trait_set_id = ts.id
-          WHERE 
+          WHERE
             ts.id IS NULL
         ) x
         JOIN `%s.trait_set` src
@@ -222,7 +222,7 @@ BEGIN
           LEFT JOIN `%s.trait` t
           ON
             trait_id = t.id
-          WHERE 
+          WHERE
             t.id IS NULL
         ) x
         JOIN `%s.trait` src
@@ -302,7 +302,7 @@ BEGIN
           LEFT JOIN `%s.clinical_assertion` ca
           ON
             rcv_map.scv_accession = ca.id
-          WHERE 
+          WHERE
             ca.id IS NULL
         ) x
         JOIN `%s.clinical_assertion` src
@@ -336,7 +336,7 @@ BEGIN
           LEFT JOIN `%s.clinical_assertion_trait_set` cats
           ON
             rcv_map.clinical_assertion_trait_set_id = cats.id
-          WHERE 
+          WHERE
             cats.id IS NULL
         ) x
         JOIN `%s.clinical_assertion_trait_set` src
@@ -379,7 +379,7 @@ BEGIN
           LEFT JOIN `%s.clinical_assertion_trait` cat
           ON
             ca_trait_id = cat.id
-          WHERE 
+          WHERE
             cat.id IS NULL
         ) x
         JOIN `%s.clinical_assertion_trait` src
@@ -389,7 +389,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );  
+      );
 
       -- clinical_assertion_observation table
       EXECUTE IMMEDIATE FORMAT("""
@@ -412,7 +412,7 @@ BEGIN
           LEFT JOIN `%s.clinical_assertion_observation` caobs
           ON
             ca_obs_id = caobs.id
-          WHERE 
+          WHERE
             caobs.id IS NULL
         ) x
         JOIN `%s.clinical_assertion_observation` src
@@ -422,7 +422,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );  
+      );
 
       -- trait_mapping table
       EXECUTE IMMEDIATE FORMAT("""
@@ -452,7 +452,7 @@ BEGIN
           LEFT JOIN `%s.trait_mapping` tm
           ON
             rcv_map.scv_accession = tm.clinical_assertion_id
-          WHERE 
+          WHERE
             tm.clinical_assertion_id IS NULL
         ) x
         JOIN `%s.trait_mapping` src
@@ -462,7 +462,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );  
+      );
 
       -- clinical_assertion_variation table
       EXECUTE IMMEDIATE FORMAT("""
@@ -492,7 +492,7 @@ BEGIN
           LEFT JOIN `%s.clinical_assertion_variation` cav
           ON
             rcv_map.scv_accession = cav.id
-          WHERE 
+          WHERE
             cav.id IS NULL
         ) x
         JOIN `%s.clinical_assertion_variation` src
@@ -502,7 +502,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );  
+      );
 
       -- variation table
       EXECUTE IMMEDIATE FORMAT("""
@@ -538,7 +538,7 @@ BEGIN
           LEFT JOIN `%s.variation` v
           ON
             rcv_map.variation_id = v.id
-          WHERE 
+          WHERE
             v.id IS NULL
         ) x
         JOIN `%s.variation` src
@@ -548,7 +548,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );  
+      );
 
       -- gene_association table
       EXECUTE IMMEDIATE FORMAT("""
@@ -578,7 +578,7 @@ BEGIN
             ga_source.gene_id = ga.gene_id
             and
             ga_source.variation_id = ga.variation_id
-          WHERE 
+          WHERE
             ga.gene_id IS NULL
         ) x
         JOIN `%s.gene_association` src
@@ -590,7 +590,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );    
+      );
 
       -- gene table
       EXECUTE IMMEDIATE FORMAT("""
@@ -615,7 +615,7 @@ BEGIN
           LEFT JOIN `%s.gene` g
           ON
             g_source.gene_id = g.id
-          WHERE 
+          WHERE
             g.id IS NULL
         ) x
         JOIN `%s.gene` src
@@ -625,7 +625,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );    
+      );
 
       -- rcv_accession table
       EXECUTE IMMEDIATE FORMAT("""
@@ -657,7 +657,7 @@ BEGIN
           LEFT JOIN `%s.rcv_accession` rcv
           ON
             rcv_map.rcv_accession = rcv.id
-          WHERE 
+          WHERE
             rcv.id IS NULL
         ) x
         JOIN `%s.rcv_accession` src
@@ -667,7 +667,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );    
+      );
 
       -- rcv_accession_classification table
       EXECUTE IMMEDIATE FORMAT("""
@@ -685,13 +685,13 @@ BEGIN
           src.review_status,
           ARRAY_AGG(
             STRUCT(
-              clfn.num_submissions, 
-              clfn.date_last_evaluated, 
-              clfn.interp_description, 
-              clfn.clinical_impact_assertion_type, 
+              clfn.num_submissions,
+              clfn.date_last_evaluated,
+              clfn.interp_description,
+              clfn.clinical_impact_assertion_type,
               clfn.clinical_impact_clinical_significance
             )
-          ) AS agg_classification  
+          ) AS agg_classification
         FROM (
           SELECT DISTINCT
             rcv_map.rcv_accession,
@@ -703,7 +703,7 @@ BEGIN
             rcv_map.rcv_accession = rcvc.rcv_id
             and
             rcvc.statement_type = rcv_stmt_type
-          WHERE 
+          WHERE
             rcvc.rcv_id IS NULL
         ) x
         JOIN `%s.rcv_accession_classification` src
@@ -712,7 +712,7 @@ BEGIN
           and
           src.statement_type = x.rcv_stmt_type
         LEFT JOIN UNNEST(src.agg_classification) AS clfn
-        GROUP BY  
+        GROUP BY
           src.release_date,
           src.rcv_id,
           src.statement_type,
@@ -721,7 +721,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );  
+      );
 
       -- variation_archive (vcv) table
       EXECUTE IMMEDIATE FORMAT("""
@@ -757,7 +757,7 @@ BEGIN
           LEFT JOIN `%s.variation_archive` vcv
           ON
             rcv_map.variation_archive_id = vcv.id
-          WHERE 
+          WHERE
             vcv.id IS NULL
         ) x
         JOIN `%s.variation_archive` src
@@ -767,7 +767,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );  
+      );
 
 
       -- variation_archive_classification table
@@ -812,7 +812,7 @@ BEGIN
             rcv_map.variation_archive_id = vcvc.vcv_id
             and
             vcvc.statement_type = vcv_stmt_type
-          WHERE 
+          WHERE
             vcvc.vcv_id IS NULL
         ) x
         JOIN `%s.variation_archive_classification` src
@@ -824,7 +824,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );     
+      );
 
       -- submission table
       EXECUTE IMMEDIATE FORMAT("""
@@ -848,7 +848,7 @@ BEGIN
           LEFT JOIN `%s.submission` s
           ON
             rcv_map.submission_id = s.id
-          WHERE 
+          WHERE
             s.id IS NULL
         ) x
         JOIN `%s.submission` src
@@ -858,7 +858,7 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );    
+      );
 
       -- submitter table
       EXECUTE IMMEDIATE FORMAT("""
@@ -886,7 +886,7 @@ BEGIN
           LEFT JOIN `%s.submitter` s
           ON
             rcv_map.submitter_id = s.id
-          WHERE 
+          WHERE
             s.id IS NULL
         ) x
         JOIN `%s.submitter` src
@@ -896,10 +896,10 @@ BEGIN
         tgt.schema,
         tgt.schema,
         src.schema
-      );   
+      );
 
       -- update the review_status values on the target datasets
-      -- since we are porting older datasets into the period of 
+      -- since we are porting older datasets into the period of
       -- time that is based on the newer xml datasets
       -- clinical_assertion, rcv_accession_classification, and vcv_archive_classification
       EXECUTE IMMEDIATE FORMAT("""
@@ -911,7 +911,7 @@ BEGIN
           revstat.cur_label = tgt.review_status
       """,
         tgt.schema
-      );   
+      );
 
       EXECUTE IMMEDIATE FORMAT("""
         UPDATE `%s.rcv_accession_classification` tgt

@@ -58,8 +58,8 @@ CREATE OR REPLACE TABLE `variation_tracker.gc_case`
 )
 ;
 
-CREATE OR REPLACE TABLE `variation_tracker.alert_type` 
-AS  
+CREATE OR REPLACE TABLE `variation_tracker.alert_type`
+AS
 SELECT * FROM UNNEST([
   STRUCT(NULL AS sort_order, '' AS label),
   (0, 'Out of Date'),

@@ -32,7 +32,7 @@ BEGIN
           GROUP BY
             sg.clinical_assertion_id
         )
-        SELECT 
+        SELECT
           ca.id,
           ca.version,
           ca.assertion_type,
@@ -67,7 +67,7 @@ BEGIN
           `clinvar_ingest.parseAttributeSet`(ca.content) as attribs,
           `clinvar_ingest.parseCitations`(JSON_EXTRACT(ca.content,"$.Interpretation")) as interpCitations,
           sgq.geneContextQualifier
-          
+
         from `%s.clinical_assertion` ca
         left join `%s.scv_summary` scv
         on
@@ -88,5 +88,3 @@ END;
 
 
 -- call clinvar_ingest.gk_pilot_scv_proc(CURRENT_DATE());
-
-

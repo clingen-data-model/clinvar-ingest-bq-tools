@@ -6,7 +6,7 @@ BEGIN
       CREATE OR REPLACE TABLE `%s.gk_pilot_pre_catvar_expression`
       AS
       WITH axn_chr_repair AS (
-        select 
+        select
           variation_id,
           accession,
           IFNULL((CAST(REGEXP_EXTRACT(accession, r'CM000([0-9]+)\\.1') as INTEGER) - 662), CAST(REGEXP_EXTRACT(accession, r'NC_[0]+([0-9]+)\\.[0-9]+') AS INTEGER)) as derived_chr,
@@ -38,11 +38,11 @@ BEGIN
             ELSE accession
           END AS NCBI_accession
         from `%s.variation_members`
-        where 
+        where
           chr is null and assembly_version is not null
       ),
-      exp_item AS ( 
-        select 
+      exp_item AS (
+        select
           vi.variation_id,
           vi.accession,
           vi.fmt as syntax,
@@ -52,7 +52,7 @@ BEGIN
           1 as precedence,
           IF(vi.accession = 'NC_012920.1', CAST(null as INTEGER), vi.assembly_version) as assembly_version
         from `%s.variation_identity` vi
-        where 
+        where
           vi.fmt = 'spdi'
         UNION ALL
         -- select DISTINCT to eliminate the dupe MT occurences across builds
@@ -70,9 +70,9 @@ BEGIN
           IF(vl.accession = 'NC_012920.1', CAST(null as INTEGER), vl.assembly_version) as assembly_version
         from `%s.variation_loc` vl
         where
-            vl.gnomad_source is not null 
+            vl.gnomad_source is not null
         UNION ALL
-        select 
+        select
           vh.variation_id,
           vh.accession,
           format('hgvs.%%s', IFNULL(REGEXP_EXTRACT(e.nucleotide, r':([gmcnrp])\\.'), LEFT(vh.type, 1))) as syntax,
@@ -93,7 +93,7 @@ BEGIN
           vl.loc_hgvs_source as value,
           'genomic' as hgvs_type,
           vl.loc_hgvs_issue as issue,
-          4 as precedence,    
+          4 as precedence,
           IF(vl.accession = 'NC_012920.1', CAST(null as INTEGER), vl.assembly_version) as assembly_version
         from `%s.variation_loc` vl
         left join `%s.variation_hgvs` vh
@@ -104,12 +104,12 @@ BEGIN
           and
           vh.assembly_version = vl.assembly_version
           and
-          vh.assembly = vl.assembly 
+          vh.assembly = vl.assembly
         where
           vl.gnomad_source is null
           and
           vl.loc_hgvs_source is not null
-          and 
+          and
           vh.variation_id is null
       )
       select
@@ -126,18 +126,18 @@ BEGIN
         acr.variation_id = exp_item.variation_id
         and
         acr.accession = exp_item.accession
-      group by 
+      group by
         exp_item.variation_id,
         IFNULL(acr.NCBI_accession, exp_item.accession),
-        exp_item.assembly_version 
+        exp_item.assembly_version
     """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       -- build pre-merged variation members
       CREATE OR REPLACE TABLE `%s.gk_pilot_pre_catvar_member`
-      AS 
+      AS
       WITH axn_chr_repair AS (
-        select 
+        select
           `in`.variation_id,
           `in`.accession,
           IFNULL((CAST(REGEXP_EXTRACT(`in`.accession, r'CM000([0-9]+)\\.1') as INTEGER) - 662), CAST(REGEXP_EXTRACT(`in`.accession, r'NC_[0]+([0-9]+)\\.[0-9]+') AS INTEGER)) as derived_chr,
@@ -168,17 +168,17 @@ BEGIN
             WHEN "CM000686.1" THEN "NC_000024.9"
             ELSE `in`.accession
           END AS NCBI_accession
-          from `%s.gk_pilot_vrs` 
-        where 
+          from `%s.gk_pilot_vrs`
+        where
           `in`.chr is null and `in`.assembly_version is not null
       ),
       seqref_ext_item AS (
         select
           exp.variation_id,
           exp.accession,
-          'chromosome' as name, 
+          'chromosome' as name,
           IFNULL(
-            (CASE acr.derived_chr WHEN 24 THEN "Y" WHEN 23 THEN "X" ELSE CAST(acr.derived_chr as STRING) END), 
+            (CASE acr.derived_chr WHEN 24 THEN "Y" WHEN 23 THEN "X" ELSE CAST(acr.derived_chr as STRING) END),
             vrs.`in`.chr
           ) as value_string,
           CAST(null as BOOLEAN) as value_boolean,
@@ -201,7 +201,7 @@ BEGIN
         select DISTINCT
           exp.variation_id,
           exp.accession,
-          'assembly' as name, 
+          'assembly' as name,
           assembly as value_string,
           CAST(null as BOOLEAN) as value_boolean,
           CAST(null as STRING) as value_system,
@@ -209,26 +209,26 @@ BEGIN
           CAST(null as STRING) as value_label
       from `%s.gk_pilot_pre_catvar_expression` exp
         where exp.assembly is not null
-      ), 
+      ),
       seqref_ext as (
         select
           variation_id,
           accession,
           ARRAY_AGG(
             STRUCT(
-              name, 
-              value_string, 
-              value_boolean, 
+              name,
+              value_string,
+              value_boolean,
               STRUCT(value_system as system, value_code as code, value_label as label) as value_coding
             ) ORDER BY seqref_ext_item.name
           ) as extensions,
         from seqref_ext_item
-        group by 
+        group by
           variation_id,
           accession
       )
-      select 
-        r.`in`.variation_id, 
+      select
+        r.`in`.variation_id,
         r.`in`.accession,
         r.`in`.precedence,
         STRUCT(
@@ -252,14 +252,14 @@ BEGIN
         ) member
       from `%s.gk_pilot_vrs` r
       left join `%s.gk_pilot_pre_catvar_expression` exp
-      on 
-        exp.variation_id = r.`in`.variation_id 
-        and 
+      on
+        exp.variation_id = r.`in`.variation_id
+        and
         exp.accession = r.`in`.accession
       left join seqref_ext sqext
-      on 
-        sqext.variation_id = r.`in`.variation_id 
-        and 
+      on
+        sqext.variation_id = r.`in`.variation_id
+        and
         sqext.accession = r.`in`.accession
       left join `%s.variation_loc` vl
       on
@@ -275,7 +275,7 @@ BEGIN
       WITH so_lookup AS (
         SELECT
           so_item.*
-        FROM 
+        FROM
         (
           SELECT
             [
@@ -302,7 +302,7 @@ BEGIN
           cross join unnest(so_list.so_items) as so_item
       ),
       hgvs_items AS (
-        select 
+        select
           vh.variation_id,
           vh.accession,
           format('hgvs.%%s', IFNULL(REGEXP_EXTRACT(exp.nucleotide, r':([gmcnrp])\\.'), '?')) as nucleotide_syntax,
@@ -376,7 +376,7 @@ BEGIN
               hcsq.molecularConsequence
             )
           ) value
-        from hgvs_items hgvs 
+        from hgvs_items hgvs
         left join hgvs_item_consq hcsq
         on
           hcsq.variation_id = hgvs.variation_id
@@ -394,10 +394,10 @@ BEGIN
               vrs.`out`.errors is not null,
               -- if there are any vrs processing errors then use DescribedVariation,
               'DescribedVariation',
-              CASE vrs.`in`.vrs_class 
-              WHEN 'Allele' THEN 'CanonicalAllele' 
-              WHEN 'CopyNumberChange' THEN 'CategoricalCnvChange' 
-              WHEN 'CopyNumberCount' THEN 'CategoricalCnvCount' 
+              CASE vrs.`in`.vrs_class
+              WHEN 'Allele' THEN 'CanonicalAllele'
+              WHEN 'CopyNumberChange' THEN 'CategoricalCnvChange'
+              WHEN 'CopyNumberCount' THEN 'CategoricalCnvCount'
               ELSE 'DescribedVariation' END
             )
           ) as value_string,
@@ -460,9 +460,9 @@ BEGIN
           x.variation_id,
           ARRAY_AGG(
             STRUCT(
-              x.name, 
-              x.value_string, 
-              x.value_boolean, 
+              x.name,
+              x.value_string,
+              x.value_boolean,
               x.value_coding,
               x.value_array
             )
@@ -556,7 +556,7 @@ BEGIN
           tvm.variation_id = vrs.in.variation_id
           and
           tvm.accession = vrs.in.accession
-        where 
+        where
           vrs.`in` is null
       ),
      pre_catvars as (
@@ -588,7 +588,7 @@ BEGIN
           m.variation_id = vrs.`in`.variation_id
           and
           m.accession = vrs.`in`.accession
-        WHERE vrs.`out`.type = 'Allele' 
+        WHERE vrs.`out`.type = 'Allele'
         UNION ALL
         SELECT
           vrs.`in`.variation_id,
@@ -615,7 +615,7 @@ BEGIN
           vrs.`out`.copies as copies,
           null as copyChange
         from `%s.gk_pilot_vrs` vrs
-        WHERE vrs.`out`.type = 'CopyNumberCount' 
+        WHERE vrs.`out`.type = 'CopyNumberCount'
         UNION ALL
         SELECT
           vrs.`in`.variation_id,
@@ -634,7 +634,7 @@ BEGIN
             ) as label
           ) as copyChange
         from `%s.gk_pilot_vrs` vrs
-        WHERE vrs.`out`.type = 'CopyNumberChange' 
+        WHERE vrs.`out`.type = 'CopyNumberChange'
 
       ),
       cv_constraints AS (
@@ -661,7 +661,7 @@ BEGIN
       on
         cv.variation_id = vi.variation_id
       -- -- add extensions
-      join cat_exts x 
+      join cat_exts x
       on
         x.variation_id = cv.variation_id
       left join cv_constraints cx
@@ -673,7 +673,7 @@ BEGIN
       CREATE OR REPLACE TABLE `%s.gk_pilot_catvar`
       AS
       WITH x as (
-        SELECT 
+        SELECT
           JSON_STRIP_NULLS(
             TO_JSON(tv),
           remove_empty => TRUE

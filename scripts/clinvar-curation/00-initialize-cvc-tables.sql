@@ -33,7 +33,7 @@ CREATE TABLE `clinvar_curator.cvc_clinvar_batches`
 
 -- This script creates or replaces a view named `cvc_annotations_view` in the `clinvar_curator` schema.
 -- The view is constructed from all the `clinvar_annotations` data and includes the following transformations and fields:
--- 
+--
 -- - `annotation_id`: A string representation of the annotation date in UNIX milliseconds.
 -- - `vcv_axn`: The `vcv_id` field from the source table.
 -- - `scv_id`: The first part of the `scv_id` field, split by a dot.
@@ -52,11 +52,11 @@ CREATE TABLE `clinvar_curator.cvc_clinvar_batches`
 -- - `is_latest`: A boolean indicating if the annotation is the latest for the given `scv_id`.
 -- - `annotation_label`: A formatted string combining the annotation date, curator, action, and a truncated reason.
 -- - `review_status`: The `review_status` field from the source table.
--- 
+--
 -- The view is designed to facilitate querying and analysis of ClinVar annotations with additional metadata and transformations.
 CREATE OR REPLACE VIEW clinvar_curator.cvc_annotations_view
 AS
-  WITH anno AS 
+  WITH anno AS
   (
     SELECT
       CAST(UNIX_MILLIS(annotation_date) AS STRING) as annotation_id,
@@ -88,18 +88,18 @@ AS
       a.review_status as clinvar_review_status
     FROM `clinvar_curator.clinvar_annotations` a
     JOIN `clinvar_ingest.all_releases`() rel
-    ON 
+    ON
       DATE(a.annotation_date) between rel.release_date+1 and rel.next_release_date
   ),
-  anno_review AS 
+  anno_review AS
   (
-    SELECT 
+    SELECT
       a.*,
       rev.reviewer,
       rev.status as review_status,
       rev.notes as review_notes,
-      IF(rev.annotation_id is null, 
-        NULL, 
+      IF(rev.annotation_id is null,
+        NULL,
         FORMAT(
           '%s (%s) %s',
           IFNULL(rev.status, 'n/a'),
@@ -122,27 +122,27 @@ AS
     ON
       b_rev.batch_id = rev.batch_id
   )
-  select 
+  select
     ar.*,
     FORMAT(
       '%t (%s) %s: %s',
-      ar.annotated_date, 
+      ar.annotated_date,
       IFNULL(ar.curator,'n/a'),
-      ar.action_abbrev, 
+      ar.action_abbrev,
       IFNULL(ar.reason_abbrev,'n/a')
     ) as annotation_label,
     -- if there are no other scv_id annotations after when orderd by annotation date then it is the latest
     (
-      COUNT(ar.annotated_date) 
+      COUNT(ar.annotated_date)
       OVER (
-        PARTITION BY ar.batch_id, ar.scv_id 
-        ORDER BY ar.annotation_id 
+        PARTITION BY ar.batch_id, ar.scv_id
+        ORDER BY ar.annotation_id
         ROWS BETWEEN 1 FOLLOWING AND UNBOUNDED FOLLOWING
       ) = 0
     ) AS is_latest,
     (ar.batch_id is not null) AS is_reviewed
   from anno_review as ar
-  ;      
+  ;
 
 -- This script creates a view named `cvc_batch_scv_max_annotation_view` in the `clinvar_curator` schema.
 -- The view aggregates data from the `cvc_clinvar_reviews` with their corresponding`cvc_annotations_view` data.
@@ -150,15 +150,15 @@ AS
 -- The view is useful for identifying the latest annotation for each SCV ID in a given batch.
 CREATE OR REPLACE VIEW clinvar_curator.cvc_batch_scv_max_annotation_view
 AS
-  SELECT 
-    ccr.batch_id, 
-    av.scv_id, 
-    max(av.annotation_id) annotation_id 
+  SELECT
+    ccr.batch_id,
+    av.scv_id,
+    max(av.annotation_id) annotation_id
   FROM `clinvar_curator.cvc_clinvar_reviews` ccr
   JOIN `clinvar_curator.cvc_annotations_view` av
   ON
     av.annotation_id = ccr.annotation_id
-  GROUP BY 
+  GROUP BY
     av.scv_id,
     ccr.batch_id
   ;
@@ -166,12 +166,12 @@ AS
 -- This script creates or replaces the view `clinvar_curator.cvc_submitted_annotations_view`.
 -- The view provides a comprehensive overview of submitted annotations, including their validity status,
 -- reasons for invalid submissions, and various metadata related to the submission and annotation process.
--- 
+--
 -- The view includes the following columns:
 -- - valid_submission: A boolean indicating if the submission was valid for NCBI's receipt.
 -- - invalid_submission_reason: A string describing the reason why NCBI rejected the submission.
 -- - batch_id: The batch identifier from the `cvc_clinvar_submissions` table.
--- - batch_release_date: The release date of the batch 
+-- - batch_release_date: The release date of the batch
 -- - submission_date: The date the annotation was submitted
 -- - submission_month_year: The month and year of submission in 'MON'YY' format.
 -- - submission_yy_mm: The year and month of submission in 'YY-MM' format.
@@ -188,7 +188,7 @@ AS
 -- - curator: The curator responsible from the `cvc_annotations_view` table.
 -- - annotation_id: The annotation identifier from the `cvc_annotations_view` table.
 -- - annotated_date: The date the annotation was made from the `cvc_annotations_view` table.
--- 
+--
 -- The view joins data from the following tables:
 -- - `clinvar_curator.cvc_clinvar_submissions`: Provides submission data.
 -- - `clinvar_curator.cvc_annotations_view`: Provides annotation data.
@@ -249,18 +249,18 @@ SELECT
 
 -- This script creates or replaces the view `clinvar_curator.cvc_submitted_outcomes_view`.
 -- The view provides a summary of the outcomes of submitted annotations based on the latest release date.
--- 
+--
 -- The view is constructed using a Common Table Expression (CTE) `latest_release` to fetch the most recent release date.
--- 
+--
 -- The main SELECT statement joins the `cvc_submitted_annotations_view` with the `latest_release` CTE and two instances of the `clinvar_scvs` table.
--- 
+--
 -- The `outcome` field is determined using a CASE statement that evaluates various conditions:
 --   - "invalid submission" if the submission is not valid.
 --   - "deleted" if the submission has been deleted.
 --   - "flagged" if the submission has been flagged.
 --   - "resubmitted, reclassified" or "resubmitted, same classification" if the submission has been resubmitted with or without reclassification.
 --   - "pending (or rejected)" for other cases.
--- 
+--
 -- The view also includes additional fields from the `cvc_submitted_annotations_view` such as:
 --   - `invalid_submission_reason`
 --   - `batch_id`
@@ -286,7 +286,7 @@ CREATE OR REPLACE VIEW clinvar_curator.cvc_submitted_outcomes_view
 AS
   SELECT
     latest_release.release_date as report_release_date,
-    CASE 
+    CASE
       WHEN (NOT sa.valid_submission) THEN
         "invalid submission"
       WHEN (cur_vs.id is null) THEN
@@ -304,7 +304,7 @@ AS
     sa.submission_date,
     sa.submission_month_year,
     sa.submission_yy_mm,
-    sa.variation_id,  
+    sa.variation_id,
     sa.vcv_axn,
     sa.vcv_id,
     sa.vcv_ver,

@@ -1,19 +1,19 @@
 CREATE OR REPLACE FUNCTION `clinvar_ingest.parseSequenceLocations`(json STRING)
 RETURNS ARRAY<STRUCT<
   for_display BOOL,
-  assembly STRING, 
-  assembly_accession_version STRING, 
-  assembly_status STRING, 
-  accession STRING, 
-  chr STRING, 
-  start INT64, 
-  stop INT64, 
-  inner_start INT64, 
-  inner_stop INT64, 
-  outer_start INT64, 
-  outer_stop INT64, 
-  variant_length INT64, 
-  display_start INT64, 
+  assembly STRING,
+  assembly_accession_version STRING,
+  assembly_status STRING,
+  accession STRING,
+  chr STRING,
+  start INT64,
+  stop INT64,
+  inner_start INT64,
+  inner_stop INT64,
+  outer_start INT64,
+  outer_stop INT64,
+  variant_length INT64,
+  display_start INT64,
   display_stop INT64,
   position_vcf INT64,
   reference_allele_vcf STRING,
@@ -23,7 +23,7 @@ RETURNS ARRAY<STRUCT<
   alternate_allele STRING,
   for_display_length BOOL
 >>
-LANGUAGE js  
+LANGUAGE js
   OPTIONS (
     library=['gs://clinvar-ingest/bq-tools/parse-utils.js'])
 AS r"""
@@ -58,7 +58,7 @@ WITH x as (
     }
     """ as content
 )
-select 
+select
   x.content,
-  `clinvar_ingest.parseSequenceLocations`(JSON_EXTRACT(x.content, r'$.Location')) as seq 
+  `clinvar_ingest.parseSequenceLocations`(JSON_EXTRACT(x.content, r'$.Location')) as seq
 from x;

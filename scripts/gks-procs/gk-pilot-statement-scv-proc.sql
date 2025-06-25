@@ -11,18 +11,18 @@ BEGIN
           gks.id,
           STRUCT(
             "Document" as type,
-            IF(lower(cid.source) = 'pubmed', cid.id, null) as pmid, 
+            IF(lower(cid.source) = 'pubmed', cid.id, null) as pmid,
             IF(lower(cid.source) = 'doi', cid.id, null) as doi,
-            CASE 
-            WHEN c.url is not null THEN 
+            CASE
+            WHEN c.url is not null THEN
               c.url
-            WHEN lower(cid.source) = "pubmed" THEN 
+            WHEN lower(cid.source) = "pubmed" THEN
               FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',cid.id)
-            WHEN lower(cid.source) = "pmc" THEN 
+            WHEN lower(cid.source) = "pmc" THEN
               FORMAT('https://europepmc.org/article/PMC/%%s',cid.id)
-            WHEN lower(cid.source) = "doi" THEN 
+            WHEN lower(cid.source) = "doi" THEN
               FORMAT('https://doi.org/%%s',cid.id)
-            WHEN lower(cid.source) = "bookshelf" THEN 
+            WHEN lower(cid.source) = "bookshelf" THEN
               FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',cid.id)
             ELSE
               cid.curie
@@ -39,16 +39,16 @@ BEGIN
             "Document" as type,
             IF(lower(cid.source) = 'pubmed', cid.id, null) as pmid,
             IF(lower(cid.source) = 'doi', cid.id, null) as doi,
-            CASE 
-            WHEN c.url is not null THEN 
+            CASE
+            WHEN c.url is not null THEN
               c.url
-            WHEN lower(cid.source) = "pubmed" THEN 
+            WHEN lower(cid.source) = "pubmed" THEN
               FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',cid.id)
-            WHEN lower(cid.source) = "pmc" THEN 
+            WHEN lower(cid.source) = "pmc" THEN
               FORMAT('https://europepmc.org/article/PMC/%%s',cid.id)
-            WHEN lower(cid.source) = "doi" THEN 
+            WHEN lower(cid.source) = "doi" THEN
               FORMAT('https://doi.org/%%s',c.id)
-            WHEN lower(cid.source) = "bookshelf" THEN 
+            WHEN lower(cid.source) = "bookshelf" THEN
               FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',cid.id)
             ELSE
               cid.curie
@@ -122,16 +122,16 @@ BEGIN
                 "Document" as type,
                 IF(lower(cid.source) = 'pubmed', STRING_AGG(cid.id), null) as pmid,
                 IF(lower(cid.source) = 'doi', STRING_AGG(cid.id), null) as doi,
-                CASE 
-                WHEN c.url is not null THEN 
+                CASE
+                WHEN c.url is not null THEN
                   c.url
-                WHEN lower(ccid.source) = "pubmed" THEN 
+                WHEN lower(ccid.source) = "pubmed" THEN
                   FORMAT('https://pubmed.ncbi.nlm.nih.gov/%%s',STRING_AGG(cid.id))
-                WHEN lower(cidsource) = "pmc" THEN 
+                WHEN lower(cidsource) = "pmc" THEN
                   FORMAT('https://europepmc.org/article/PMC/%%s',STRING_AGG(cid.id))
-                WHEN lower(cid.source) = "doi" THEN 
+                WHEN lower(cid.source) = "doi" THEN
                   FORMAT('https://doi.org/%%s',STRING_AGG(cid.id))
-                WHEN lower(cid.source) = "bookshelf" THEN 
+                WHEN lower(cid.source) = "bookshelf" THEN
                   FORMAT('https://www.ncbi.nlm.nih.gov/books/%%s',STRING_AGG(cid.id))
                 ELSE
                   FORMAT('%%s:%%s', cid.source, STRING_AGG(cid.id))
@@ -145,7 +145,7 @@ BEGIN
         left join unnest(a.citation) as c
         left join unnest(c.id) as cid
         where a.attribute.type = "AssertionMethod"
-        group by 
+        group by
           gks.id,
           a.attribute.value,
           cid.source,
@@ -162,35 +162,35 @@ BEGIN
       scv_ext as (
         select
           gks.id,
-          "alleleOrigin" as name, 
+          "alleleOrigin" as name,
           gks.origin as value
         from `%s.gk_pilot_scv` gks
         where (gks.review_status is not null)
-        UNION ALL      
+        UNION ALL
         select
           gks.id,
-          "reviewStatus" as name, 
+          "reviewStatus" as name,
           gks.review_status as value
         from `%s.gk_pilot_scv` gks
         where (gks.review_status is not null)
         UNION ALL
         select
           gks.id,
-          "submittedClassification" as name, 
+          "submittedClassification" as name,
           gks.submitted_classification as value
         from `%s.gk_pilot_scv` gks
         where (gks.submitted_classification is not null)
         UNION ALL
         select
           gks.id,
-          "methodCategory" as name, 
+          "methodCategory" as name,
           gks.method_type as value
         from `%s.gk_pilot_scv` gks
         where (gks.method_type is not null)
         UNION ALL
         select
           gks.id,
-          "localKey" as name, 
+          "localKey" as name,
           gks.local_key as value
         from `%s.gk_pilot_scv` gks
         where (gks.local_key is not null)
@@ -203,17 +203,17 @@ BEGIN
         group by se.id
       )
       -- final output before it is normalized into json
-      select 
+      select
         gks.id as scv_id,
-        gks.version as scv_ver,  
+        gks.version as scv_ver,
 
         FORMAT('%%s.%%i', gks.id, gks.version) as id,
         (
           CASE cct.clinvar_prop_type
-          WHEN 'path' THEN 'VariantPathogenicityStatement' 
-          WHEN 'dr' THEN 'VariantDrugResponseStatement' 
-          WHEN 'np' THEN 'VariantNoAssertionStatement' 
-          ELSE 'VariantMiscallaneousAssertionStatement' 
+          WHEN 'path' THEN 'VariantPathogenicityStatement'
+          WHEN 'dr' THEN 'VariantDrugResponseStatement'
+          WHEN 'np' THEN 'VariantNoAssertionStatement'
+          ELSE 'VariantMiscallaneousAssertionStatement'
           END
         ) as type,
         STRUCT(
@@ -224,7 +224,7 @@ BEGIN
           cv.members as members,
           cv.mappings as mappings,
           cv.extensions as extensions
-        ) as subjectVariation,   
+        ) as subjectVariation,
         (
           CASE cct.clinvar_prop_type
           WHEN 'path' THEN 'isCausalFor'
@@ -275,18 +275,18 @@ BEGIN
       left join scv_citations
       on
         gks.id = scv_citations.id
-      left join `clinvar_ingest.clinvar_clinsig_types` cct 
-      on 
+      left join `clinvar_ingest.clinvar_clinsig_types` cct
+      on
         cct.code = gks.classif_type
         and
         cct.statement_type = gks.statement_type??
       left join scv_exts
       on
         scv_exts.id = gks.id
-      left join contrib 
+      left join contrib
       on
         contrib.id = gks.id
-      left join scv_method 
+      left join scv_method
       on
         scv_method.id = gks.id
       left join (
@@ -299,7 +299,7 @@ BEGIN
           from `%s.gk_pilot_trait`
           group by scv_id
           having count(*) = 1
-        ) solo 
+        ) solo
         on solo.scv_id = gkt.scv_id
       ) simple_cond
       on
@@ -317,9 +317,9 @@ BEGIN
           from `%s.gk_pilot_trait`
           group by scv_id
           having count(*) > 1
-        ) multi 
+        ) multi
         on multi.scv_id = gkt.scv_id
-        group by 
+        group by
           gkt.scv_id,
           gkt.trait_set_id,
           gkt.trait_set_type
@@ -332,7 +332,7 @@ BEGIN
       CREATE OR REPLACE TABLE `%s.gk_pilot_statement_scv`
       AS
       WITH x as (
-        SELECT 
+        SELECT
           JSON_STRIP_NULLS(
             TO_JSON(tv),
           remove_empty => TRUE
