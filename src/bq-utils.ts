@@ -170,25 +170,48 @@ function recurseJson(obj: AnyObject, fns: TransformFunction[]): void {
 }
 
 function convertCopiesStartAndEndValue(key: string | number, value: any): { key: string; value: any } | undefined {
-  if (key === 'copies' || key === 'start' || key === 'end') {
-      if (value === 'null' || value === '') {
-          // If the value is "null" or an empty string, transform it to JSON null
-          return { key, value: null };
-      } else if (typeof value === 'string') {
-          if (value.startsWith('[') && value.endsWith(']')) {
-              // If it's a string that represents an array, transform it to a JSON array
-              return { key, value: JSON.parse(value.replace(/null/g, 'null')) };
-          } else {
-              // If it's a plain string without brackets, attempt to convert it to an integer
-              const parsedInt = parseInt(value, 10);
-              return { key, value: isNaN(parsedInt) ? value : parsedInt }; // Preserve original if parsing fails
-          }
-      }
+  if (
+    (typeof key === 'string' && (
+      key === 'copies' || key === 'start' || key === 'end' ||
+      key.startsWith('copies_') || key.startsWith('start_') || key.startsWith('end_')
+    ))
+  ) {
+    if (value === 'null' || value === '') {
+      // If the value is "null" or an empty string, transform it to JSON null
+      return { key, value: null };
+    }
+    else if (Array.isArray(value)) {
+      // Transform each element, keeping nulls as null, parsing integers where possible, otherwise as strings
+      const transformed = value.map((v: any) => {
+        if (v === null) {
+          return null;
+        }
+        if (v === 'null' || v === '') {
+          return null;
+        }
+        const parsedInt = parseInt(v, 10);
+        if (!isNaN(parsedInt)) {
+          return parsedInt;
+        }
+        return String(v);
+      });
+      return { key, value: transformed };
+    } else {
+      // Not an array, try to convert to integer
+      const parsedInt = parseInt(value, 10);
+      return { key, value: isNaN(parsedInt) ? String(value) : parsedInt };
+    }
   }
   return undefined;
 }
 
 function normalizeValueKey(key: string | number, value: any): { key: string; value: any } | undefined {
+  if (typeof key === "string" && (/^start_/.test(key))) {
+    return { key: 'start', value };
+  }
+  if (typeof key === "string" && (/^end_/.test(key))) {
+    return { key: 'end', value };
+  }
   if (typeof key === "string" && (/^value_/.test(key))) {
     return { key: 'value', value };
   }

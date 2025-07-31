@@ -6,7 +6,7 @@ const determineMonthBasedOnRange = bqUtils.__get__('determineMonthBasedOnRange')
 const keyObjectById = bqUtils.__get__('keyObjectById');
 const normalizeAndKeyById = bqUtils.__get__('normalizeAndKeyById');
 const normalizeHpId = bqUtils.__get__('normalizeHpId');
-
+const createSigType = bqUtils.__get__('createSigType');
 
 test('formatNearestMonth should format dates correctly', () => {
   expect(formatNearestMonth(new Date('2024-04-16'))).toBe("May '24");
@@ -28,8 +28,8 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
   const inputObject = {
     id: 'prefix:123',
     copies: '10',
-    start: 'null',
-    end: '[null, null]',
+    start_array: [null, '200'],
+    end_array: ['400', null],
     value_test: 'value1',
     objectCondition_complex: 'condition1',
     definingContext_location:
@@ -43,16 +43,43 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     '123': {
       id: 'prefix:123',
       copies: 10,
-      start: null,
-      end: [null, null],
+      start: [null, 200],
+      end: [400, null],
       value: 'value1',
       objectCondition: 'condition1',
       definingContext: {  locationId: 'prefix:123', locationName: 'test' }
     }
   });
 });
-const createSigType = bqUtils.__get__('createSigType');
 
+
+test('normalizeAndKeyById should normalize and key input object correctly', () => {
+  const inputObject = {
+    id: 'prefix:123',
+    copies: '10',
+    start: '10',
+    end: '25',
+    value_test: 'value1',
+    objectCondition_complex: 'condition1',
+    definingContext_location:
+      {
+        locationId: 'prefix:123',
+        locationName: 'test'
+      }
+  };
+  const result = normalizeAndKeyById(inputObject);
+  expect(result).toEqual({
+    '123': {
+      id: 'prefix:123',
+      copies: 10,
+      start: 10,
+      end: 25,
+      value: 'value1',
+      objectCondition: 'condition1',
+      definingContext: {  locationId: 'prefix:123', locationName: 'test' }
+    }
+  });
+});
 test('createSigType should return correct counts and percentages', () => {
     expect(createSigType(0, 0, 0)).toEqual([
         { count: 0, percent: 0 },
