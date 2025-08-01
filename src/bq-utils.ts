@@ -288,7 +288,6 @@ type SigType = {
 
 /**
  * Creates an array of SigType objects representing the count and percentage of each significance type.
- * A significance type is defined as either "non-significant", "uncertain", or "significant".
  *
  * @param nosig_count - The count of non-significant items.
  * @param unc_count - The count of uncertain items.
