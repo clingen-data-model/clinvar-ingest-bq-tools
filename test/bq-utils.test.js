@@ -28,8 +28,11 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
   const inputObject = {
     id: 'prefix:123',
     copies: '10',
-    start_array: [null, '200'],
-    end_array: ['400', null],
+    copies_range: [],
+    start: null,
+    end: null,
+    start_range: [null, '200'],
+    end_range: ['400', null],
     value_test: 'value1',
     objectCondition_complex: 'condition1',
     definingContext_location:
@@ -52,13 +55,14 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
   });
 });
 
-
 test('normalizeAndKeyById should normalize and key input object correctly', () => {
   const inputObject = {
     id: 'prefix:123',
-    copies: '10',
+    copies_range: ['1','5'],
     start: '10',
-    end: '25',
+    end: null,
+    start_range: [],
+    end_range: ['100','200'],
     value_test: 'value1',
     objectCondition_complex: 'condition1',
     definingContext_location:
@@ -71,15 +75,16 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
   expect(result).toEqual({
     '123': {
       id: 'prefix:123',
-      copies: 10,
+      copies: [1, 5],
       start: 10,
-      end: 25,
+      end: [100, 200],
       value: 'value1',
       objectCondition: 'condition1',
       definingContext: {  locationId: 'prefix:123', locationName: 'test' }
     }
   });
 });
+
 test('createSigType should return correct counts and percentages', () => {
     expect(createSigType(0, 0, 0)).toEqual([
         { count: 0, percent: 0 },

@@ -34,8 +34,6 @@ function formatNearestMonth(date: Date | string): string {
 // console.log(formatNearestMonth(new Date())); // Use current date
 // console.log(formatNearestMonth("2024-04-16")); // Use a string date input
 
-
-
 function formatMonthYear(date: Date): string {
   // Format the date to "MMM 'YY"
   const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -123,108 +121,214 @@ function keyObjectById(inputObject: JsonObjectWithId): Record<string, JsonObject
   return transformedObject;
 }
 
+// interface AnyObject {
+//   [key: string]: any;
+// }
+
+// type TransformFunction = (key: string | number, value: any) => AnyObject | undefined;
+
+// function recurseJson(obj: AnyObject, fns: TransformFunction[]): void {
+//   // Check if the input is an object or array
+//   if (typeof obj === 'object' && obj !== null) {
+//       // If it's an array, iterate over its elements
+//       if (Array.isArray(obj)) {
+//           for (let i = 0; i < obj.length; i++) {
+//               let value = obj[i];
+//               // Execute each function on the value
+//               for (const fn of fns) {
+//                   const replacement = fn(i, value); // Call the function with index and value
+//                   if (replacement !== undefined) {
+//                       value = replacement; // Replace the value with the returned value if it's not undefined
+//                   }
+//               }
+//               obj[i] = value; // Update the array element
+//               // Recursively call the function for each element
+//               recurseJson(obj[i], fns);
+//           }
+//       } else {
+//           // If it's an object, iterate over its keys
+//           for (const key in obj) {
+//               if (obj.hasOwnProperty(key)) {
+//                   let value = obj[key];
+//                   // Execute each function on the value
+//                   for (const fn of fns) {
+//                       const replacement = fn(key, value); // Call the function with key and value
+//                       if (replacement !== undefined) {
+//                           delete obj[key]; // Remove the original key-value pair
+//                           obj[replacement.key] = replacement.value; // Add the new key-value pair
+//                           value = replacement.value; // Update the value
+//                       }
+//                   }
+//                   // Recursively call the function for nested objects and arrays
+//                   recurseJson(value, fns);
+//               }
+//           }
+//       }
+//   }
+// }
+
 interface AnyObject {
   [key: string]: any;
 }
 
-type TransformFunction = (key: string | number, value: any) => AnyObject | undefined;
+type TransformFunction = (key: string | number, value: any) => { key: string; value: any } | undefined;
 
-function recurseJson(obj: AnyObject, fns: TransformFunction[]): void {
-  // Check if the input is an object or array
-  if (typeof obj === 'object' && obj !== null) {
-      // If it's an array, iterate over its elements
-      if (Array.isArray(obj)) {
-          for (let i = 0; i < obj.length; i++) {
-              let value = obj[i];
-              // Execute each function on the value
-              for (const fn of fns) {
-                  const replacement = fn(i, value); // Call the function with index and value
-                  if (replacement !== undefined) {
-                      value = replacement; // Replace the value with the returned value if it's not undefined
-                  }
-              }
-              obj[i] = value; // Update the array element
-              // Recursively call the function for each element
-              recurseJson(obj[i], fns);
-          }
-      } else {
-          // If it's an object, iterate over its keys
-          for (const key in obj) {
-              if (obj.hasOwnProperty(key)) {
-                  let value = obj[key];
-                  // Execute each function on the value
-                  for (const fn of fns) {
-                      const replacement = fn(key, value); // Call the function with key and value
-                      if (replacement !== undefined) {
-                          delete obj[key]; // Remove the original key-value pair
-                          obj[replacement.key] = replacement.value; // Add the new key-value pair
-                          value = replacement.value; // Update the value
-                      }
-                  }
-                  // Recursively call the function for nested objects and arrays
-                  recurseJson(value, fns);
-              }
-          }
+// Helpers
+const isObject = (x: any): x is AnyObject =>
+  typeof x === "object" && x !== null && !Array.isArray(x);
+
+const isEmptyArray = (x: any): x is any[] =>
+  Array.isArray(x) && x.length === 0;
+
+/**
+ * Only allow writing the replacement if:
+ *  - the new key didn’t exist before, OR
+ *  - its current value is null, OR
+ *  - its current value is an empty array
+ */
+function canWriteReplacement(
+  obj: AnyObject,
+  newKey: string,
+  oldKey: string
+): boolean {
+  if (newKey === oldKey || !(newKey in obj)) return true;
+  const existing = obj[newKey];
+  return existing === null || isEmptyArray(existing);
+}
+
+export function recurseJson(
+  node: AnyObject | any[],
+  fns: TransformFunction[]
+): void {
+  if (Array.isArray(node)) {
+    for (let i = 0; i < node.length; i++) {
+      let val = node[i];
+
+      for (const fn of fns) {
+        const rep = fn(i, val);
+        if (rep) {
+          val = rep.value;
+          node[i] = val;
+        }
       }
+
+      if (isObject(val) || Array.isArray(val)) {
+        recurseJson(val, fns);
+      }
+    }
+
+  } else if (isObject(node)) {
+    // snapshot original keys so new ones don't get re-visited
+    const keys = Object.keys(node);
+
+    for (const origKey of keys) {
+      let val = node[origKey];
+      let curKey = origKey;
+
+      for (const fn of fns) {
+        const rep = fn(curKey, val);
+        if (rep) {
+          // always delete the old property
+          delete node[curKey];
+
+          // only write the new one if it passes our rule
+          if (canWriteReplacement(node, rep.key, curKey)) {
+            node[rep.key] = rep.value;
+          }
+
+          // for further transforms & recursion, work on the new value
+          val = rep.value;
+          curKey = rep.key;
+        }
+      }
+
+      if (isObject(val) || Array.isArray(val)) {
+        recurseJson(val, fns);
+      }
+    }
   }
 }
 
-function convertCopiesStartAndEndValue(key: string | number, value: any): { key: string; value: any } | undefined {
-  if (
-    (typeof key === 'string' && (
-      key === 'copies' || key === 'start' || key === 'end' ||
-      key.startsWith('copies_') || key.startsWith('start_') || key.startsWith('end_')
-    ))
-  ) {
-    if (value === 'null' || value === '') {
-      // If the value is "null" or an empty string, transform it to JSON null
-      return { key, value: null };
-    }
-    else if (Array.isArray(value)) {
-      // Transform each element, keeping nulls as null, parsing integers where possible, otherwise as strings
-      const transformed = value.map((v: any) => {
-        if (v === null) {
-          return null;
-        }
-        if (v === 'null' || v === '') {
-          return null;
-        }
-        const parsedInt = parseInt(v, 10);
-        if (!isNaN(parsedInt)) {
-          return parsedInt;
-        }
-        return String(v);
-      });
-      return { key, value: transformed };
-    } else {
-      // Not an array, try to convert to integer
-      const parsedInt = parseInt(value, 10);
-      return { key, value: isNaN(parsedInt) ? String(value) : parsedInt };
-    }
-  }
-  return undefined;
+type KeyType = "copies" | "start" | "end";
+type ParsedValue = number | string | null;
+type Result = { key: KeyType; value: ParsedValue | ParsedValue[] };
+
+function isEmpty(v: unknown): boolean {
+  return v === null || v === "null" || v === "";
 }
 
-function normalizeValueKey(key: string | number, value: any): { key: string; value: any } | undefined {
-  if (typeof key === "string" && (/^start_/.test(key))) {
-    return { key: 'start', value };
+function parseSingle(v: unknown): ParsedValue {
+  if (isEmpty(v)) return null;
+  const s = String(v);
+  const n = parseInt(s, 10);
+  return !isNaN(n) ? n : s;
+}
+
+export function convertCopiesStartAndEndValue(
+  key: string | number,
+  value: unknown
+): Result | undefined {
+  if (typeof key !== "string") return;
+
+  // match either exact or prefix_
+  const m = key.match(/^(copies|start|end)(?:_|$)/);
+  if (!m) return;
+  const baseKey = m[1] as KeyType;
+
+  // normalize an entirely empty array or empty scalar → null
+  if (isEmpty(value) || (Array.isArray(value) && value.every(isEmpty))) {
+    return { key: baseKey, value: null };
   }
-  if (typeof key === "string" && (/^end_/.test(key))) {
-    return { key: 'end', value };
+
+  // handle arrays
+  if (Array.isArray(value)) {
+    return {
+      key: baseKey,
+      value: value.map(parseSingle),
+    };
   }
-  if (typeof key === "string" && (/^value_/.test(key))) {
-    return { key: 'value', value };
-  }
-  if (typeof key === "string" && (/^objectCondition_/.test(key))) {
-    return { key: 'objectCondition', value };
-  }
-  if (typeof key === "string" && (/^objectTumorType_/.test(key))) {
-    return { key: 'objectTumorType', value };
-  }
-  if (typeof key === "string" && (/^definingContext_/.test(key))) {
-    return { key: 'definingContext', value };
-  }
-  return undefined;
+
+  // single primitive
+  return {
+    key: baseKey,
+    value: parseSingle(value),
+  };
+}
+
+
+type NormalizedKey =
+  | "start"
+  | "end"
+  | "copies"
+  | "value"
+  | "objectCondition"
+  | "objectTumorType"
+  | "definingContext";
+
+const PREFIX_MAP: Record<string, NormalizedKey> = {
+  start: "start",
+  end: "end",
+  copies: "copies",
+  value: "value",
+  objectCondition: "objectCondition",
+  objectTumorType: "objectTumorType",
+  definingContext: "definingContext",
+};
+
+function normalizeValueKey(
+  key: string | number,
+  value: unknown
+): { key: NormalizedKey; value: unknown } | undefined {
+  if (typeof key !== "string") return undefined;
+
+  const underscore = key.indexOf("_");
+  if (underscore === -1) return undefined; // no prefix_
+
+  const prefix = key.slice(0, underscore);
+  const normalized = PREFIX_MAP[prefix];
+  if (!normalized) return undefined;
+
+  return { key: normalized, value };
 }
 
 function normalizeAndKeyById(inputObject: JsonObjectWithId): Record<string, JsonObjectWithId> {
