@@ -10,6 +10,10 @@
 function formatNearestMonth(date: Date | string): string {
   const inputDate = typeof date === 'string' ? new Date(date) : date;
 
+  if (isNaN(inputDate.getTime())) {
+    throw new Error('Invalid date provided');
+  }
+
   // Get the year, month, and day from the date
   let year = inputDate.getFullYear();
   let month = inputDate.getMonth(); // getMonth() returns month from 0-11
@@ -30,9 +34,6 @@ function formatNearestMonth(date: Date | string): string {
   return formatMonthYear(newDate);
 }
 
-// // Example usage:
-// console.log(formatNearestMonth(new Date())); // Use current date
-// console.log(formatNearestMonth("2024-04-16")); // Use a string date input
 
 function formatMonthYear(date: Date): string {
   // Format the date to "MMM 'YY"
@@ -50,50 +51,43 @@ function formatMonthYear(date: Date): string {
  * @param endDate - The end date of the range.
  * @returns The month in the format "MM/YYYY" that has more days in the range, or the prior month if the days are equal.
  */
+function calculateDaysInRange(startDate: Date, endDate: Date): number {
+  return (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24) + 1;
+}
+
+function getMonthBoundaries(date: Date) {
+  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+  const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+  return { firstDay, lastDay };
+}
+
 function determineMonthBasedOnRange(startDate: Date, endDate: Date): { yymm: string; monyy: string } {
-  // Ensure the start date is before the end date
   if (startDate > endDate) {
     [startDate, endDate] = [endDate, startDate];
   }
 
-  // Set the prior month date from the end by subtracting one month from the end date
-  let firstDayOfPriorMonth = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 1);
-  const firstDayOfLastMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
-  const lastDayOfLastMonth = endDate;
+  const priorMonth = new Date(endDate.getFullYear(), endDate.getMonth() - 1, 1);
+  const currentMonth = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
 
-  // Check if the last day of the prior month is greater than the start date
-  const lastDayOfPriorMonth = new Date(firstDayOfPriorMonth.getFullYear(), firstDayOfPriorMonth.getMonth() + 1, 0);
-  firstDayOfPriorMonth = firstDayOfPriorMonth > startDate ? firstDayOfPriorMonth : startDate;
+  const priorBoundaries = getMonthBoundaries(priorMonth);
+  const adjustedPriorStart = priorBoundaries.firstDay > startDate ? priorBoundaries.firstDay : startDate;
 
-  // Calculate days in prior and current month within the range
-  const daysInPriorMonth = (lastDayOfPriorMonth.getTime() - firstDayOfPriorMonth.getTime()) / (1000 * 60 * 60 * 24) + 1;
-  const daysInLastMonth = (lastDayOfLastMonth.getTime() - firstDayOfLastMonth.getTime()) / (1000 * 60 * 60 * 24) + 1;
+  const daysInPriorMonth = calculateDaysInRange(adjustedPriorStart, priorBoundaries.lastDay);
+  const daysInCurrentMonth = calculateDaysInRange(currentMonth, endDate);
 
-  // Check which month has more days in the range or use the prior month if the days are equal
-  let mon_yy = ""
-  let yy = ""
-  let mm = ""
-  if (daysInLastMonth >= daysInPriorMonth) {
-    mm = (lastDayOfLastMonth.getMonth() + 1).toString().padStart(2, '0');
-    yy = lastDayOfLastMonth.getFullYear().toString().substring(2);
-    mon_yy = formatMonthYear(lastDayOfLastMonth);
-  } else {
-    mm = (firstDayOfPriorMonth.getMonth() + 1).toString().padStart(2, '0');
-    yy = firstDayOfPriorMonth.getFullYear().toString().substring(2);
-    mon_yy = formatMonthYear(firstDayOfPriorMonth);
-  }
-  return { yymm: `${yy}-${mm}`, monyy: mon_yy };
+  const selectedDate = daysInCurrentMonth >= daysInPriorMonth ? endDate : adjustedPriorStart;
+  const monthStr = (selectedDate.getMonth() + 1).toString().padStart(2, '0');
+  const yearStr = selectedDate.getFullYear().toString().substring(2);
+  const monthYear = formatMonthYear(selectedDate);
+
+  return { yymm: `${yearStr}-${monthStr}`, monyy: monthYear };
 }
 
-// // Example usage
-// const startDate = new Date("2023-03-15");
-// const endDate = new Date("2023-04-10");
-// console.log(determineMonthBasedOnRange(startDate, endDate)); // Output will depend on the calculated days
 
 // json transforms
 interface JsonObjectWithId {
   id: string;
-  [key: string]: any;  // Allow any other key-value pairs
+  [key: string]: unknown;
 }
 
 /**
@@ -103,9 +97,12 @@ interface JsonObjectWithId {
  * @throws {Error} If the input object does not have an 'id' property.
  */
 function keyObjectById(inputObject: JsonObjectWithId): Record<string, JsonObjectWithId> {
-  // Check if the input object has the property 'id'
-  if (!inputObject || !inputObject.hasOwnProperty('id')) {
-      throw new Error('Input object must have an "id" property.');
+  if (!inputObject || !inputObject.hasOwnProperty('id') || typeof inputObject.id !== 'string') {
+    throw new Error('Input object must have a valid string "id" property.');
+  }
+
+  if (inputObject.id.trim() === '') {
+    throw new Error('Input object "id" property cannot be empty.');
   }
 
   // Extract the final key value if a colon is present in the 'id' property
@@ -121,17 +118,17 @@ function keyObjectById(inputObject: JsonObjectWithId): Record<string, JsonObject
   return transformedObject;
 }
 
-interface AnyObject {
-  [key: string]: any;
+interface JsonObject {
+  [key: string]: unknown;
 }
 
-type TransformFunction = (key: string | number, value: any) => { key: string; value: any } | undefined;
+type TransformFunction = (key: string | number, value: unknown) => { key: string; value: unknown } | undefined;
 
 // Helpers
-const isObject = (x: any): x is AnyObject =>
+const isObject = (x: unknown): x is JsonObject =>
   typeof x === "object" && x !== null && !Array.isArray(x);
 
-const isEmptyArray = (x: any): x is any[] =>
+const isEmptyArray = (x: unknown): x is unknown[] =>
   Array.isArray(x) && x.length === 0;
 
 /**
@@ -141,7 +138,7 @@ const isEmptyArray = (x: any): x is any[] =>
  *  - its current value is an empty array
  */
 function canWriteReplacement(
-  obj: AnyObject,
+  obj: JsonObject,
   newKey: string,
   oldKey: string
 ): boolean {
@@ -150,8 +147,8 @@ function canWriteReplacement(
   return existing === null || isEmptyArray(existing);
 }
 
-export function recurseJson(
-  node: AnyObject | any[],
+function recurseJson(
+  node: JsonObject | unknown[],
   fns: TransformFunction[]
 ): void {
   if (Array.isArray(node)) {
@@ -203,9 +200,9 @@ export function recurseJson(
   }
 }
 
-type KeyType = "copies" | "start" | "end";
+type LocalKeyType = "copies" | "start" | "end";
 type ParsedValue = number | string | null;
-type Result = { key: KeyType; value: ParsedValue | ParsedValue[] };
+type Result = { key: LocalKeyType; value: ParsedValue | ParsedValue[] };
 
 function isEmpty(v: unknown): boolean {
   return v === null || v === "null" || v === "";
@@ -218,37 +215,30 @@ function parseSingle(v: unknown): ParsedValue {
   return !isNaN(n) ? n : s;
 }
 
+const VALID_KEYS = new Set(["copies", "start", "end"]);
+
 function convertCopiesStartAndEndValue(
   key: string | number,
   value: unknown
 ): Result | undefined {
   if (typeof key !== "string") return;
 
-  // match either exact or prefix_
-  const m = key.match(/^(copies|start|end)(?:_|$)/);
-  if (!m) return;
-  const baseKey = m[1] as KeyType;
+  const match = key.match(/^(copies|start|end)(?:_|$)/);
+  if (!match) return;
 
-  // normalize an entirely empty array or empty scalar → null
+  const baseKey = match[1] as LocalKeyType;
+  if (!VALID_KEYS.has(baseKey)) return;
+
   if (isEmpty(value) || (Array.isArray(value) && value.every(isEmpty))) {
     return { key: baseKey, value: null };
   }
 
-  // handle arrays
   if (Array.isArray(value)) {
-    return {
-      key: baseKey,
-      value: value.map(parseSingle),
-    };
+    return { key: baseKey, value: value.map(parseSingle) };
   }
 
-  // single primitive
-  return {
-    key: baseKey,
-    value: parseSingle(value),
-  };
+  return { key: baseKey, value: parseSingle(value) };
 }
-
 
 type NormalizedKey =
   | "start"
@@ -290,10 +280,6 @@ function normalizeAndKeyById(inputObject: JsonObjectWithId): Record<string, Json
   return keyObjectById(inputObject);
 }
 
-// Attach to global object explicitly if necessary (e.g., for Node.js)
-if (typeof global !== 'undefined') {
-  (global as any).formatNearestMonth = formatNearestMonth;
-}
 
 type SigType = {
   count: number;
@@ -312,45 +298,35 @@ type SigType = {
  * - If the total count of all types is zero, the function returns an array with zero counts and percentages.
  * - Percentages are rounded to three decimal places.
  */
-function createSigType(nosig_count: number, unc_count: number, sig_count: number): SigType[] {
+function calculatePercentage(count: number, total: number): number {
+  return Math.round((count / total) * 1000) / 1000;
+}
 
-  // Convert inputs to numbers (integers) to avoid concatenation when used in SQL function
-  nosig_count = Number(nosig_count);
-  unc_count = Number(unc_count);
-  sig_count = Number(sig_count);
+function createSigType(nosigCount: number, uncCount: number, sigCount: number): SigType[] {
+  const counts = [Number(nosigCount), Number(uncCount), Number(sigCount)];
+  const total = counts.reduce((sum, count) => sum + count, 0);
 
-  // Check if the total count is zero to avoid division by zero
-  if ((nosig_count + unc_count + sig_count) === 0) {
-    return [
-      { count: 0, percent: 0 },
-      { count: 0, percent: 0 },
-      { count: 0, percent: 0 }
-    ];
+  if (total === 0) {
+    return counts.map(() => ({ count: 0, percent: 0 }));
   }
 
-  // Calculate the total count
-  const total = nosig_count + unc_count + sig_count;
-
-  // Calculate percentages and return an array of SigType objects
-  // The returned array ORDINAL positions must be: 0 = nosig, 1 = unc, 2 = sig
-  return [
-    { count: nosig_count, percent: Math.round((nosig_count / total) * 1000) / 1000 },
-    { count: unc_count, percent: Math.round((unc_count / total) * 1000) / 1000 },
-    { count: sig_count, percent: Math.round((sig_count / total) * 1000) / 1000 }
-  ];
+  return counts.map(count => ({
+    count,
+    percent: calculatePercentage(count, total)
+  }));
 }
 
 /**
  * Normalize HP ID to the form HP:[\d]{7}, or remove or add leading zeros if gt or lt 7 digits, respectively.
  * Handles case-insensitive HP: prefixes like hp:hp:1234 and malformed entries.
  */
-function normalizeHpId(hp_id: string | null | undefined): string | null | undefined {
-  if (hp_id === null || hp_id === undefined) return hp_id;
+function normalizeHpId(hpId: string | null | undefined): string | null | undefined {
+  if (hpId === null || hpId === undefined) return hpId;
 
-  const original = hp_id;
+  const original = hpId;
 
   // Collapse multiple HP: or HP prefixes like HP:HP0123 → HP0123
-  const collapsed = hp_id.replace(/^(hp:)+/i, '')  // collapse HP:HP:
+  const collapsed = hpId.replace(/^(hp:)+/i, '')  // collapse HP:HP:
                         .replace(/.*?(hp)(\d+)$/i, '$2'); // if HP123 pattern exists, keep the digits only
 
   // Only proceed if it’s all digits now
