@@ -121,52 +121,6 @@ function keyObjectById(inputObject: JsonObjectWithId): Record<string, JsonObject
   return transformedObject;
 }
 
-// interface AnyObject {
-//   [key: string]: any;
-// }
-
-// type TransformFunction = (key: string | number, value: any) => AnyObject | undefined;
-
-// function recurseJson(obj: AnyObject, fns: TransformFunction[]): void {
-//   // Check if the input is an object or array
-//   if (typeof obj === 'object' && obj !== null) {
-//       // If it's an array, iterate over its elements
-//       if (Array.isArray(obj)) {
-//           for (let i = 0; i < obj.length; i++) {
-//               let value = obj[i];
-//               // Execute each function on the value
-//               for (const fn of fns) {
-//                   const replacement = fn(i, value); // Call the function with index and value
-//                   if (replacement !== undefined) {
-//                       value = replacement; // Replace the value with the returned value if it's not undefined
-//                   }
-//               }
-//               obj[i] = value; // Update the array element
-//               // Recursively call the function for each element
-//               recurseJson(obj[i], fns);
-//           }
-//       } else {
-//           // If it's an object, iterate over its keys
-//           for (const key in obj) {
-//               if (obj.hasOwnProperty(key)) {
-//                   let value = obj[key];
-//                   // Execute each function on the value
-//                   for (const fn of fns) {
-//                       const replacement = fn(key, value); // Call the function with key and value
-//                       if (replacement !== undefined) {
-//                           delete obj[key]; // Remove the original key-value pair
-//                           obj[replacement.key] = replacement.value; // Add the new key-value pair
-//                           value = replacement.value; // Update the value
-//                       }
-//                   }
-//                   // Recursively call the function for nested objects and arrays
-//                   recurseJson(value, fns);
-//               }
-//           }
-//       }
-//   }
-// }
-
 interface AnyObject {
   [key: string]: any;
 }
@@ -264,7 +218,7 @@ function parseSingle(v: unknown): ParsedValue {
   return !isNaN(n) ? n : s;
 }
 
-export function convertCopiesStartAndEndValue(
+function convertCopiesStartAndEndValue(
   key: string | number,
   value: unknown
 ): Result | undefined {
