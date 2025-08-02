@@ -16,9 +16,17 @@ const convertCopiesStartAndEndValue = bqUtils.__get__('convertCopiesStartAndEndV
 const normalizeValueKey = bqUtils.__get__('normalizeValueKey');
 
 test('formatNearestMonth should format dates correctly', () => {
+  // April has 30 days, midpoint = ceil(30/2) = 15. Day 16 > 15, so rounds up
   expect(formatNearestMonth(new Date('2024-04-16'))).toBe("May '24");
+  // April: Day 14 <= 15, so stays in April
   expect(formatNearestMonth(new Date('2024-04-14'))).toBe("Apr '24");
-  expect(formatNearestMonth('2024-01-15')).toBe("Jan '24");
+
+  // January has 31 days, midpoint = ceil(31/2) = 16
+  expect(formatNearestMonth('2024-01-15')).toBe("Jan '24"); // Day 15 <= 16, stays in January
+  expect(formatNearestMonth('2024-01-16')).toBe("Jan '24"); // Day 16 <= 16, stays in January
+  expect(formatNearestMonth('2024-01-17')).toBe("Feb '24"); // Day 17 > 16, rounds up to February
+
+  // December has 31 days, midpoint = ceil(31/2) = 16. Day 20 > 16, so rounds up to next year
   expect(formatNearestMonth('2024-12-20')).toBe("Jan '25");
 
   // Test error handling

@@ -8,7 +8,27 @@
  * @returns The formatted date in the format "Month Year".
  */
 function formatNearestMonth(date: Date | string): string {
-  const inputDate = typeof date === 'string' ? new Date(date) : date;
+  let inputDate: Date;
+
+  if (typeof date === 'string') {
+    // Parse string dates manually to avoid timezone issues
+    const dateMatch = date.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (dateMatch) {
+      const year = parseInt(dateMatch[1], 10);
+      const month = parseInt(dateMatch[2], 10) - 1; // Month is 0-indexed
+      const day = parseInt(dateMatch[3], 10);
+      inputDate = new Date(year, month, day);
+    } else {
+      inputDate = new Date(date);
+    }
+  } else {
+    // For Date objects, extract UTC components and recreate as local date
+    // This ensures consistent behavior regardless of how the Date was originally created
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+    inputDate = new Date(year, month, day);
+  }
 
   if (isNaN(inputDate.getTime())) {
     throw new Error('Invalid date provided');
@@ -19,8 +39,12 @@ function formatNearestMonth(date: Date | string): string {
   let month = inputDate.getMonth(); // getMonth() returns month from 0-11
   const day = inputDate.getDate();
 
-  // Decide whether to round up or down based on the day of the month
-  if (day >= 15) {
+  // Calculate the number of days in the current month
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const midpoint = Math.ceil(daysInMonth / 2);
+
+  // Decide whether to round up or down based on which half of the month the day falls in
+  if (day > midpoint) {
     month += 1; // Move to the next month
     if (month === 12) { // Check for year transition
       month = 0;
