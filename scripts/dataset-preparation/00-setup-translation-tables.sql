@@ -76,10 +76,10 @@ VALUES
     ('GermlineClassification',    'oth',     'other',                             0, 'oth',     150, 150, 'oth',  150, 150, 'none',      'cg000100', 'not specified', 'cg000021', null),
     ('GermlineClassification',    'protect', 'protective',                        0, 'protect', 160, 160, 'oth',  160, 160, 'none',      'cg000100', 'not specified', 'cg000022', null),
     -- SomaticImpact
-    ('SomaticClinicalImpact',    't1', 'Tier I - Strong',                        2, 'somatic', 10, 10, 'somatic', 10, 10,  'supports',  'cg000100', 'definitive',    'cg000023', null),
-    ('SomaticClinicalImpact',    't2', 'Tier II - Potential',                    2, 'somatic', 11, 11, 'somatic', 11, 11,  'supports',  'cg000102', 'likely',        'cg000024', null),
-    ('SomaticClinicalImpact',    't3', 'Tier III - Unknown',                     1, 'somatic', 20, 20, 'somatic', 20, 20,  'none',      'cg000103', 'inconclusive',  'cg000025', null),
-    ('SomaticClinicalImpact',    't4', 'Tier IV - Benign/Likely benign',         0, 'somatic', 32, 32, 'somatic', 32, 32,  'refutes',   'cg000102', 'likely',        'cg000026', null);
+    ('SomaticClinicalImpact',    't1', 'Tier I (Strong)',                        2, 'somatic', 10, 10, 'somatic', 10, 10,  'supports',  'cg000100', 'definitive',    'cg000023', null),
+    ('SomaticClinicalImpact',    't2', 'Tier II (Potential)',                    2, 'somatic', 11, 11, 'somatic', 11, 11,  'supports',  'cg000102', 'likely',        'cg000024', null),
+    ('SomaticClinicalImpact',    't3', 'Tier III Unknown',                     1, 'somatic', 20, 20, 'somatic', 20, 20,  'none',      'cg000103', 'inconclusive',  'cg000025', null),
+    ('SomaticClinicalImpact',    't4', 'Tier IV (Benign)/Likely benign',         0, 'somatic', 32, 32, 'somatic', 32, 32,  'refutes',   'cg000102', 'likely',        'cg000026', null);
 
 -- drop the non-GERMLINE rows from the clinsig_types table (on stage only)
 BEGIN
@@ -131,15 +131,15 @@ VALUES
     ('dr',   'DrugResponse', 11),
     ('oth',  'Other', 12),
     ('somatic', 'SomaticClinicalImpact', 20),
-    ('onco', 'Oncogenicity', 30);
-
-    -- ('rf',   'RiskFactor',30),
-    -- ('np',   'NotProvided',60),
+    ('onco', 'Oncogenicity', 30)
+    -- outliers
+    ('rf',   'RiskFactor',100),
+    ('np',   'NotProvided',110),
     -- put affects, associated, confresSensitivity and protect in other category
-    -- ('aff',  'Affects',20),
-    -- ('assoc','Associated',30),
-    -- ('cs',   'ConfersSensitivity',40),
-    -- ('protect','Protective',80),
+    ('aff',  'Affects',120),
+    ('assoc','Associated',130),
+    ('cs',   'ConfersSensitivity',140),
+    ('protect','Protective',180);
 
 
 CREATE OR REPLACE TABLE `clinvar_ingest.scv_clinsig_map` (
