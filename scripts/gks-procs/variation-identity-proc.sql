@@ -1,5 +1,5 @@
 
-CREATE OR REPLACE PROCEDURE `clinvar_ingest.variation_identity_proc`(on_date DATE)
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.variation_identity`(on_date DATE)
 BEGIN
 
   FOR rec IN (select s.schema_name FROM clinvar_ingest.schema_on(on_date) as s)
@@ -12,25 +12,37 @@ BEGIN
       CREATE or REPLACE TABLE `%s.temp_variation`
       AS
       WITH cn AS (
-        select
+        SELECT
           x.variation_id,
           x.variation_name,
-          string_agg(distinct a.attribute.type) as copy_type,
-          string_agg(distinct a.attribute.value) as copy_value
-        from (
-          select
-            v.id as variation_id,
-            v.name as variation_name,
-            cav.clinical_assertion_id as scv_id,
-            `clinvar_ingest.parseAttributeSet`(cav.content) as attribs
-          from `%s.clinical_assertion_variation` cav
-          join `%s.clinical_assertion` ca on ca.id = cav.clinical_assertion_id
-          join `%s.variation` v on v.id = ca.variation_id
-          where cav.content like '%%CopyNumber%%'
+          STRING_AGG(DISTINCT a.attribute.type) AS copy_type,
+          STRING_AGG(DISTINCT a.attribute.value) AS copy_value
+        FROM (
+          SELECT
+            v.id AS variation_id,
+            v.name AS variation_name,
+            cav.clinical_assertion_id AS scv_id,
+            `clinvar_ingest.parseAttributeSet`(cav.content) AS attribs
+          FROM `%s.clinical_assertion_variation` cav
+          JOIN `%s.clinical_assertion` ca
+          ON
+            ca.id = cav.clinical_assertion_id
+            AND
+            -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+            -- the segregation of functional data statements from GermlineClassification scvs.
+            ca.statement_type IS NOT NULL
+          JOIN `%s.variation` v
+          ON
+            v.id = ca.variation_id
+          WHERE
+            cav.content LIKE '%%CopyNumber%%'
         ) x
-        cross join unnest(x.attribs) as a
-        where a.attribute.type in ('AbsoluteCopyNumber','CopyNumberTuple')
-        group by x.variation_id, x.variation_name
+        CROSS JOIN UNNEST(x.attribs) AS a
+        WHERE
+          a.attribute.type IN ('AbsoluteCopyNumber','CopyNumberTuple')
+        GROUP BY
+          x.variation_id,
+          x.variation_name
       ),
       var AS (
         SELECT
@@ -38,13 +50,28 @@ BEGIN
           v.name,
           v.subclass_type,
           v.variation_type,
-          JSON_EXTRACT_SCALAR(v.content, "$.Location.CytogeneticLocation['$']") as cytogenetic,
-          JSON_EXTRACT_SCALAR(v.content, "$['CanonicalSPDI']['$']") as canonical_spdi,
-          CAST(IF(cn.copy_type = 'AbsoluteCopyNumber', cn.copy_value, null) AS INT64) as absolute_copies,
-          IF(cn.copy_type = 'CopyNumberTuple', ARRAY(SELECT CAST(elem AS INT64) FROM UNNEST(SPLIT(cn.copy_value)) as elem), null) as range_copies,
+          JSON_EXTRACT_SCALAR(v.content, "$.Location.CytogeneticLocation['$']") AS cytogenetic,
+          JSON_EXTRACT_SCALAR(v.content, "$['CanonicalSPDI']['$']") AS canonical_spdi,
+          CAST(
+            IF(
+              cn.copy_type = 'AbsoluteCopyNumber',
+              cn.copy_value,
+              null
+            )
+            AS INT64
+          ) AS absolute_copies,
+          IF(
+            cn.copy_type = 'CopyNumberTuple',
+            ARRAY(
+              SELECT
+                CAST(elem AS INT64)
+                FROM UNNEST(SPLIT(cn.copy_value)) AS elem
+            ),
+            null
+          ) AS range_copies,
           v.content
         FROM `%s.variation` v
-        LEFT JOIN cn on cn.variation_id = v.id
+        LEFT JOIN cn ON cn.variation_id = v.id
         WHERE
           -- bad variant list DO NOT try to deal with these right now, these have been submitted to clinvar for correction
           v.id not in (
@@ -152,7 +179,9 @@ BEGIN
         -- use additional assembly string match since mito accessions are duplicated across assemblies
         -- without this it will produce a cartesian product of rows for all mito variants.
         li.assembly = l.assembly
-    """, rec.schema_name, rec.schema_name);
+    """,
+    rec.schema_name,
+    rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.variation_hgvs` AS
@@ -306,7 +335,10 @@ BEGIN
         h_top.varlen_precedence,
         h_top.start_pos,
         h_top.end_pos
-    """, rec.schema_name, rec.schema_name, rec.schema_name);
+    """,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       UPDATE `%s.temp_variation` tv
@@ -353,7 +385,11 @@ BEGIN
       WHERE
         var.variation_id = tv.variation_id and
         tv.vrs_class is null
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.variation_xref` AS
@@ -362,7 +398,9 @@ BEGIN
         xref.*
       FROM `%s.temp_variation` v
       CROSS JOIN UNNEST(`clinvar_ingest.parseXRefs`(JSON_EXTRACT(v.content, r'$.XRefList'))) as xref
-    """, rec.schema_name, rec.schema_name);
+    """,
+    rec.schema_name,
+    rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.variation_spdi` AS
@@ -571,7 +609,20 @@ BEGIN
       where vs.rn = 1
       -- 27,578,636 (2024-03-31)
       -- 27,576,509 (2024-04-07)
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name);
 
     EXECUTE IMMEDIATE FORMAT("""
       CREATE OR REPLACE TABLE `%s.variation_identity` AS
@@ -634,7 +685,11 @@ BEGIN
           v.variation_id = tv.variation_id
         LEFT JOIN m
         ON tv.variation_id = m.variation_id
-    """, rec.schema_name, rec.schema_name, rec.schema_name, rec.schema_name);
+    """,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name,
+    rec.schema_name);
 
   END FOR;
 END;

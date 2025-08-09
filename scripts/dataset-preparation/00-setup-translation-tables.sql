@@ -1,12 +1,3 @@
--- CREATE OR REPLACE TABLE `clinvar_ingest.cvc_context_types` (code STRING, label STRING, display_order INT64);
-
--- INSERT INTO `clinvar_ingest.cvc_context_types` (code, label, display_order)
--- VALUES
---     ('gd','Germline Disease', 10),
---     ('sc','Somatic Cancer',   20),
---     ('pg','Pharmacogenomic',  30),
---     ('ot','Other',            40);
-
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types` (
     statement_type STRING,
     code STRING,

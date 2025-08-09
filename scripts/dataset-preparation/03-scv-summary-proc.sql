@@ -4,17 +4,6 @@ CREATE OR REPLACE PROCEDURE `clinvar_ingest.scv_summary`(
 BEGIN
 
   DECLARE scv_summary_output_sql STRING;
-  DECLARE project_id STRING;
-
-  SET project_id = (
-    SELECT
-      catalog_name as paroject_id
-    FROM `INFORMATION_SCHEMA.SCHEMATA`
-    WHERE
-      schema_name = 'clinvar_ingest'
-  );
-
-  -- NOTE: This will no longer work on clingen-stage based on recent changes to support clingen-dev.
 
   EXECUTE IMMEDIATE FORMAT("""
     CREATE OR REPLACE TABLE `%s.scv_summary`
@@ -45,9 +34,13 @@ BEGIN
       UNNEST(`clinvar_ingest.parseAttributeSet`(ca.content)) as a,
       UNNEST(a.citation) as c
       WHERE
-        a.attribute.type = "AssertionMethod"
-        and
-        c.url is not null
+        a.attribute.type = 'AssertionMethod'
+        AND
+        c.url IS NOT NULL
+        AND
+        -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+        -- the segregation of functional data statements from GermlineClassification scvs.
+        ca.statement_type IS NOT NULL
       GROUP BY
         ca.id,
         a.attribute.type,
@@ -68,6 +61,10 @@ BEGIN
       LEFT JOIN obs_method om
       ON
         om.id = ca.id
+      WHERE
+        -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+        -- the segregation of functional data statements from GermlineClassification scvs.
+        ca.statement_type IS NOT NULL
       GROUP BY
         ca.id
     ),
@@ -80,6 +77,10 @@ BEGIN
       LEFT JOIN UNNEST(ca.interpretation_comments) as c
       WHERE
         ARRAY_LENGTH(ca.interpretation_comments) > 0
+        AND
+        -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+        -- the segregation of functional data statements from GermlineClassification scvs.
+        ca.statement_type IS NOT NULL
       GROUP BY
         id
     ),
@@ -116,6 +117,10 @@ BEGIN
         cvs.scv = TRUE
         AND
         ca.release_date between cvs.start_release_date and cvs.end_release_date
+      WHERE
+        -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+        -- the segregation of functional data statements from GermlineClassification scvs.
+        ca.statement_type IS NOT NULL
     )
     SELECT
       ca.release_date,
@@ -180,5 +185,21 @@ BEGIN
     LEFT JOIN `%s.rcv_accession` rcv
     ON
       rcv.id = ca.rcv_accession_id
-  """, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name, schema_name);
+    WHERE
+      -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+      -- the segregation of functional data statements from GermlineClassification scvs.
+      ca.statement_type IS NOT NULL
+  """,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name,
+  schema_name);
+
 END;

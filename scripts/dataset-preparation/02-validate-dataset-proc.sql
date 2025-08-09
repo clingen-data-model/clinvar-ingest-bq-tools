@@ -26,7 +26,8 @@ BEGIN
       map.scv_term = LOWER(IFNULL(ca.interpretation_description,'not provided'))
     WHERE
       map.scv_term IS NULL
-  """, schema_name) INTO scv_classification_terms;
+  """,
+  schema_name) INTO scv_classification_terms;
 
   IF scv_classification_terms IS NOT NULL AND ARRAY_LENGTH(scv_classification_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(
@@ -54,7 +55,12 @@ BEGIN
       cst.statement_type = ca.statement_type
     WHERE
       cst.code IS NULL
-  """, schema_name) INTO scv_classification_statement_combo_terms;
+      AND
+      -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+      -- the segregation of functional data statements from GermlineClassification scvs.
+      ca.statement_type IS NOT NULL
+  """,
+  schema_name) INTO scv_classification_statement_combo_terms;
 
   IF scv_classification_statement_combo_terms IS NOT NULL AND ARRAY_LENGTH(scv_classification_statement_combo_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(
@@ -76,12 +82,17 @@ BEGIN
     ON
       cs.label = LOWER(ca.review_status)
       AND
-      ca.release_date between cs.start_release_date and cs.end_release_date
+      ca.release_date BETWEEN cs.start_release_date AND cs.end_release_date
       AND
       cs.scv = TRUE
     WHERE
       cs.label IS NULL
-  """, schema_name) INTO scv_review_status_terms;
+      AND
+      -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
+      -- the segregation of functional data statements from GermlineClassification scvs.
+      ca.statement_type IS NOT NULL
+  """,
+  schema_name) INTO scv_review_status_terms;
 
   IF scv_review_status_terms IS NOT NULL AND ARRAY_LENGTH(scv_review_status_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(
@@ -102,10 +113,11 @@ BEGIN
     ON
       cs.label = LOWER(rcvc.review_status)
       AND
-      rcvc.release_date between cs.start_release_date and cs.end_release_date
+      rcvc.release_date BETWEEN cs.start_release_date AND cs.end_release_date
     WHERE
       cs.label IS NULL
-  """, schema_name) INTO rcv_classification_review_status_terms;
+  """,
+  schema_name) INTO rcv_classification_review_status_terms;
 
   IF rcv_classification_review_status_terms IS NOT NULL AND ARRAY_LENGTH(rcv_classification_review_status_terms) > 0 THEN
     SET all_validation_errors = ARRAY_CONCAT(
@@ -160,7 +172,9 @@ BEGIN
         ra.id = rm.rcv_accession
       WHERE
         ra.trait_set_id != rm.trait_set_id
-    """, schema_name, schema_name) INTO trait_set_id_mismatch;
+    """,
+    schema_name,
+    schema_name) INTO trait_set_id_mismatch;
 
     IF trait_set_id_mismatch > 0 THEN
       SET all_validation_errors = ARRAY_CONCAT(
@@ -178,7 +192,9 @@ BEGIN
     STRUCT('clinical_assertion', 'variation_id'),
     STRUCT('clinical_assertion', 'variation_archive_id'),
     STRUCT('clinical_assertion', 'review_status'),
-    STRUCT('clinical_assertion', 'statement_type'),
+    -- null statement_type records which were introduced in the 2025-08-08 release due to
+    -- the segregation of functional data statements from GermlineClassification scvs.
+    -- STRUCT('clinical_assertion', 'statement_type'),
     STRUCT('clinical_assertion', 'release_date'),
     STRUCT('rcv_accession', 'id'),
     STRUCT('rcv_accession', 'version'),
