@@ -299,8 +299,14 @@ function normalizeValueKey(
   return { key: normalized, value };
 }
 
-function normalizeAndKeyById(inputObject: JsonObjectWithId): Record<string, JsonObjectWithId> {
+function normalizeAndKeyById(
+  inputObject: JsonObjectWithId,
+  skipKeyById: boolean = false
+): Record<string, JsonObjectWithId> | JsonObjectWithId {
   recurseJson(inputObject, [convertCopiesStartAndEndValue, normalizeValueKey]);
+  if (skipKeyById) {
+    return inputObject;
+  }
   return keyObjectById(inputObject);
 }
 

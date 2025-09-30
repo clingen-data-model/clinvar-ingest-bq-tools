@@ -117,6 +117,34 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
   });
 });
 
+test('normalizeAndKeyById should normalize and key input object correctly', () => {
+  const inputObject = {
+    id: 'prefix:123',
+    copies_range: ['1','5'],
+    start: '10',
+    end: null,
+    start_range: [],
+    end_range: ['100','200'],
+    value_test: 'value1',
+    objectCondition_complex: 'condition1',
+    definingContext_location:
+      {
+        locationId: 'prefix:123',
+        locationName: 'test'
+      }
+  };
+  const result = normalizeAndKeyById(inputObject, true);
+  expect(result).toEqual({
+    id: 'prefix:123',
+    copies: [1, 5],
+    start: 10,
+    end: [100, 200],
+    value: 'value1',
+    objectCondition: 'condition1',
+    definingContext: {  locationId: 'prefix:123', locationName: 'test' }
+  });
+});
+
 test('createSigType should return correct counts and percentages', () => {
     expect(createSigType(0, 0, 0)).toEqual([
         { count: 0, percent: 0 },
