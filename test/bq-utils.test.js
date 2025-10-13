@@ -66,12 +66,8 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     start_range: [null, '200'],
     end_range: ['400', null],
     value_test: 'value1',
-    objectCondition_complex: 'condition1',
-    definingContext_location:
-      {
-        locationId: 'prefix:123',
-        locationName: 'test'
-      }
+    objectTherapy_complex: 'therapy1',
+    conditionQualifier_simple: 'condition1'
   };
   const result = normalizeAndKeyById(inputObject);
   expect(result).toEqual({
@@ -81,8 +77,8 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
       start: [null, 200],
       end: [400, null],
       value: 'value1',
-      objectCondition: 'condition1',
-      definingContext: {  locationId: 'prefix:123', locationName: 'test' }
+      objectTherapy: 'therapy1',
+      conditionQualifier: 'condition1'
     }
   });
 });
@@ -97,11 +93,12 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     end_range: ['100','200'],
     value_test: 'value1',
     objectCondition_complex: 'condition1',
-    definingContext_location:
+    constraints: [
       {
-        locationId: 'prefix:123',
-        locationName: 'test'
+        type: 'DefiningAlleleConstraint',
+        allele: 'allele:1'
       }
+    ]
   };
   const result = normalizeAndKeyById(inputObject);
   expect(result).toEqual({
@@ -112,7 +109,7 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
       end: [100, 200],
       value: 'value1',
       objectCondition: 'condition1',
-      definingContext: {  locationId: 'prefix:123', locationName: 'test' }
+      constraints: [{type: 'DefiningAlleleConstraint',allele: 'allele:1'}]
     }
   });
 });
@@ -126,12 +123,7 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     start_range: [],
     end_range: ['100','200'],
     value_test: 'value1',
-    objectCondition_complex: 'condition1',
-    definingContext_location:
-      {
-        locationId: 'prefix:123',
-        locationName: 'test'
-      }
+    objectCondition_complex: 'condition1'
   };
   const result = normalizeAndKeyById(inputObject, true);
   expect(result).toEqual({
@@ -140,8 +132,7 @@ test('normalizeAndKeyById should normalize and key input object correctly', () =
     start: 10,
     end: [100, 200],
     value: 'value1',
-    objectCondition: 'condition1',
-    definingContext: {  locationId: 'prefix:123', locationName: 'test' }
+    objectCondition: 'condition1'
   });
 });
 
@@ -264,7 +255,7 @@ test('convertCopiesStartAndEndValue should handle various inputs', () => {
 test('normalizeValueKey should normalize keys correctly', () => {
   expect(normalizeValueKey('value_test', 'test')).toEqual({ key: 'value', value: 'test' });
   expect(normalizeValueKey('objectCondition_complex', 'condition')).toEqual({ key: 'objectCondition', value: 'condition' });
-  expect(normalizeValueKey('definingContext_location', 'context')).toEqual({ key: 'definingContext', value: 'context' });
+  expect(normalizeValueKey('copies_int', 'context')).toEqual({ key: 'copies', value: 'context' });
 
   // Test invalid keys
   expect(normalizeValueKey('invalid_key', 'test')).toBeUndefined();
