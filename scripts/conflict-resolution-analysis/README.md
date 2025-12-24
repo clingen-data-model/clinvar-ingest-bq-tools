@@ -115,8 +115,6 @@ The goal is to answer questions like:
 | `sheets_change_reasons` | Primary reason for each change, for reason comparison charts |
 | `sheets_multi_reason_detail` | All contributing reasons (not just primary), for deep-dive analysis |
 | `sheets_monthly_overview` | Single row per month, pre-aggregated for simple dashboards |
-| `sheets_change_status_wide` | Change status as columns, for stacked bar charts with slicers |
-| `sheets_change_reasons_wide` | Reasons as columns, for stacked bar charts with slicers |
 
 ## Key Metrics
 
@@ -156,13 +154,14 @@ Why conflicts get resolved (in priority order):
 | `scv_removed` | Contributing submission(s) were withdrawn/deleted |
 | `scv_rank_downgraded` | Contributing SCV demoted out of contributing tier (excludes flagged) |
 | `scv_reclassified` | Contributing submitter changed their classification |
+| `scv_added` | New submission(s) added to contributing tier |
 | `outlier_reclassified` | Outlier submitter changed their classification |
+| `scv_flagged_on_lower_tier` | Lower-tier SCV flagged (ClinVar flagging is important to track) |
+| `consensus_reached` | Multiple submitters converged (heuristic fallback) |
 
 **Note**: `higher_rank_scv_added` and `vcv_rank_changed` only apply to 0-star conflicts being superseded by 1-star SCVs. For 1-star conflicts, only `expert_panel_added` can supersede them (no 2-star SCVs exist in ClinVar).
 
-**Note**: `scv_added` is not a resolution reason because when SCVs are added and a conflict resolves, a higher-priority reason (like `expert_panel_added` or `higher_rank_scv_added`) always takes precedence.
-
-**Note**: Lower-tier reasons have been removed because they don't impact the VCV's classification. Only contributing tier SCV changes are tracked.
+**Note**: Other lower-tier reasons (`scv_added_on_lower_tier`, `scv_removed_on_lower_tier`, `scv_reclassified_on_lower_tier`) have been removed because they don't impact the VCV's classification. However, `scv_flagged_on_lower_tier` is retained because ClinVar flagging is an important action worth tracking.
 
 ### Modification Reasons
 
@@ -177,6 +176,7 @@ Why conflicts changed but weren't resolved (in priority order):
 | `vcv_rank_changed` | Different tier now determines classification |
 | `outlier_status_changed` | Gained or lost outlier status |
 | `conflict_type_changed` | Changed between clinsig and non-clinsig |
+| `scv_flagged_on_lower_tier` | Lower-tier SCV flagged (ClinVar flagging is important to track) |
 | `unknown` | No identifiable reason (fallback) |
 
 ### Multi-Reason Tracking
@@ -290,10 +290,7 @@ These tables are designed to work with BigQuery Data Connector in Google Sheets:
 | `05-monthly-conflict-scv-changes.sql` | Tracks SCV-level changes and aggregates to VCV summary |
 | `06-resolution-modification-analytics.sql` | Creates final analytics tables with reason categorization |
 | `07-google-sheets-analytics.sql` | Creates optimized views for Google Sheets with slicers |
-| `scv-reason-breakdown-queries.sql` | Example queries for exploring resolved variants with their SCVs |
 | `GOOGLE-SHEETS-SETUP.md` | Guide for building Google Sheets dashboards with charts and slicers |
-| `RESOLUTION-REASONS.md` | Detailed documentation of all resolution and modification reasons |
-| `DESIGN-scv-level-tracking.md` | Technical design document for SCV-level change tracking |
 
 ## Data Flow Example
 

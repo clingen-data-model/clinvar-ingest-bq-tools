@@ -433,13 +433,17 @@ vcv_scv_aggregates AS (
   SELECT
     v.*,
     -- Build array of (reason, count) structs for non-zero counts
-    -- Only includes contributing tier reasons since lower-tier changes don't affect VCV classification
+    -- Using contributing SCV counts for high-priority resolution-relevant reasons
+    -- Lower-tier reasons are informational (low priority)
     ARRAY_CONCAT(
+      -- Contributing tier reasons (high priority)
       IF(v.contributing_scvs_added_count > 0, [STRUCT('scv_added' AS reason, v.contributing_scvs_added_count AS cnt)], []),
       IF(v.contributing_scvs_first_time_flagged_count > 0, [STRUCT('scv_flagged' AS reason, v.contributing_scvs_first_time_flagged_count AS cnt)], []),
       IF(v.contributing_scvs_removed_count > 0, [STRUCT('scv_removed' AS reason, v.contributing_scvs_removed_count AS cnt)], []),
       IF(v.contributing_scvs_classification_changed_count > 0, [STRUCT('scv_reclassified' AS reason, v.contributing_scvs_classification_changed_count AS cnt)], []),
-      IF(v.contributing_scvs_rank_downgraded_count > 0, [STRUCT('scv_rank_downgraded' AS reason, v.contributing_scvs_rank_downgraded_count AS cnt)], [])
+      IF(v.contributing_scvs_rank_downgraded_count > 0, [STRUCT('scv_rank_downgraded' AS reason, v.contributing_scvs_rank_downgraded_count AS cnt)], []),
+      -- Lower tier flagging is tracked because ClinVar flagging is an important action worth tracking
+      IF(v.lower_tier_scvs_first_time_flagged_count > 0, [STRUCT('scv_flagged_on_lower_tier' AS reason, v.lower_tier_scvs_first_time_flagged_count AS cnt)], [])
     ) AS reason_structs
   FROM vcv_scv_aggregates v
 )

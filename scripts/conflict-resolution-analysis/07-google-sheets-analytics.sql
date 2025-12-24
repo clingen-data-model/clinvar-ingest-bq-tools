@@ -528,7 +528,10 @@ SELECT
   SUM(CASE WHEN primary_reason = 'outlier_status_changed' THEN variant_count ELSE 0 END) AS outlier_status_changed,
   SUM(CASE WHEN primary_reason = 'conflict_type_changed' THEN variant_count ELSE 0 END) AS conflict_type_changed,
   SUM(CASE WHEN primary_reason = 'single_submitter_withdrawn' THEN variant_count ELSE 0 END) AS single_submitter_withdrawn,
+  -- Lower tier flagging (ClinVar flagging is important to track)
+  SUM(CASE WHEN primary_reason = 'scv_flagged_on_lower_tier' THEN variant_count ELSE 0 END) AS scv_flagged_on_lower_tier,
   -- Fallback
+  SUM(CASE WHEN primary_reason = 'consensus_reached' THEN variant_count ELSE 0 END) AS consensus_reached,
   SUM(CASE WHEN primary_reason = 'unknown' THEN variant_count ELSE 0 END) AS unknown
 FROM `clinvar_ingest.sheets_change_reasons`
 GROUP BY snapshot_release_date, conflict_type, outlier_status, change_status

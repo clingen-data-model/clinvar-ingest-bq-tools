@@ -28,8 +28,8 @@ SCV-level reasons are tracked separately for **contributing tier** vs **lower ti
   - For 1-star VCV conflicts: 0-star SCVs are "lower tier"
 
 This distinction affects reason assignment:
-- Contributing tier changes are tracked (e.g., `scv_flagged`, `scv_removed`, `scv_reclassified`)
-- Lower tier changes are **not tracked** because they don't impact the VCV's classification
+- Contributing tier changes have **high priority** (e.g., `scv_flagged`, `scv_removed`, `scv_reclassified`)
+- Lower tier changes have **lowest priority** (e.g., `scv_flagged_on_lower_tier`, `scv_removed_on_lower_tier`)
 
 The tier is determined by checking `prev_is_contributing` and `curr_is_contributing` flags:
 - For `added` SCVs: Use `curr_is_contributing` (new SCV's tier in current month)
@@ -226,7 +226,8 @@ Assign `primary_reason` using a priority-ordered CASE statement:
    - `scv_reclassified` - Contributing SCV changed classification
    - `scv_added` - New SCV added to contributing tier
 5. `outlier_reclassified` - Outlier-specific resolution
-6. `unknown` - Fallback: no identifiable reason
+6. `scv_flagged_on_lower_tier` - Lower-tier SCV flagged (ClinVar flagging is important to track)
+7. `consensus_reached` - Fallback: multiple factors
 
 **Key Design Decisions:**
 
@@ -234,7 +235,7 @@ Assign `primary_reason` using a priority-ordered CASE statement:
 
 2. **1-star conflicts:** For 1-star conflicts, only `expert_panel_added` can supersede them. There are no 2-star SCVs in ClinVar's ranking system, so `higher_rank_scv_added` does not apply to 1-star conflicts.
 
-3. **Contributing tier only:** Only contributing tier SCV changes are tracked because they directly impact the conflict. Lower tier changes are not tracked since they don't affect the VCV's classification.
+3. **Contributing tier priority:** Contributing tier reasons take precedence because they directly impact the conflict. Lower tier reasons are informational—they indicate activity on SCVs that don't determine the VCV's classification.
 
 ## Key Considerations
 
