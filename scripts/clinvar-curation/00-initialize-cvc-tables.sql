@@ -30,119 +30,156 @@ CREATE TABLE `clinvar_curator.cvc_clinvar_batches`
 
 -- VIEWS to support the clinvar curation dashboard, reporting and downstream processing
 
+-- before running the materialized view the clinvar_annotations_native table must be
+-- created using the setup-external-tables.sh script and the scheduling job should be
+-- setup to refresh it from the underlying google sheet table
 
--- This script creates or replaces a view named `cvc_annotations_view` in the `clinvar_curator` schema.
--- The view is constructed from all the `clinvar_annotations` data and includes the following transformations and fields:
+
+-- ============================================================================
+-- Materialized View: clinvar_curator.cvc_annotations_base_mv
 --
--- - `annotation_id`: A string representation of the annotation date in UNIX milliseconds.
--- - `vcv_axn`: The `vcv_id` field from the source table.
--- - `scv_id`: The first part of the `scv_id` field, split by a dot.
--- - `scv_ver`: The second part of the `scv_id` field, cast to an INT64.
--- - `variation_id`: The `variation_id` field, cast to a string.
--- - `submitter_id`: The `submitter_id` field, cast to a string.
--- - `action`: The `action` field, converted to lowercase.
--- - `curator`: The first part of the `curator_email` field, split by the '@' symbol.
--- - `annotated_on`: The original `annotation_date` field.
--- - `annotated_date`: The date part of the `annotation_date` field.
--- - `annotated_time_utc`: The time part of the `annotation_date` field in UTC.
--- - `reason`: The `reason` field from the source table.
--- - `notes`: The `notes` field from the source table.
--- - `vcv_id`: The first part of the `vcv_id` field, split by a dot.
--- - `vcv_ver`: The second part of the `vcv_id` field, cast to an INT64.
--- - `is_latest`: A boolean indicating if the annotation is the latest for the given `scv_id`.
--- - `annotation_label`: A formatted string combining the annotation date, curator, action, and a truncated reason.
--- - `review_status`: The `review_status` field from the source table.
+-- Description:
+--   This materialized view consolidates and enriches ClinVar curation annotation
+--   records for downstream analysis and reporting. It joins annotation data with
+--   release metadata, clinical significance mappings, review statuses, and batch
+--   submission information. The view provides normalized and derived fields such
+--   as annotation and review labels, action abbreviations, and flags for review
+--   and submission status. It is intended to serve as a comprehensive base for
+--   curation workflows and reporting in the ClinVar curation system.
 --
--- The view is designed to facilitate querying and analysis of ClinVar annotations with additional metadata and transformations.
+-- Source Tables:
+--   - clinvar_curator.clinvar_annotations_native
+--   - clinvar_ingest.all_releases_materialized
+--   - clinvar_ingest.scv_clinsig_map
+--   - clinvar_ingest.clinvar_status
+--   - clinvar_curator.cvc_clinvar_submissions
+--   - clinvar_curator.cvc_clinvar_reviews
+--   - clinvar_curator.cvc_clinvar_batches
+--
+-- Key Features:
+--   - Normalizes and parses annotation and submission identifiers.
+--   - Maps clinical significance and review status to standardized forms.
+--   - Derives user-friendly labels for annotations and reviews.
+--   - Flags records as reviewed or submitted.
+--   - Handles edge cases in release date logic to avoid date overflow errors.
+--
+-- Usage:
+--   Use this view as a base for querying curated ClinVar annotation data,
+--   including review and submission status, for reporting and analysis.
+-- ============================================================================
+CREATE OR REPLACE MATERIALIZED VIEW clinvar_curator.cvc_annotations_base_mv
+AS
+WITH anno AS (
+  SELECT
+    CAST(UNIX_MILLIS(a.annotation_date) AS STRING) AS annotation_id,
+    rel.release_date AS annotation_release_date,
+    a.vcv_id AS vcv_axn,
+    -- Using REGEXP_EXTRACT is a supported alternative to SPLIT + OFFSET
+    REGEXP_EXTRACT(a.scv_id, r'([^.]*)') AS scv_id,
+    SAFE_CAST(REGEXP_EXTRACT(a.scv_id, r'\.([0-9]+)$') AS INT64) AS scv_ver,
+    REGEXP_EXTRACT(a.vcv_id, r'([^.]*)') AS vcv_id,
+    SAFE_CAST(REGEXP_EXTRACT(a.vcv_id, r'\.([0-9]+)$') AS INT64) AS vcv_ver,
+    CAST(a.variation_id AS STRING) AS variation_id,
+    CAST(a.submitter_id AS STRING) AS submitter_id,
+    LOWER(a.action) AS action,
+    REGEXP_EXTRACT(a.curator_email, r'([^@]+)') AS curator,
+    a.annotation_date AS annotated_on,
+    DATE(a.annotation_date) AS annotated_date,
+    a.reason,
+    a.notes,
+    CASE LOWER(a.action)
+      WHEN 'flagging candidate' THEN 'flag'
+      WHEN 'no change' THEN 'no chg'
+      WHEN 'remove flagged submission' THEN 'rem flg sub'
+      ELSE 'unk'
+    END AS action_abbrev,
+    LEFT(a.reason, 25) || IF(LENGTH(a.reason) > 25, '...', '') AS reason_abbrev,
+    a.review_status AS clinvar_review_status,
+    a.ignore,
+    map.cv_clinsig_type as clinsig_type,
+    cs.rank
+  FROM `clinvar_curator.clinvar_annotations_native` AS a
+  JOIN `clinvar_ingest.all_releases_materialized` AS rel
+    ON a.annotation_date >= TIMESTAMP(rel.release_date + INTERVAL 1 DAY)
+    -- This logic prevents the date overflow error for the max date
+    AND (
+      rel.next_release_date = DATE('9999-12-31')
+      OR a.annotation_date < TIMESTAMP(rel.next_release_date + INTERVAL 1 DAY)
+    )
+  LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
+    ON map.scv_term = LOWER(a.interpretation)
+  LEFT JOIN `clinvar_ingest.clinvar_status` cs
+    ON cs.label = LOWER(a.review_status)
+),
+anno_review AS (
+  SELECT
+    a.*,
+    rev.reviewer,
+    rev.status AS review_status,
+    rev.notes AS review_notes,
+    IF(
+      rev.annotation_id IS NULL, NULL,
+      FORMAT(
+        '%s (%s)%s',
+        COALESCE(rev.status, 'n/a'),
+        COALESCE(rev.reviewer, 'n/a'),
+        COALESCE(CONCAT(' *', sub.batch_id, '*'), '')
+      )
+    ) AS review_label,
+    rev.batch_id,
+    DATE(b_rev.finalized_datetime) AS batch_date,
+    b_rev.batch_release_date,
+    (sub.annotation_id IS NOT NULL) AS is_submitted
+  FROM anno AS a
+  LEFT JOIN `clinvar_curator.cvc_clinvar_submissions` AS sub
+    ON sub.annotation_id = a.annotation_id
+  LEFT JOIN `clinvar_curator.cvc_clinvar_reviews` AS rev
+    ON rev.annotation_id = a.annotation_id
+  LEFT JOIN `clinvar_curator.cvc_clinvar_batches` AS b_rev
+    ON b_rev.batch_id = rev.batch_id
+)
+SELECT
+  ar.*,
+  FORMAT(
+    '%t (%s) %s: %s',
+    ar.annotated_date,
+    COALESCE(ar.curator, 'n/a'),
+    ar.action_abbrev,
+    COALESCE(ar.reason_abbrev, 'n/a')
+  ) AS annotation_label,
+  (ar.batch_id IS NOT NULL) AS is_reviewed
+FROM anno_review AS ar
+;
+
+-- ============================================================================
+-- View: clinvar_curator.cvc_annotations_view
+--
+-- Description:
+--   This view provides a convenient interface to the materialized view
+--   `cvc_annotations_base_mv`, adding an `is_latest` flag to indicate whether
+--   each annotation is the most recent for its SCV ID within a batch.
+--   The `is_latest` field is computed using an analytic function that checks
+--   if there are any later annotations for the same SCV ID and batch.
+--
+-- Usage:
+--   Use this view to easily filter for the latest annotation per SCV in each batch,
+--   or to access all annotation records with additional metadata and review status.
+-- ============================================================================
+
 CREATE OR REPLACE VIEW clinvar_curator.cvc_annotations_view
 AS
-  WITH anno AS
-  (
-    SELECT
-      CAST(UNIX_MILLIS(annotation_date) AS STRING) as annotation_id,
-      rel.release_date as annotation_release_date,
-      a.vcv_id as vcv_axn,
-      SPLIT(a.scv_id,'.')[OFFSET(0)] AS scv_id,
-      CAST(SPLIT(a.scv_id,'.')[OFFSET(1)] AS INT64) AS scv_ver,
-      CAST(a.variation_id AS String) AS variation_id,
-      CAST(a.submitter_id AS String) AS submitter_id,
-      LOWER(a.action) AS action,
-      SPLIT(a.curator_email,'@')[OFFSET(0)] AS curator,
-      a.annotation_date AS annotated_on,
-      DATE(a.annotation_date) AS annotated_date,
-      a.reason,
-      a.notes,
-      SPLIT(a.vcv_id,'.')[OFFSET(0)] AS vcv_id,
-      CAST(SPLIT(a.vcv_id,'.')[OFFSET(1)] AS INT64) AS vcv_ver,
-      CASE LOWER(a.action)
-      WHEN 'flagging candidate' THEN
-        'flag'
-      WHEN 'no change' THEN
-        'no chg'
-      WHEN 'remove flagged submission' THEN
-        'rem flg sub'
-      ELSE
-        'unk'
-      END as action_abbrev,
-      LEFT(a.reason, 25)||IF(LENGTH(a.reason) > 25,'...','') as reason_abbrev,
-      a.review_status as clinvar_review_status
-    FROM `clinvar_curator.clinvar_annotations` a
-    JOIN `clinvar_ingest.all_releases`() rel
-    ON
-      DATE(a.annotation_date) between rel.release_date+1 and rel.next_release_date
-  ),
-  anno_review AS
-  (
-    SELECT
-      a.*,
-      rev.reviewer,
-      rev.status as review_status,
-      rev.notes as review_notes,
-      IF(rev.annotation_id is null,
-        NULL,
-        FORMAT(
-          '%s (%s) %s',
-          IFNULL(rev.status, 'n/a'),
-          IFNULL(rev.reviewer, 'n/a'),
-          IFNULL(FORMAT('*%s*',sub.batch_id), '')
-        )
-      ) as review_label,
-      rev.batch_id,
-      DATE(b_rev.finalized_datetime) as batch_date,
-      b_rev.batch_release_date,
-      (sub.annotation_id is not null) as is_submitted
-    FROM anno a
-    LEFT JOIN `clinvar_curator.cvc_clinvar_submissions` sub
-    ON
-      sub.annotation_id = a.annotation_id
-    LEFT JOIN `clinvar_curator.cvc_clinvar_reviews` rev
-    ON
-      rev.annotation_id = a.annotation_id
-    LEFT JOIN `clinvar_curator.cvc_clinvar_batches` b_rev
-    ON
-      b_rev.batch_id = rev.batch_id
-  )
-  select
-    ar.*,
-    FORMAT(
-      '%t (%s) %s: %s',
-      ar.annotated_date,
-      IFNULL(ar.curator,'n/a'),
-      ar.action_abbrev,
-      IFNULL(ar.reason_abbrev,'n/a')
-    ) as annotation_label,
-    -- if there are no other scv_id annotations after when orderd by annotation date then it is the latest
+  SELECT
+    *,
+    -- This analytic function is now in a standard view
     (
-      COUNT(ar.annotated_date)
-      OVER (
-        PARTITION BY ar.batch_id, ar.scv_id
-        ORDER BY ar.annotation_id
+      COUNT(annotated_date) OVER (
+        PARTITION BY batch_id, scv_id
+        ORDER BY annotation_id
         ROWS BETWEEN 1 FOLLOWING AND UNBOUNDED FOLLOWING
       ) = 0
-    ) AS is_latest,
-    (ar.batch_id is not null) AS is_reviewed
-  from anno_review as ar
-  ;
+    ) AS is_latest
+  FROM `clinvar_curator.cvc_annotations_base_mv`
+;
 
 -- This script creates a view named `cvc_batch_scv_max_annotation_view` in the `clinvar_curator` schema.
 -- The view aggregates data from the `cvc_clinvar_reviews` with their corresponding`cvc_annotations_view` data.
@@ -155,7 +192,7 @@ AS
     av.scv_id,
     max(av.annotation_id) annotation_id
   FROM `clinvar_curator.cvc_clinvar_reviews` ccr
-  JOIN `clinvar_curator.cvc_annotations_view` av
+  JOIN `clinvar_curator.cvc_annotations_base_mv` av
   ON
     av.annotation_id = ccr.annotation_id
   GROUP BY
@@ -230,7 +267,7 @@ SELECT
   JOIN `clinvar_curator.cvc_clinvar_batches` b
   ON
     b.batch_id = ccs.batch_id
-  JOIN `clinvar_curator.cvc_annotations_view` av
+  JOIN `clinvar_curator.cvc_annotations_base_mv` av
   ON
     av.annotation_id = ccs.annotation_id
   LEFT JOIN `clinvar_ingest.clinvar_scvs` vs
