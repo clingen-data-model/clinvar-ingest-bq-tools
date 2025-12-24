@@ -1,7 +1,7 @@
 {
   "googleSheetsOptions": {
     "skipLeadingRows": 1,
-    "range": "'SCV Records'!A:R"
+    "range": "'SCV Records'!A:S"
   },
   "schema": {
     "fields": [
@@ -76,6 +76,10 @@
       {
         "name": "retired_date",
         "type": "DATE"
+      },
+      {
+        "name": "ignore",
+        "type": "BOOLEAN"
       }
     ]
   },
