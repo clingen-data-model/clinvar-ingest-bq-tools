@@ -15,22 +15,27 @@
 
 CREATE OR REPLACE TABLE FUNCTION `clinvar_ingest.all_releases`()
 AS (
-    -- the state of al clinvar schemas available at the moment
+    -- The state of all clinvar schemas available at the moment
     WITH r AS (
-        SELECT
+        SELECT DISTINCT
             CAST(
                 REGEXP_REPLACE(
-                    iss.schema_name,
+                    table_schema, -- Changed from iss.schema_name
                     r'clinvar_(\d{4})_(\d{2})_(\d{2}).*',
                     '\\1-\\2-\\3'
                 ) as DATE
             ) AS release_date
-        FROM INFORMATION_SCHEMA.SCHEMATA iss
+        -- CORRECTED: Query INFORMATION_SCHEMA.TABLES directly with a region qualifier.
+        -- Note: You may need to change `region-us` to your specific BigQuery region (e.g., `region-eu`, `region-asia-southeast1`).
+        FROM `region-us.INFORMATION_SCHEMA.TABLES`
         WHERE
-            REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
+            REGEXP_CONTAINS(table_schema, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
+            -- This condition filters for the specific table - by checking for the existing of
+            -- scv_summary it helps ensure that the release will only be returned if the post
+            -- processing of stored procedures is completed from the clinvar-ingest workflow.
+            AND table_name = 'scv_summary'
         UNION ALL
         SELECT
-            null,
             release_date
         FROM `clingen-dev.clinvar_ingest.historic_release_dates`
     )
@@ -41,6 +46,7 @@ AS (
     FROM r
     ORDER BY 1
 );
+
 
 CREATE OR REPLACE TABLE FUNCTION `clinvar_ingest.release_on`(on_date DATE) AS (
 SELECT
@@ -60,18 +66,23 @@ CREATE OR REPLACE TABLE FUNCTION `clinvar_ingest.all_schemas`()
 AS (
     -- the state of al clinvar schemas available at the moment
     WITH r AS (
-        SELECT
-            iss.schema_name,
+        SELECT DISTINCT
+            table_schema as schema_name,
             CAST(
                 REGEXP_REPLACE(
-                    iss.schema_name,
+                    table_schema,
                     r'clinvar_(\d{4})_(\d{2})_(\d{2}).*',
                     '\\1-\\2-\\3'
                 ) as DATE
             ) AS release_date
-        FROM INFORMATION_SCHEMA.SCHEMATA iss
+        -- Note: You may need to change `region-us` to your specific BigQuery region.
+        FROM `region-us.INFORMATION_SCHEMA.TABLES`
         WHERE
-            REGEXP_CONTAINS(iss.schema_name, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
+            REGEXP_CONTAINS(table_schema, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
+            -- This condition filters for the specific table - by checking for the existing of
+            -- scv_summary it helps ensure that the release will only be returned if the post
+            -- processing of stored procedures is completed from the clinvar-ingest workflow.
+            AND table_name = 'scv_summary'
     )
     SELECT
         r.schema_name,
