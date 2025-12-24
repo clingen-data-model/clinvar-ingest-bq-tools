@@ -1,18 +1,40 @@
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.dataset_preparation`(
-  on_date DATE
+  in_schema_name STRING
 )
 BEGIN
-  DECLARE rec STRUCT<schema_name STRING, release_date DATE, prev_release_date DATE, next_release_date DATE>;
+  -- All variable declarations must be grouped together at the top of the block.
+  DECLARE dataset_count INT64;
+  DECLARE release_date_str STRING;
+  DECLARE release_date DATE;
+  DECLARE rec STRUCT<schema_name STRING, release_date DATE>;
 
-  -- Declare a cursor to fetch the row
-  SET rec = (
-    SELECT AS STRUCT
-      s.schema_name,
-      s.release_date,
-      s.prev_release_date,
-      s.next_release_date
-    FROM clinvar_ingest.schema_on(on_date) AS s
+  -- Check if the dataset exists in the current project
+  SET dataset_count = (
+    SELECT COUNT(1)
+    FROM INFORMATION_SCHEMA.SCHEMATA
+    WHERE schema_name = in_schema_name
   );
+
+  IF dataset_count = 0 THEN
+    RAISE USING MESSAGE = FORMAT('Dataset "%s" does not exist in the current project.', in_schema_name);
+  END IF;
+
+  -- Now the rest of the procedural logic can execute.
+  SET release_date_str = REGEXP_EXTRACT(in_schema_name, r'^clinvar_(\d{4}_\d{2}_\d{2})_v\d+_\d+_\d+$');
+
+  -- Throw an error if schema_name does not match expected format
+  IF release_date_str IS NULL THEN
+    RAISE USING MESSAGE = FORMAT(
+      'Invalid schema_name format: "%s". Expected: clinvar_YYYY_MM_DD_vX_X_X',
+      in_schema_name
+    );
+  END IF;
+
+  -- Convert the extracted string to DATE
+  SET release_date = PARSE_DATE('%Y_%m_%d', release_date_str);
+
+  -- Create the rec struct
+  SET rec = STRUCT(in_schema_name, release_date);
 
   CALL `clinvar_ingest.normalize_dataset`(rec.schema_name);
   CALL `clinvar_ingest.validate_dataset`(rec.schema_name);
