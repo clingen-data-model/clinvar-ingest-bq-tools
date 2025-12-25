@@ -61,7 +61,7 @@ Place slicers at the top of your sheet. All charts on the sheet will respond to 
 
 ### Chart 1: Conflict Trend Over Time
 
-**Purpose**: Show total conflicts trending month-over-month
+**Purpose**: Show conflicts as a percentage of variants with conflict potential, trending month-over-month
 
 **Data Source**: `sheets_conflict_summary`
 
@@ -69,10 +69,12 @@ Place slicers at the top of your sheet. All charts on the sheet will respond to 
 
 **Configuration**:
 - X-axis: `snapshot_month`
-- Y-axis: `conflict_count`
+- Y-axis: `pct_of_conflict_potential`
 - Series: Group by `conflict_type` (optional)
 
-**Alternative**: Use `pct_of_path_variants` for percentage view
+**Why percentage?**: Using `pct_of_conflict_potential` shows total conflicts as a percentage of variants that have the potential for conflict (i.e., variants with 2+ SCVs at their contributing tier). This provides a more meaningful trend than raw counts because it normalizes for growth in the ClinVar database over time.
+
+**Alternative**: Use `conflict_count` for raw counts, or `pct_of_path_variants` for percentage of all pathogenicity variants
 
 ---
 
@@ -140,7 +142,7 @@ ORDER BY snapshot_release_date
 1. Add slicers for `conflict_type` and `outlier_status`
 2. Insert → Chart → Stacked column chart
 3. X-axis: `snapshot_month`
-4. Series: `scv_flagged`, `scv_removed`, `scv_reclassified`, `expert_panel_added`, `consensus_reached`, etc.
+4. Series: `scv_flagged`, `scv_removed`, `scv_reclassified`, `expert_panel_added`, etc.
 
 **Available Reason Columns**:
 
@@ -151,29 +153,24 @@ ORDER BY snapshot_release_date
 - `vcv_rank_changed`: Existing SCV upgraded from 0-star to 1-star, superseding the conflict
 - `outlier_reclassified`: An outlier submitter changed their classification
 - `single_submitter_withdrawn`: Single submitter withdrew (conflict dissolved)
-- `consensus_reached`: Submitters converged (no single SCV change explains resolution)
 
-*Contributing Tier Reasons (High Priority)*:
+*Contributing Tier Reasons (for both resolutions and modifications)*:
 
 - `scv_flagged`: ClinVar flagged a contributing-tier SCV
 - `scv_removed`: Contributing-tier submission was withdrawn
-- `scv_rank_downgraded`: A contributing SCV was downgraded (no longer contributes due to lower rank)
+- `scv_rank_downgraded`: A contributing SCV was downgraded (no longer contributes due to lower rank, excludes flagged)
 - `scv_reclassified`: Contributing-tier lab changed their classification
+
+*Modification-Only Reasons (never appear for resolutions)*:
+
 - `scv_added`: New submission added to contributing tier
-
-*Lower Tier Flagging (ClinVar flagging is important to track)*:
-
-- `scv_flagged_on_lower_tier`: ClinVar flagged a lower-tier SCV (e.g., 0-star SCV on 1-star conflict)
-
-*Modification-Only Reasons*:
-
 - `outlier_status_changed`: Gained or lost outlier status
 - `conflict_type_changed`: Changed between clinsig and non-clinsig
 - `unknown`: No identifiable reason (fallback)
 
-**Note on Tiers**: "Contributing tier" refers to SCVs at the rank tier that determines the VCV's classification (1-star SCVs for 1-star conflicts, 0-star for 0-star conflicts). "Lower tier" refers to SCVs below that tier (e.g., 0-star SCVs on a 1-star conflict).
+**Note on `scv_added`**: When SCVs are added and a conflict resolves, a higher-priority reason (like `expert_panel_added` or `higher_rank_scv_added`) always takes precedence. So `scv_added` only appears for modifications.
 
-**Note**: Other lower-tier reasons (`scv_added_on_lower_tier`, `scv_removed_on_lower_tier`, `scv_reclassified_on_lower_tier`) have been removed because they don't impact the VCV's classification. However, `scv_flagged_on_lower_tier` is retained because ClinVar flagging is an important action worth tracking.
+**Note on Tiers**: "Contributing tier" refers to SCVs at the rank tier that determines the VCV's classification (1-star SCVs for 1-star conflicts, 0-star for 0-star conflicts). Lower-tier SCV changes are not tracked because they don't impact the VCV's classification.
 
 **Note on 0-star vs 1-star conflicts**: `higher_rank_scv_added` and `vcv_rank_changed` only apply to 0-star conflicts being superseded by 1-star SCVs. For 1-star conflicts, only `expert_panel_added` can supersede them (there are no 2-star SCVs in ClinVar's ranking system).
 
@@ -210,10 +207,35 @@ ORDER BY snapshot_release_date
 
 **Chart Type**: Grouped bar chart
 
+**Query**:
+```sql
+SELECT * FROM `clinvar_ingest.sheets_multi_reason_detail`
+ORDER BY snapshot_release_date, reason
+```
+
 **Configuration**:
-- X-axis: `reason`
-- Y-axis: `as_primary_count` and `as_secondary_count` (side by side)
-- Filter: Apply date range slicer
+
+1. Add slicers for `snapshot_month`, `conflict_type`, `outlier_status`, and `change_status`
+2. Insert → Chart → Grouped bar chart
+3. X-axis: `reason`
+4. Series 1: `as_primary_count` (how often this reason is THE primary driver)
+5. Series 2: `as_secondary_count` (how often this reason contributes but isn't primary)
+
+**Alternative Query** (aggregated totals for simpler chart):
+
+```sql
+SELECT
+  reason,
+  change_status,
+  SUM(as_primary_count) AS as_primary_count,
+  SUM(as_secondary_count) AS as_secondary_count,
+  SUM(variant_count) AS variant_count
+FROM `clinvar_ingest.sheets_multi_reason_detail`
+GROUP BY reason, change_status
+ORDER BY SUM(as_primary_count) DESC
+```
+
+**Tip**: Filter to `change_status = 'resolved'` to focus on resolution reasons only.
 
 ---
 
@@ -225,6 +247,14 @@ ORDER BY snapshot_release_date
 
 **Chart Type**: Scorecard or single-value chart
 
+**Query** (latest 2 months for comparison):
+
+```sql
+SELECT * FROM `clinvar_ingest.sheets_monthly_overview`
+ORDER BY snapshot_release_date DESC
+LIMIT 2
+```
+
 **Configuration**:
 - Value: `pct_total_conflicts` (latest month)
 - Comparison: Previous month value
@@ -233,6 +263,8 @@ ORDER BY snapshot_release_date
 - `pct_clinsig_conflicts`: Clinically significant conflict rate
 - `net_change`: Monthly net change
 - `resolved_conflicts`: Resolutions this month
+
+**Tip**: Use separate scorecard charts for each KPI. Set the comparison value from the second row (previous month) to show trend direction.
 
 ## Step 4: Dashboard Layout
 
@@ -252,7 +284,8 @@ ORDER BY snapshot_release_date
 │                                                             │
 │  ┌──────────────────────────────────────────────────────┐  │
 │  │  Conflict Trend Over Time (Line Chart)               │  │
-│  │  - Shows total conflicts or percentage by month      │  │
+│  │  - Total conflicts as % of variants with conflict    │  │
+│  │    potential                                         │  │
 │  └──────────────────────────────────────────────────────┘  │
 │                                                             │
 ├─────────────────────────────────────────────────────────────┤

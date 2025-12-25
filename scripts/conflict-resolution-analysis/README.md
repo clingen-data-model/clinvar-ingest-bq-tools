@@ -154,14 +154,13 @@ Why conflicts get resolved (in priority order):
 | `scv_removed` | Contributing submission(s) were withdrawn/deleted |
 | `scv_rank_downgraded` | Contributing SCV demoted out of contributing tier (excludes flagged) |
 | `scv_reclassified` | Contributing submitter changed their classification |
-| `scv_added` | New submission(s) added to contributing tier |
 | `outlier_reclassified` | Outlier submitter changed their classification |
-| `scv_flagged_on_lower_tier` | Lower-tier SCV flagged (ClinVar flagging is important to track) |
-| `consensus_reached` | Multiple submitters converged (heuristic fallback) |
 
 **Note**: `higher_rank_scv_added` and `vcv_rank_changed` only apply to 0-star conflicts being superseded by 1-star SCVs. For 1-star conflicts, only `expert_panel_added` can supersede them (no 2-star SCVs exist in ClinVar).
 
-**Note**: Other lower-tier reasons (`scv_added_on_lower_tier`, `scv_removed_on_lower_tier`, `scv_reclassified_on_lower_tier`) have been removed because they don't impact the VCV's classification. However, `scv_flagged_on_lower_tier` is retained because ClinVar flagging is an important action worth tracking.
+**Note**: `scv_added` is not a resolution reason because when SCVs are added and a conflict resolves, a higher-priority reason (like `expert_panel_added` or `higher_rank_scv_added`) always takes precedence.
+
+**Note**: Lower-tier reasons have been removed because they don't impact the VCV's classification. Only contributing tier SCV changes are tracked.
 
 ### Modification Reasons
 
@@ -176,7 +175,6 @@ Why conflicts changed but weren't resolved (in priority order):
 | `vcv_rank_changed` | Different tier now determines classification |
 | `outlier_status_changed` | Gained or lost outlier status |
 | `conflict_type_changed` | Changed between clinsig and non-clinsig |
-| `scv_flagged_on_lower_tier` | Lower-tier SCV flagged (ClinVar flagging is important to track) |
 | `unknown` | No identifiable reason (fallback) |
 
 ### Multi-Reason Tracking
