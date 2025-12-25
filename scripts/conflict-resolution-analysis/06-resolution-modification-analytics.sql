@@ -49,28 +49,23 @@
 --   - 'vcv_rank_changed': 0-star conflict superseded by existing SCV upgraded to 1-star
 --   - 'scv_flagged': One or more contributing SCVs were flagged
 --   - 'scv_removed': One or more contributing SCVs were deleted/withdrawn
---   - 'scv_rank_downgraded': Contributing SCV demoted out of contributing tier
+--   - 'scv_rank_downgraded': Contributing SCV demoted out of contributing tier (excludes flagged)
 --   - 'scv_reclassified': Contributing SCV changed classification to match others
---   - 'scv_added': New SCV(s) added to contributing tier (resolved conflict)
 --   - 'outlier_reclassified': Outlier submitter changed their classification
---   - 'scv_flagged_on_lower_tier': Lower-tier SCV flagged (ClinVar flagging is important to track)
---   - 'consensus_reached': Multiple submitters converged (heuristic fallback)
 --
--- Modification Reasons (why conflicts changed but weren't resolved):
---   - 'scv_reclassified': Contributing SCV changed classification, still conflicting
---   - 'scv_flagged': Contributing SCV(s) flagged but conflict remains
---   - 'scv_removed': Contributing SCV(s) removed but conflict remains
+-- Modification-Only Reasons (never apply to resolutions):
 --   - 'scv_added': New SCV(s) added to the conflict at contributing tier
---   - 'vcv_rank_changed': VCV rank changed (different SCVs now contribute)
+--   - 'vcv_rank_changed': VCV rank changed (different SCVs now contribute) - for modifications
 --   - 'outlier_status_changed': Outlier status flipped
 --   - 'conflict_type_changed': Changed between clinsig and non-clinsig
---   - 'scv_flagged_on_lower_tier': Lower-tier SCV flagged (ClinVar flagging is important to track)
 --   - 'unknown': No identifiable reason (fallback)
 --
--- Note: Other lower-tier reasons (scv_added_on_lower_tier, scv_removed_on_lower_tier,
--- scv_reclassified_on_lower_tier) have been removed because they don't impact the VCV's
--- classification. However, scv_flagged_on_lower_tier is retained because ClinVar flagging
--- is an important action worth tracking regardless of tier.
+-- Note: 'scv_added' only applies to modifications because when SCVs are added and a conflict
+-- resolves, a higher-priority reason (like 'expert_panel_added' or 'higher_rank_scv_added')
+-- always takes precedence.
+--
+-- Note: Lower-tier reasons have been removed because they don't impact the VCV's
+-- classification. Only contributing tier SCV changes are tracked.
 --
 -- Priority Notes:
 --   - For 0-star conflicts: 'higher_rank_scv_added' and 'vcv_rank_changed' are checked
@@ -152,11 +147,6 @@ scv_summary AS (
     contributing_scvs_first_time_flagged_count,
     contributing_scvs_classification_changed_count,
     contributing_scvs_rank_downgraded_count,
-    -- Lower tier counts
-    lower_tier_scvs_added_count,
-    lower_tier_scvs_removed_count,
-    lower_tier_scvs_first_time_flagged_count,
-    lower_tier_scvs_classification_changed_count,
     -- Derived fields
     vcv_rank_changed,
     has_expert_panel,
@@ -209,17 +199,15 @@ SELECT
         -- Rank downgrade before reclassification: downgrade effectively removes SCV from contributing tier
         WHEN s.contributing_scvs_rank_downgraded_count > 0 THEN 'scv_rank_downgraded'
         WHEN s.contributing_scvs_classification_changed_count > 0 THEN 'scv_reclassified'
-        WHEN s.contributing_scvs_added_count > 0 THEN 'scv_added'
+        -- Note: scv_added is not checked here because when SCVs are added and conflict resolves,
+        -- a higher-priority reason (like expert_panel_added or higher_rank_scv_added) always applies
         WHEN v.vcv_resolved_reason = 'outlier_resolved' THEN 'outlier_reclassified'
-        -- Lower-tier flagging is tracked because ClinVar flagging is an important action
-        WHEN s.lower_tier_scvs_first_time_flagged_count > 0 THEN 'scv_flagged_on_lower_tier'
-        ELSE 'consensus_reached'
+        ELSE 'unknown'
       END
     WHEN v.change_status = 'modified' THEN
       -- For modifications, use the most impactful reason as primary
       -- Contributing tier reasons take precedence
       CASE
-        -- Contributing tier reasons (high priority)
         WHEN s.contributing_scvs_classification_changed_count > 0 THEN 'scv_reclassified'
         WHEN s.contributing_scvs_first_time_flagged_count > 0 THEN 'scv_flagged'
         WHEN s.contributing_scvs_removed_count > 0 THEN 'scv_removed'
@@ -227,8 +215,6 @@ SELECT
         WHEN s.vcv_rank_changed THEN 'vcv_rank_changed'
         WHEN v.outlier_status_changed THEN 'outlier_status_changed'
         WHEN v.conflict_type_changed THEN 'conflict_type_changed'
-        -- Lower-tier flagging is tracked because ClinVar flagging is an important action
-        WHEN s.lower_tier_scvs_first_time_flagged_count > 0 THEN 'scv_flagged_on_lower_tier'
         ELSE 'unknown'
       END
     ELSE 'unknown'
@@ -315,11 +301,6 @@ scv_summary AS (
     contributing_scvs_first_time_flagged_count,
     contributing_scvs_classification_changed_count,
     contributing_scvs_rank_downgraded_count,
-    -- Lower tier counts
-    lower_tier_scvs_added_count,
-    lower_tier_scvs_removed_count,
-    lower_tier_scvs_first_time_flagged_count,
-    lower_tier_scvs_classification_changed_count,
     -- Derived fields
     vcv_rank_changed,
     has_expert_panel,
@@ -357,11 +338,6 @@ resolution_details AS (
     s.contributing_scvs_first_time_flagged_count,
     s.contributing_scvs_classification_changed_count,
     s.contributing_scvs_rank_downgraded_count,
-    -- Lower tier
-    s.lower_tier_scvs_added_count,
-    s.lower_tier_scvs_removed_count,
-    s.lower_tier_scvs_first_time_flagged_count,
-    s.lower_tier_scvs_classification_changed_count,
     -- Derived
     s.has_expert_panel,
     s.vcv_rank_changed,
@@ -393,12 +369,11 @@ resolution_details AS (
       -- Rank downgrade before reclassification
       WHEN s.contributing_scvs_rank_downgraded_count > 0 THEN 'scv_rank_downgraded'
       WHEN s.contributing_scvs_classification_changed_count > 0 THEN 'scv_reclassified'
-      WHEN s.contributing_scvs_added_count > 0 THEN 'scv_added'
+      -- Note: scv_added is not checked here because when SCVs are added and conflict resolves,
+      -- a higher-priority reason (like expert_panel_added or higher_rank_scv_added) always applies
       -- Fallback to VCV-level heuristic
       WHEN v.vcv_resolved_reason = 'outlier_resolved' THEN 'outlier_reclassified'
-      -- Lower-tier flagging is tracked because ClinVar flagging is an important action
-      WHEN s.lower_tier_scvs_first_time_flagged_count > 0 THEN 'scv_flagged_on_lower_tier'
-      ELSE 'consensus_reached'
+      ELSE 'unknown'
     END AS resolution_reason
   FROM vcv_changes v
   LEFT JOIN scv_summary s
@@ -430,8 +405,6 @@ modification_details AS (
     s.contributing_scvs_removed_count,
     s.contributing_scvs_first_time_flagged_count,
     s.contributing_scvs_classification_changed_count,
-    -- Lower tier (only flagging is tracked)
-    s.lower_tier_scvs_first_time_flagged_count,
     -- Derived
     s.vcv_rank_changed,
     -- Multi-reason fields (list of all SCV change reasons for this VCV)
@@ -476,11 +449,6 @@ modification_reasons AS (
   SELECT snapshot_release_date, prev_snapshot_release_date, variation_id,
          is_clinsig, has_outlier, conflict_rank, 'conflict_type_changed' AS modification_reason
   FROM modification_details WHERE conflict_type_changed
-  UNION ALL
-  -- Lower-tier flagging is tracked because ClinVar flagging is an important action
-  SELECT snapshot_release_date, prev_snapshot_release_date, variation_id,
-         is_clinsig, has_outlier, conflict_rank, 'scv_flagged_on_lower_tier' AS modification_reason
-  FROM modification_details WHERE lower_tier_scvs_first_time_flagged_count > 0
 ),
 
 -- Aggregate resolution counts by reason (including conflict_rank_tier)
@@ -634,7 +602,6 @@ SELECT
   SUM(CASE WHEN change_category = 'Resolution' AND reason = 'expert_panel_added' THEN variant_count ELSE 0 END) AS resolved_expert_panel,
   SUM(CASE WHEN change_category = 'Resolution' AND reason = 'single_submitter_withdrawn' THEN variant_count ELSE 0 END) AS resolved_single_submitter,
   SUM(CASE WHEN change_category = 'Resolution' AND reason = 'outlier_reclassified' THEN variant_count ELSE 0 END) AS resolved_outlier_reclassified,
-  SUM(CASE WHEN change_category = 'Resolution' AND reason = 'consensus_reached' THEN variant_count ELSE 0 END) AS resolved_consensus,
   SUM(CASE WHEN change_category = 'Resolution' THEN variant_count ELSE 0 END) AS resolved_total,
 
   -- Modification counts by reason
@@ -701,7 +668,6 @@ SELECT
   SUM(CASE WHEN change_category = 'Resolution' AND reason = 'scv_reclassified' THEN variant_count ELSE 0 END) AS resolved_scv_reclassified,
   SUM(CASE WHEN change_category = 'Resolution' AND reason = 'expert_panel_added' THEN variant_count ELSE 0 END) AS resolved_expert_panel,
   SUM(CASE WHEN change_category = 'Resolution' AND reason = 'single_submitter_withdrawn' THEN variant_count ELSE 0 END) AS resolved_single_submitter,
-  SUM(CASE WHEN change_category = 'Resolution' AND reason = 'consensus_reached' THEN variant_count ELSE 0 END) AS resolved_consensus,
 
   -- Modification reason breakdown (overall)
   SUM(CASE WHEN change_category = 'Modification' AND reason = 'scv_added' THEN variant_count ELSE 0 END) AS modified_scv_added,
