@@ -115,6 +115,8 @@ The goal is to answer questions like:
 | `sheets_change_reasons` | Primary reason for each change, for reason comparison charts |
 | `sheets_multi_reason_detail` | All contributing reasons (not just primary), for deep-dive analysis |
 | `sheets_monthly_overview` | Single row per month, pre-aggregated for simple dashboards |
+| `sheets_change_status_wide` | Change status as columns, for stacked bar charts with slicers |
+| `sheets_change_reasons_wide` | Reasons as columns, for stacked bar charts with slicers |
 
 ## Key Metrics
 
@@ -288,7 +290,10 @@ These tables are designed to work with BigQuery Data Connector in Google Sheets:
 | `05-monthly-conflict-scv-changes.sql` | Tracks SCV-level changes and aggregates to VCV summary |
 | `06-resolution-modification-analytics.sql` | Creates final analytics tables with reason categorization |
 | `07-google-sheets-analytics.sql` | Creates optimized views for Google Sheets with slicers |
+| `scv-reason-breakdown-queries.sql` | Example queries for exploring resolved variants with their SCVs |
 | `GOOGLE-SHEETS-SETUP.md` | Guide for building Google Sheets dashboards with charts and slicers |
+| `RESOLUTION-REASONS.md` | Detailed documentation of all resolution and modification reasons |
+| `DESIGN-scv-level-tracking.md` | Technical design document for SCV-level change tracking |
 
 ## Data Flow Example
 
