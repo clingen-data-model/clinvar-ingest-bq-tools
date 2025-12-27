@@ -59,7 +59,7 @@ Place slicers at the top of your sheet. All charts on the sheet will respond to 
 
 ## Step 3: Create Charts
 
-### Chart 1: Conflict Trend Over Time
+### Chart 1a: Conflict Trend Over Time
 
 **Purpose**: Show conflicts as a percentage of variants with conflict potential, trending month-over-month
 
@@ -78,7 +78,7 @@ Place slicers at the top of your sheet. All charts on the sheet will respond to 
 
 ---
 
-### Chart 2: Net Change Bar Chart (Two-Color)
+### Chart 1b: Net Change Bar Chart (Two-Color)
 
 **Purpose**: Show whether conflicts are increasing or decreasing each month with color coding
 
@@ -99,7 +99,7 @@ Place slicers at the top of your sheet. All charts on the sheet will respond to 
 
 ---
 
-### Chart 3: Change Status Breakdown
+### Chart 2a: Change Status Breakdown
 
 **Purpose**: Show composition of changes each month (new, resolved, modified, unchanged)
 
@@ -123,7 +123,7 @@ ORDER BY snapshot_release_date
 
 ---
 
-### Chart 4: Resolution Reasons
+### Chart 3a: Resolution Reasons
 
 **Purpose**: Understand WHY conflicts are being resolved
 
@@ -178,7 +178,7 @@ ORDER BY snapshot_release_date
 
 ---
 
-### Chart 5: Resolution Rate Over Time
+### Chart 4a: Resolution Rate Over Time
 
 **Purpose**: Track the percentage of conflicts being resolved each month
 
@@ -199,7 +199,7 @@ ORDER BY snapshot_release_date
 
 ---
 
-### Chart 6: Primary vs Contributing Reasons
+### Chart 5a: Primary vs Contributing Reasons
 
 **Purpose**: Compare how often a reason is the primary driver vs a contributing factor
 
@@ -239,7 +239,7 @@ ORDER BY SUM(as_primary_count) DESC
 
 ---
 
-### Chart 7: Conflict Percentage Dashboard (KPIs)
+### Chart 6a: Conflict Percentage Dashboard (KPIs)
 
 **Purpose**: Show current conflict rate as percentage of all variants
 
