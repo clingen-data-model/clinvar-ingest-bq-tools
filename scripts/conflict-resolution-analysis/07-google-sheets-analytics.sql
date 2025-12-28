@@ -258,10 +258,13 @@ baseline AS (
 
 -- Map current month to previous month for baseline lookup
 month_mapping AS (
-  SELECT DISTINCT
+  SELECT
     snapshot_release_date,
     LAG(snapshot_release_date) OVER (ORDER BY snapshot_release_date) AS prev_snapshot_release_date
-  FROM `clinvar_ingest.monthly_conflict_snapshots`
+  FROM (
+    SELECT DISTINCT snapshot_release_date
+    FROM `clinvar_ingest.monthly_conflict_snapshots`
+  )
 )
 
 SELECT
@@ -348,10 +351,13 @@ baseline AS (
 ),
 
 month_mapping AS (
-  SELECT DISTINCT
+  SELECT
     snapshot_release_date,
     LAG(snapshot_release_date) OVER (ORDER BY snapshot_release_date) AS prev_snapshot_release_date
-  FROM `clinvar_ingest.monthly_conflict_snapshots`
+  FROM (
+    SELECT DISTINCT snapshot_release_date
+    FROM `clinvar_ingest.monthly_conflict_snapshots`
+  )
 )
 
 SELECT
