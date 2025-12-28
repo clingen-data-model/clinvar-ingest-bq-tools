@@ -117,6 +117,7 @@ The goal is to answer questions like:
 | `sheets_monthly_overview` | Single row per month, pre-aggregated for simple dashboards |
 | `sheets_change_status_wide` | Change status as columns, for stacked bar charts with slicers |
 | `sheets_change_reasons_wide` | Reasons as columns, for stacked bar charts with slicers |
+| `sheets_multi_reason_wide` | Primary/secondary counts per reason as columns, for time-series charts |
 
 ## Key Metrics
 

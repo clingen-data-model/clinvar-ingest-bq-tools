@@ -533,3 +533,56 @@ SELECT
 FROM `clinvar_ingest.sheets_change_reasons`
 GROUP BY snapshot_release_date, conflict_type, outlier_status, change_status
 ORDER BY snapshot_release_date, conflict_type, outlier_status, change_status;
+
+
+-- ============================================================================
+-- View 8: Multi-Reason Primary vs Secondary Over Time (Wide Format)
+-- ============================================================================
+-- This view pivots multi-reason data to show primary and secondary counts
+-- for each reason as separate columns, enabling time-series charts that
+-- compare how often each reason is the primary driver vs a contributing factor.
+--
+-- Use for:
+--   - Line/area charts showing primary vs secondary trends per reason
+--   - Stacked charts comparing reason importance over time
+--   - Understanding which reasons are typically primary vs supporting
+
+CREATE OR REPLACE VIEW `clinvar_ingest.sheets_multi_reason_wide` AS
+
+SELECT
+  snapshot_release_date,
+  FORMAT_DATE('%Y-%m', snapshot_release_date) AS snapshot_month,
+  conflict_type,
+  outlier_status,
+  change_status,
+  -- Primary counts per reason
+  SUM(CASE WHEN reason = 'scv_reclassified' THEN as_primary_count ELSE 0 END) AS scv_reclassified_primary,
+  SUM(CASE WHEN reason = 'scv_flagged' THEN as_primary_count ELSE 0 END) AS scv_flagged_primary,
+  SUM(CASE WHEN reason = 'scv_removed' THEN as_primary_count ELSE 0 END) AS scv_removed_primary,
+  SUM(CASE WHEN reason = 'scv_added' THEN as_primary_count ELSE 0 END) AS scv_added_primary,
+  SUM(CASE WHEN reason = 'scv_rank_downgraded' THEN as_primary_count ELSE 0 END) AS scv_rank_downgraded_primary,
+  SUM(CASE WHEN reason = 'expert_panel_added' THEN as_primary_count ELSE 0 END) AS expert_panel_added_primary,
+  SUM(CASE WHEN reason = 'higher_rank_scv_added' THEN as_primary_count ELSE 0 END) AS higher_rank_scv_added_primary,
+  SUM(CASE WHEN reason = 'vcv_rank_changed' THEN as_primary_count ELSE 0 END) AS vcv_rank_changed_primary,
+  SUM(CASE WHEN reason = 'outlier_reclassified' THEN as_primary_count ELSE 0 END) AS outlier_reclassified_primary,
+  SUM(CASE WHEN reason = 'outlier_status_changed' THEN as_primary_count ELSE 0 END) AS outlier_status_changed_primary,
+  SUM(CASE WHEN reason = 'conflict_type_changed' THEN as_primary_count ELSE 0 END) AS conflict_type_changed_primary,
+  SUM(CASE WHEN reason = 'single_submitter_withdrawn' THEN as_primary_count ELSE 0 END) AS single_submitter_withdrawn_primary,
+  SUM(CASE WHEN reason = 'unknown' THEN as_primary_count ELSE 0 END) AS unknown_primary,
+  -- Secondary (contributing but not primary) counts per reason
+  SUM(CASE WHEN reason = 'scv_reclassified' THEN as_secondary_count ELSE 0 END) AS scv_reclassified_secondary,
+  SUM(CASE WHEN reason = 'scv_flagged' THEN as_secondary_count ELSE 0 END) AS scv_flagged_secondary,
+  SUM(CASE WHEN reason = 'scv_removed' THEN as_secondary_count ELSE 0 END) AS scv_removed_secondary,
+  SUM(CASE WHEN reason = 'scv_added' THEN as_secondary_count ELSE 0 END) AS scv_added_secondary,
+  SUM(CASE WHEN reason = 'scv_rank_downgraded' THEN as_secondary_count ELSE 0 END) AS scv_rank_downgraded_secondary,
+  SUM(CASE WHEN reason = 'expert_panel_added' THEN as_secondary_count ELSE 0 END) AS expert_panel_added_secondary,
+  SUM(CASE WHEN reason = 'higher_rank_scv_added' THEN as_secondary_count ELSE 0 END) AS higher_rank_scv_added_secondary,
+  SUM(CASE WHEN reason = 'vcv_rank_changed' THEN as_secondary_count ELSE 0 END) AS vcv_rank_changed_secondary,
+  SUM(CASE WHEN reason = 'outlier_reclassified' THEN as_secondary_count ELSE 0 END) AS outlier_reclassified_secondary,
+  SUM(CASE WHEN reason = 'outlier_status_changed' THEN as_secondary_count ELSE 0 END) AS outlier_status_changed_secondary,
+  SUM(CASE WHEN reason = 'conflict_type_changed' THEN as_secondary_count ELSE 0 END) AS conflict_type_changed_secondary,
+  SUM(CASE WHEN reason = 'single_submitter_withdrawn' THEN as_secondary_count ELSE 0 END) AS single_submitter_withdrawn_secondary,
+  SUM(CASE WHEN reason = 'unknown' THEN as_secondary_count ELSE 0 END) AS unknown_secondary
+FROM `clinvar_ingest.sheets_multi_reason_detail`
+GROUP BY snapshot_release_date, conflict_type, outlier_status, change_status
+ORDER BY snapshot_release_date, conflict_type, outlier_status, change_status;

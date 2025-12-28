@@ -199,43 +199,68 @@ ORDER BY snapshot_release_date
 
 ---
 
-### Chart 5a: Primary vs Contributing Reasons
+### Chart 5a: Primary vs Secondary Reasons Over Time
 
-**Purpose**: Compare how often a reason is the primary driver vs a contributing factor
+**Purpose**: Track how often each reason is the primary driver vs a contributing factor, trending over time
 
-**Data Source**: `sheets_multi_reason_detail`
+**Data Source**: `sheets_multi_reason_wide`
 
-**Chart Type**: Grouped bar chart
+**Chart Type**: Line chart or stacked area chart
 
 **Query**:
+
 ```sql
-SELECT * FROM `clinvar_ingest.sheets_multi_reason_detail`
-ORDER BY snapshot_release_date, reason
+SELECT * FROM `clinvar_ingest.sheets_multi_reason_wide`
+WHERE change_status = 'resolved'
+ORDER BY snapshot_release_date
 ```
 
 **Configuration**:
 
-1. Add slicers for `snapshot_month`, `conflict_type`, `outlier_status`, and `change_status`
-2. Insert → Chart → Grouped bar chart
-3. X-axis: `reason`
-4. Series 1: `as_primary_count` (how often this reason is THE primary driver)
-5. Series 2: `as_secondary_count` (how often this reason contributes but isn't primary)
+1. Add slicers for `conflict_type` and `outlier_status`
+2. Insert → Chart → Line chart (or stacked area)
+3. X-axis: `snapshot_month`
+4. Series: Select the `_primary` and `_secondary` columns for the reasons you want to compare
 
-**Alternative Query** (aggregated totals for simpler chart):
+**Example - Compare scv_reclassified primary vs secondary over time**:
+
+- Series 1: `scv_reclassified_primary` (when reclassification was THE main reason)
+- Series 2: `scv_reclassified_secondary` (when reclassification contributed but wasn't primary)
+
+**Available Column Pairs** (each reason has `_primary` and `_secondary` columns):
+
+| Reason | Primary Column | Secondary Column |
+|--------|---------------|------------------|
+| `scv_reclassified` | `scv_reclassified_primary` | `scv_reclassified_secondary` |
+| `scv_flagged` | `scv_flagged_primary` | `scv_flagged_secondary` |
+| `scv_removed` | `scv_removed_primary` | `scv_removed_secondary` |
+| `scv_added` | `scv_added_primary` | `scv_added_secondary` |
+| `scv_rank_downgraded` | `scv_rank_downgraded_primary` | `scv_rank_downgraded_secondary` |
+| `expert_panel_added` | `expert_panel_added_primary` | `expert_panel_added_secondary` |
+| `higher_rank_scv_added` | `higher_rank_scv_added_primary` | `higher_rank_scv_added_secondary` |
+| `vcv_rank_changed` | `vcv_rank_changed_primary` | `vcv_rank_changed_secondary` |
+| `outlier_reclassified` | `outlier_reclassified_primary` | `outlier_reclassified_secondary` |
+| `outlier_status_changed` | `outlier_status_changed_primary` | `outlier_status_changed_secondary` |
+| `conflict_type_changed` | `conflict_type_changed_primary` | `conflict_type_changed_secondary` |
+| `single_submitter_withdrawn` | `single_submitter_withdrawn_primary` | `single_submitter_withdrawn_secondary` |
+| `unknown` | `unknown_primary` | `unknown_secondary` |
+
+**Alternative - Static comparison using long format**:
+
+For a point-in-time grouped bar chart comparing all reasons, use `sheets_multi_reason_detail`:
 
 ```sql
 SELECT
   reason,
-  change_status,
   SUM(as_primary_count) AS as_primary_count,
-  SUM(as_secondary_count) AS as_secondary_count,
-  SUM(variant_count) AS variant_count
+  SUM(as_secondary_count) AS as_secondary_count
 FROM `clinvar_ingest.sheets_multi_reason_detail`
-GROUP BY reason, change_status
+WHERE change_status = 'resolved'
+GROUP BY reason
 ORDER BY SUM(as_primary_count) DESC
 ```
 
-**Tip**: Filter to `change_status = 'resolved'` to focus on resolution reasons only.
+**Tip**: Use `WHERE change_status = 'modified'` to analyze modification reasons instead.
 
 ---
 
