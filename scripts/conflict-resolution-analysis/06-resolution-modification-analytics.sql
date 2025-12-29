@@ -1,6 +1,11 @@
 -- ============================================================================
 -- Script: 06-resolution-modification-analytics.sql
 --
+-- GCS SYNC REMINDER:
+--   This file is loaded by the Cloud Function from GCS. After making changes,
+--   sync to GCS:  gsutil cp scripts/conflict-resolution-analysis/0*.sql \
+--                           gs://clinvar-ingest/conflict-analytics-sql/
+--
 -- Description:
 --   Provides detailed analytics on conflict resolutions and modifications,
 --   broken down by reason(s), with support for slicing by month, outlier status,

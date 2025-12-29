@@ -1,6 +1,11 @@
 -- ============================================================================
 -- Script: 05-monthly-conflict-scv-changes.sql
 --
+-- GCS SYNC REMINDER:
+--   This file is loaded by the Cloud Function from GCS. After making changes,
+--   sync to GCS:  gsutil cp scripts/conflict-resolution-analysis/0*.sql \
+--                           gs://clinvar-ingest/conflict-analytics-sql/
+--
 -- Description:
 --   Creates tables tracking how individual SCVs change between consecutive monthly
 --   snapshots, and summarizes these changes at the VCV level. This enables detailed

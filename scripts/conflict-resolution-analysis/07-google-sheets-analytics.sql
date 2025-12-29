@@ -1,6 +1,11 @@
 -- ============================================================================
 -- Script: 07-google-sheets-analytics.sql
 --
+-- GCS SYNC REMINDER:
+--   This file is loaded by the Cloud Function from GCS. After making changes,
+--   sync to GCS:  gsutil cp scripts/conflict-resolution-analysis/0*.sql \
+--                           gs://clinvar-ingest/conflict-analytics-sql/
+--
 -- Description:
 --   Creates optimized views for Google Sheets visualization with slicers.
 --   Designed for charts that aggregate data dynamically based on user-selected

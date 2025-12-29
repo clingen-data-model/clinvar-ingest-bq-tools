@@ -19,12 +19,23 @@ This service allows you to:
 │   (Apps Script)     │               │   (Python)          │
 └─────────────────────┘               └──────────┬──────────┘
                                                  │
-                                                 ▼
-                                      ┌─────────────────────┐
-                                      │     BigQuery        │
-                                      │   (clinvar_ingest)  │
-                                      └─────────────────────┘
+                                      ┌──────────┴──────────┐
+                                      │                     │
+                                      ▼                     ▼
+                           ┌─────────────────┐   ┌─────────────────┐
+                           │      GCS        │   │    BigQuery     │
+                           │  (SQL files)    │   │ (clinvar_ingest)│
+                           └─────────────────┘   └─────────────────┘
 ```
+
+### SQL File Storage
+
+SQL scripts are loaded from GCS at runtime:
+
+- **Bucket**: `gs://clinvar-ingest/conflict-analytics-sql/`
+- **Files**: `01-get-monthly-conflicts.sql` through `07-google-sheets-analytics.sql`
+
+This allows updating SQL logic without redeploying the Cloud Function.
 
 ## Setup
 
@@ -219,6 +230,27 @@ After running the pipeline:
 2. Use **Refresh Connected Data** from the menu
 3. Or manually refresh via **Data → Data connectors → Refresh data**
 
+## Updating SQL Files
+
+SQL files are stored in GCS and loaded at runtime. To update them:
+
+1. **Edit the SQL files** in `scripts/conflict-resolution-analysis/`
+
+2. **Sync to GCS** using the provided script:
+
+   ```bash
+   cd scripts/conflict-resolution-analysis
+   ./sync-sql-to-gcs.sh
+   ```
+
+3. **Verify the upload**:
+
+   ```bash
+   gsutil ls -l gs://clinvar-ingest/conflict-analytics-sql/
+   ```
+
+Changes take effect immediately on the next Cloud Function invocation - no redeployment needed.
+
 ## Files
 
 ```
@@ -228,6 +260,15 @@ conflict-analytics-trigger/
 ├── README.md              # This file
 └── apps-script/
     └── ConflictAnalytics.gs  # Google Apps Script code
+
+scripts/conflict-resolution-analysis/
+├── 01-get-monthly-conflicts.sql        # Monthly snapshots
+├── 02-monthly-conflict-changes.sql     # VCV-level changes
+├── 04-monthly-conflict-scv-snapshots.sql  # SCV snapshots
+├── 05-monthly-conflict-scv-changes.sql    # SCV changes
+├── 06-resolution-modification-analytics.sql  # Analytics tables
+├── 07-google-sheets-analytics.sql      # Google Sheets views
+└── sync-sql-to-gcs.sh                  # GCS sync script
 ```
 
 ## Related Documentation
