@@ -19,17 +19,18 @@ contribute to VCV-level conflict status changes.
 
 ### 1a. Tier-Aware Reason Tracking
 
-SCV-level reasons are tracked separately for **contributing tier** vs **lower tier** SCVs:
+SCV-level reasons are tracked for **contributing tier** SCVs only:
 
 - **Contributing tier**: SCVs at the rank tier that determines the VCV's classification
   - For 1-star/2-star VCVs: 1-star SCVs are contributing
   - For 0-star VCVs: 0-star SCVs are contributing
 - **Lower tier**: SCVs at a rank tier lower than the conflict's determining tier
   - For 1-star VCV conflicts: 0-star SCVs are "lower tier"
+  - Lower tier changes are captured in the data model but **not used for reason assignment**
 
 This distinction affects reason assignment:
-- Contributing tier changes are tracked (e.g., `scv_flagged`, `scv_removed`, `scv_reclassified`)
-- Lower tier changes are **not tracked** because they don't impact the VCV's classification
+- Contributing tier changes drive `primary_reason` and `scv_reasons` (e.g., `scv_flagged`, `scv_removed`, `scv_reclassified`)
+- Lower tier changes are captured for reference but don't impact reason assignment
 
 The tier is determined by checking `prev_is_contributing` and `curr_is_contributing` flags:
 - For `added` SCVs: Use `curr_is_contributing` (new SCV's tier in current month)

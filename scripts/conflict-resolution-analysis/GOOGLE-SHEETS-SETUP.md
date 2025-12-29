@@ -199,18 +199,18 @@ ORDER BY snapshot_release_date
 
 ---
 
-### Chart 5a: Primary vs Secondary Reasons Over Time
+### Chart 5a: SCV Reason Trends Over Time
 
-**Purpose**: Track how often each reason is the primary driver vs a contributing factor, trending over time
+**Purpose**: Track the SCV-level reasons that drive conflict resolutions and modifications over time, with separate counts for single-reason vs multi-reason changes
 
-**Data Source**: `sheets_multi_reason_wide`
+**Data Source**: `sheets_reason_combinations_wide`
 
-**Chart Type**: Line chart or stacked area chart
+**Chart Type**: Stacked column chart or stacked area chart
 
 **Query**:
 
 ```sql
-SELECT * FROM `clinvar_ingest.sheets_multi_reason_wide`
+SELECT * FROM `clinvar_ingest.sheets_reason_combinations_wide`
 WHERE change_status = 'resolved'
 ORDER BY snapshot_release_date
 ```
@@ -218,78 +218,64 @@ ORDER BY snapshot_release_date
 **Configuration**:
 
 1. Add slicers for `conflict_type` and `outlier_status`
-2. Insert → Chart → Line chart (or stacked area)
+2. Insert → Chart → Stacked column chart
 3. X-axis: `snapshot_month`
-4. Series: Select the `_primary` and `_secondary` columns for the reasons you want to compare
+4. Series: Select the reason columns you want to compare
 
-**Example - Compare scv_reclassified primary vs secondary over time**:
+**Available Columns**:
 
-- Series 1: `scv_reclassified_primary` (when reclassification was THE main reason)
-- Series 2: `scv_reclassified_secondary` (when reclassification contributed but wasn't primary)
+Each reason has two columns: `{reason}_single` and `{reason}_multi`
 
-**Available Column Pairs** (each reason has `_primary` and `_secondary` columns):
+| Reason | Single Column | Multi Column | Applies To |
+|--------|---------------|--------------|------------|
+| Reclassified | `reclassified_single` | `reclassified_multi` | Resolution, Modification |
+| Flagged | `flagged_single` | `flagged_multi` | Resolution, Modification |
+| Removed | `removed_single` | `removed_multi` | Resolution, Modification |
+| Added | `added_single` | `added_multi` | Modification only |
+| Rank Downgraded | `rank_downgraded_single` | `rank_downgraded_multi` | Resolution, Modification |
+| Expert Panel | `expert_panel_single` | `expert_panel_multi` | Resolution |
+| Higher Rank | `higher_rank_single` | `higher_rank_multi` | Resolution |
+| Unknown | `unknown_single` | `unknown_multi` | Rare fallback only |
 
-| Reason | Primary Column | Secondary Column |
-|--------|---------------|------------------|
-| `scv_reclassified` | `scv_reclassified_primary` | `scv_reclassified_secondary` |
-| `scv_flagged` | `scv_flagged_primary` | `scv_flagged_secondary` |
-| `scv_removed` | `scv_removed_primary` | `scv_removed_secondary` |
-| `scv_added` | `scv_added_primary` | `scv_added_secondary` |
-| `scv_rank_downgraded` | `scv_rank_downgraded_primary` | `scv_rank_downgraded_secondary` |
-| `expert_panel_added` | `expert_panel_added_primary` | `expert_panel_added_secondary` |
-| `higher_rank_scv_added` | `higher_rank_scv_added_primary` | `higher_rank_scv_added_secondary` |
-| `vcv_rank_changed` | `vcv_rank_changed_primary` | `vcv_rank_changed_secondary` |
-| `outlier_reclassified` | `outlier_reclassified_primary` | `outlier_reclassified_secondary` |
-| `outlier_status_changed` | `outlier_status_changed_primary` | `outlier_status_changed_secondary` |
-| `conflict_type_changed` | `conflict_type_changed_primary` | `conflict_type_changed_secondary` |
-| `single_submitter_withdrawn` | `single_submitter_withdrawn_primary` | `single_submitter_withdrawn_secondary` |
-| `unknown` | `unknown_primary` | `unknown_secondary` |
+*Summary Columns*:
 
-**Alternative - Static comparison using long format**:
+| Column | Description |
+|--------|-------------|
+| `single_reason_total` | Count of changes with exactly one SCV reason |
+| `multi_reason_total` | Count of changes with 2+ SCV reasons |
+| `total_variants` | Total variants changed |
 
-For a point-in-time grouped bar chart comparing all reasons, use `sheets_multi_reason_detail`:
+**Key Design Principles**:
+
+1. **Single vs Multi Columns**: Each reason has `_single` (only reason) and `_multi` (primary reason with others) columns. This lets you see how often each reason occurs alone vs. in combination.
+
+2. **VCV Outcomes Resolve to Underlying SCV Reason**: When the `primary_reason` is a VCV-level outcome (like `outlier_status_changed`, `conflict_type_changed`, or `vcv_rank_changed`), the view looks up the underlying SCV reason from the `scv_reasons` array. For example, most `outlier_status_changed` cases are caused by `scv_rank_downgraded` (the outlier SCV was demoted from the contributing tier).
+
+3. **single_submitter_withdrawn Mapping**: This is NOT a separate reason - it's a context where the underlying SCV reason (flagged/removed/reclassified) was sufficient because only one submitter existed. It maps to the underlying SCV reason from the `scv_reasons` array.
+
+4. **added for Modifications Only**: The `added` reason only appears for modifications because when SCVs are added and a conflict resolves, a higher-priority reason (`expert_panel` or `higher_rank`) takes precedence.
+
+5. **Minimal Unknown**: The `unknown` category only appears when no SCV reason can be identified in either `primary_reason` or the `scv_reasons` array. This is rare.
+
+**Alternative - Long format for custom analysis**:
+
+Use `sheets_reason_combinations` for per-reason rows with single/multi counts:
 
 ```sql
 SELECT
-  reason,
-  SUM(as_primary_count) AS as_primary_count,
-  SUM(as_secondary_count) AS as_secondary_count
-FROM `clinvar_ingest.sheets_multi_reason_detail`
+  snapshot_month,
+  scv_reason,
+  change_status,
+  SUM(single_reason_count) AS single_count,
+  SUM(multi_reason_count) AS multi_count,
+  SUM(total_variant_count) AS total_count
+FROM `clinvar_ingest.sheets_reason_combinations`
 WHERE change_status = 'resolved'
-GROUP BY reason
-ORDER BY SUM(as_primary_count) DESC
+GROUP BY snapshot_month, scv_reason, change_status
+ORDER BY snapshot_month, total_count DESC
 ```
 
 **Tip**: Use `WHERE change_status = 'modified'` to analyze modification reasons instead.
-
----
-
-### Chart 6a: Conflict Percentage Dashboard (KPIs)
-
-**Purpose**: Show current conflict rate as percentage of all variants
-
-**Data Source**: `sheets_monthly_overview`
-
-**Chart Type**: Scorecard or single-value chart
-
-**Query** (latest 2 months for comparison):
-
-```sql
-SELECT * FROM `clinvar_ingest.sheets_monthly_overview`
-ORDER BY snapshot_release_date DESC
-LIMIT 2
-```
-
-**Configuration**:
-- Value: `pct_total_conflicts` (latest month)
-- Comparison: Previous month value
-
-**Additional KPIs**:
-- `pct_clinsig_conflicts`: Clinically significant conflict rate
-- `net_change`: Monthly net change
-- `resolved_conflicts`: Resolutions this month
-
-**Tip**: Use separate scorecard charts for each KPI. Set the comparison value from the second row (previous month) to show trend direction.
 
 ## Step 4: Dashboard Layout
 
@@ -298,13 +284,6 @@ LIMIT 2
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  [Date Slicer]  [Conflict Type Slicer]  [Outlier Slicer]   │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────────────┐  ┌─────────────────────┐          │
-│  │  Conflict Rate KPI  │  │  Net Change KPI     │          │
-│  │  (Scorecard)        │  │  (Scorecard)        │          │
-│  └─────────────────────┘  └─────────────────────┘          │
-│                                                             │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌──────────────────────────────────────────────────────┐  │

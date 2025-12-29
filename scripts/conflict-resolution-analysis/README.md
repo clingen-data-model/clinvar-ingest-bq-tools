@@ -117,7 +117,8 @@ The goal is to answer questions like:
 | `sheets_monthly_overview` | Single row per month, pre-aggregated for simple dashboards |
 | `sheets_change_status_wide` | Change status as columns, for stacked bar charts with slicers |
 | `sheets_change_reasons_wide` | Reasons as columns, for stacked bar charts with slicers |
-| `sheets_multi_reason_wide` | Primary/secondary counts per reason as columns, for time-series charts |
+| `sheets_reason_combinations` | Reason combinations (e.g., "reclassified + removed"), for pattern analysis |
+| `sheets_reason_combinations_wide` | Reason combinations as columns, for stacked charts over time |
 
 ## Key Metrics
 
@@ -321,3 +322,13 @@ The variant is no longer in conflict because all submitters now agree.
 
   This excludes edge cases where the VCV classification is stale (e.g., SCVs were removed/flagged but VCV not yet updated).
 - **Primary reason assignment**: Each VCV change receives a single `primary_reason` for aggregation, while `scv_reasons` array captures all contributing factors.
+- **No double-counting across categories**: Each variant appears exactly once per month in `monthly_conflict_changes`, ensuring accurate sums across `conflict_type` and `outlier_status` dimensions. The categorization uses `COALESCE(curr_X, prev_X)` logic:
+
+  | Change Status | Category Source | Rationale                              |
+  |---------------|-----------------|----------------------------------------|
+  | `new`         | `curr_` values  | `prev_` is NULL (wasn't conflicting)   |
+  | `resolved`    | `prev_` values  | `curr_` is NULL (no longer conflicting)|
+  | `modified`    | `curr_` values  | Both exist; uses current state         |
+  | `unchanged`   | `curr_` values  | Both exist and are equal               |
+
+  This means a variant that transitions from "With Outlier" to "No Outlier" (a modification) is counted once under "No Outlier"—not double-counted as both a resolution from one category and a new conflict in another. Summing counts across all `conflict_type` × `outlier_status` combinations gives accurate totals.
