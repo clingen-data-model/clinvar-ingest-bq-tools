@@ -1,6 +1,11 @@
 -- ============================================================================
 -- Script: 02-monthly-conflict-changes.sql
 --
+-- GCS SYNC REMINDER:
+--   This file is loaded by the Cloud Function from GCS. After making changes,
+--   sync to GCS:  gsutil cp scripts/conflict-resolution-analysis/0*.sql \
+--                           gs://clinvar-ingest/conflict-analytics-sql/
+--
 -- Description:
 --   Creates a table comparing consecutive monthly conflict snapshots to track
 --   how conflicts evolve over time. Identifies new conflicts, resolved conflicts,

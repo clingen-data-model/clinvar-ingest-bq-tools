@@ -1,6 +1,11 @@
 -- ============================================================================
 -- Script: 04-monthly-conflict-scv-snapshots.sql
 --
+-- GCS SYNC REMINDER:
+--   This file is loaded by the Cloud Function from GCS. After making changes,
+--   sync to GCS:  gsutil cp scripts/conflict-resolution-analysis/0*.sql \
+--                           gs://clinvar-ingest/conflict-analytics-sql/
+--
 -- Description:
 --   Creates a table of individual SCV (Submitted ClinVar) records that contribute
 --   to VCV-level conflicts for each monthly snapshot. This enables detailed

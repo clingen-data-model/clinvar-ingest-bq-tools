@@ -1,6 +1,11 @@
 -- ============================================================================
 -- Script: 01-get-monthly-conflicts.sql
 --
+-- GCS SYNC REMINDER:
+--   This file is loaded by the Cloud Function from GCS. After making changes,
+--   sync to GCS:  gsutil cp scripts/conflict-resolution-analysis/0*.sql \
+--                           gs://clinvar-ingest/conflict-analytics-sql/
+--
 -- Description:
 --   Creates a table of monthly conflict snapshots for all variants starting
 --   from January 2023. For each month, captures all variants in a conflict
