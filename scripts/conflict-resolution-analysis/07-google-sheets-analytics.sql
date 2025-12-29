@@ -258,10 +258,13 @@ baseline AS (
 
 -- Map current month to previous month for baseline lookup
 month_mapping AS (
-  SELECT DISTINCT
+  SELECT
     snapshot_release_date,
     LAG(snapshot_release_date) OVER (ORDER BY snapshot_release_date) AS prev_snapshot_release_date
-  FROM `clinvar_ingest.monthly_conflict_snapshots`
+  FROM (
+    SELECT DISTINCT snapshot_release_date
+    FROM `clinvar_ingest.monthly_conflict_snapshots`
+  )
 )
 
 SELECT
@@ -348,10 +351,13 @@ baseline AS (
 ),
 
 month_mapping AS (
-  SELECT DISTINCT
+  SELECT
     snapshot_release_date,
     LAG(snapshot_release_date) OVER (ORDER BY snapshot_release_date) AS prev_snapshot_release_date
-  FROM `clinvar_ingest.monthly_conflict_snapshots`
+  FROM (
+    SELECT DISTINCT snapshot_release_date
+    FROM `clinvar_ingest.monthly_conflict_snapshots`
+  )
 )
 
 SELECT
@@ -531,5 +537,215 @@ SELECT
   -- Fallback
   SUM(CASE WHEN primary_reason = 'unknown' THEN variant_count ELSE 0 END) AS unknown
 FROM `clinvar_ingest.sheets_change_reasons`
+GROUP BY snapshot_release_date, conflict_type, outlier_status, change_status
+ORDER BY snapshot_release_date, conflict_type, outlier_status, change_status;
+
+
+-- ============================================================================
+-- View 8: SCV Reasons Over Time
+-- ============================================================================
+-- This view tracks the SCV-level reasons that drive conflict resolutions and
+-- modifications. Each reason row includes both single-reason and multi-reason
+-- variant counts.
+--
+-- SCV REASONS (what caused the change):
+--   Resolution reasons: reclassified, flagged, removed, rank_downgraded,
+--                       expert_panel, higher_rank
+--   Modification reasons: all above + added
+--
+-- VCV OUTCOMES (effects, not causes - tracked separately):
+--   outlier_status_changed, conflict_type_changed, vcv_rank_changed
+--   These are NOT included in reason categorization as they are effects,
+--   not causes of the resolution/modification.
+--
+-- OUTPUT FORMAT:
+--   One row per reason with:
+--   - single_reason_count: Variants where this was the ONLY SCV reason
+--   - multi_reason_count: Variants where this was primary but other reasons exist
+--   - total_variant_count: Sum of single + multi
+--
+-- NOTES:
+--   - single_submitter_withdrawn is NOT a separate reason - it's a context
+--     where the underlying SCV reason (flagged/removed/reclassified) was
+--     sufficient because only one submitter existed on one side
+--   - For expert_panel and higher_rank, the "added" is implicit in the reason
+--
+-- Use for:
+--   - Trend charts showing reason distribution over time
+--   - Comparing single vs multi-reason patterns per reason type
+--   - Aggregations by reason across time periods
+
+CREATE OR REPLACE VIEW `clinvar_ingest.sheets_reason_combinations` AS
+
+WITH reason_combos AS (
+  SELECT
+    snapshot_release_date,
+    conflict_type,
+    outlier_status,
+    vcv_change_status AS change_status,
+    primary_reason,
+    scv_reasons,
+    -- Count only true SCV reasons (exclude VCV-level outcomes)
+    (SELECT COUNT(*) FROM UNNEST(scv_reasons) r
+     WHERE r IN ('scv_reclassified', 'scv_flagged', 'scv_removed', 'scv_added', 'scv_rank_downgraded')
+    ) AS scv_reason_count,
+    -- Determine the simplified reason category (without _multi suffix)
+    -- Priority: Use explicit SCV reason from primary_reason first, then fall back to scv_reasons array
+    CASE
+      -- Expert panel supersession (3/4-star SCV added)
+      WHEN primary_reason = 'expert_panel_added' THEN 'expert_panel'
+      -- Higher rank supersession (1-star SCV supersedes 0-star conflict)
+      WHEN primary_reason = 'higher_rank_scv_added' THEN 'higher_rank'
+      -- Standard SCV reasons (when primary_reason is already an SCV reason)
+      WHEN primary_reason = 'scv_reclassified' THEN 'reclassified'
+      WHEN primary_reason = 'scv_flagged' THEN 'flagged'
+      WHEN primary_reason = 'scv_removed' THEN 'removed'
+      WHEN primary_reason = 'scv_added' THEN 'added'
+      WHEN primary_reason = 'scv_rank_downgraded' THEN 'rank_downgraded'
+      -- For VCV outcomes and context-based reasons, use the underlying SCV reason from scv_reasons array
+      WHEN primary_reason IN ('single_submitter_withdrawn', 'vcv_rank_changed',
+                              'outlier_status_changed', 'conflict_type_changed',
+                              'outlier_reclassified', 'unknown') THEN
+        CASE
+          WHEN 'scv_flagged' IN UNNEST(scv_reasons) THEN 'flagged'
+          WHEN 'scv_removed' IN UNNEST(scv_reasons) THEN 'removed'
+          WHEN 'scv_reclassified' IN UNNEST(scv_reasons) THEN 'reclassified'
+          WHEN 'scv_rank_downgraded' IN UNNEST(scv_reasons) THEN 'rank_downgraded'
+          WHEN 'scv_added' IN UNNEST(scv_reasons) THEN 'added'
+          ELSE 'unknown'
+        END
+      ELSE 'unknown'
+    END AS scv_reason
+  FROM `clinvar_ingest.conflict_vcv_change_detail`
+  WHERE scv_reasons IS NOT NULL
+    AND ARRAY_LENGTH(scv_reasons) > 0
+    -- Exclude new_conflict and no_change since they're not SCV-level reasons
+    AND primary_reason NOT IN ('new_conflict', 'no_change')
+)
+
+SELECT
+  snapshot_release_date,
+  FORMAT_DATE('%Y-%m', snapshot_release_date) AS snapshot_month,
+  conflict_type,
+  outlier_status,
+  change_status,
+  scv_reason,
+  -- Single-reason count (this was the only SCV reason)
+  COUNTIF(scv_reason_count = 1) AS single_reason_count,
+  -- Multi-reason count (this was primary but other SCV reasons exist)
+  COUNTIF(scv_reason_count > 1) AS multi_reason_count,
+  -- Total variant count
+  COUNT(*) AS total_variant_count
+FROM reason_combos
+GROUP BY
+  snapshot_release_date,
+  conflict_type,
+  outlier_status,
+  change_status,
+  scv_reason
+ORDER BY snapshot_release_date, change_status, total_variant_count DESC;
+
+
+-- ============================================================================
+-- View 9: SCV Reasons Wide Format (for Stacked Charts)
+-- ============================================================================
+-- This view pivots SCV reasons into columns for stacked bar charts.
+-- Each reason has two columns: {reason}_single and {reason}_multi
+--
+-- SCV REASONS (what caused the change):
+--   Resolution reasons: reclassified, flagged, removed, rank_downgraded,
+--                       expert_panel, higher_rank
+--   Modification reasons: all above + added
+--
+-- COLUMN FORMAT:
+--   {reason}_single: Variants where this was the ONLY SCV reason
+--   {reason}_multi: Variants where this was primary but other reasons exist
+--
+-- Use for:
+--   - Stacked bar charts showing reason breakdown over time
+--   - Side-by-side comparison of single vs multi-reason changes per reason
+
+CREATE OR REPLACE VIEW `clinvar_ingest.sheets_reason_combinations_wide` AS
+
+WITH reason_combos AS (
+  SELECT
+    snapshot_release_date,
+    conflict_type,
+    outlier_status,
+    vcv_change_status AS change_status,
+    primary_reason,
+    scv_reasons,
+    -- Count only true SCV reasons (exclude VCV-level outcomes)
+    (SELECT COUNT(*) FROM UNNEST(scv_reasons) r
+     WHERE r IN ('scv_reclassified', 'scv_flagged', 'scv_removed', 'scv_added', 'scv_rank_downgraded')
+    ) AS scv_reason_count,
+    -- Determine the simplified reason category (without _multi suffix)
+    -- Priority: Use explicit SCV reason from primary_reason first, then fall back to scv_reasons array
+    CASE
+      -- Expert panel supersession (3/4-star SCV added)
+      WHEN primary_reason = 'expert_panel_added' THEN 'expert_panel'
+      -- Higher rank supersession (1-star SCV supersedes 0-star conflict)
+      WHEN primary_reason = 'higher_rank_scv_added' THEN 'higher_rank'
+      -- Standard SCV reasons (when primary_reason is already an SCV reason)
+      WHEN primary_reason = 'scv_reclassified' THEN 'reclassified'
+      WHEN primary_reason = 'scv_flagged' THEN 'flagged'
+      WHEN primary_reason = 'scv_removed' THEN 'removed'
+      WHEN primary_reason = 'scv_added' THEN 'added'
+      WHEN primary_reason = 'scv_rank_downgraded' THEN 'rank_downgraded'
+      -- For VCV outcomes and context-based reasons, use the underlying SCV reason from scv_reasons array
+      WHEN primary_reason IN ('single_submitter_withdrawn', 'vcv_rank_changed',
+                              'outlier_status_changed', 'conflict_type_changed',
+                              'outlier_reclassified', 'unknown') THEN
+        CASE
+          WHEN 'scv_flagged' IN UNNEST(scv_reasons) THEN 'flagged'
+          WHEN 'scv_removed' IN UNNEST(scv_reasons) THEN 'removed'
+          WHEN 'scv_reclassified' IN UNNEST(scv_reasons) THEN 'reclassified'
+          WHEN 'scv_rank_downgraded' IN UNNEST(scv_reasons) THEN 'rank_downgraded'
+          WHEN 'scv_added' IN UNNEST(scv_reasons) THEN 'added'
+          ELSE 'unknown'
+        END
+      ELSE 'unknown'
+    END AS scv_reason
+  FROM `clinvar_ingest.conflict_vcv_change_detail`
+  WHERE scv_reasons IS NOT NULL
+    AND ARRAY_LENGTH(scv_reasons) > 0
+    AND primary_reason NOT IN ('new_conflict', 'no_change')
+)
+
+SELECT
+  snapshot_release_date,
+  FORMAT_DATE('%Y-%m', snapshot_release_date) AS snapshot_month,
+  conflict_type,
+  outlier_status,
+  change_status,
+  -- Reclassified
+  SUM(CASE WHEN scv_reason = 'reclassified' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS reclassified_single,
+  SUM(CASE WHEN scv_reason = 'reclassified' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS reclassified_multi,
+  -- Flagged
+  SUM(CASE WHEN scv_reason = 'flagged' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS flagged_single,
+  SUM(CASE WHEN scv_reason = 'flagged' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS flagged_multi,
+  -- Removed
+  SUM(CASE WHEN scv_reason = 'removed' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS removed_single,
+  SUM(CASE WHEN scv_reason = 'removed' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS removed_multi,
+  -- Added (modification only)
+  SUM(CASE WHEN scv_reason = 'added' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS added_single,
+  SUM(CASE WHEN scv_reason = 'added' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS added_multi,
+  -- Rank downgraded
+  SUM(CASE WHEN scv_reason = 'rank_downgraded' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS rank_downgraded_single,
+  SUM(CASE WHEN scv_reason = 'rank_downgraded' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS rank_downgraded_multi,
+  -- Expert panel
+  SUM(CASE WHEN scv_reason = 'expert_panel' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS expert_panel_single,
+  SUM(CASE WHEN scv_reason = 'expert_panel' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS expert_panel_multi,
+  -- Higher rank
+  SUM(CASE WHEN scv_reason = 'higher_rank' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS higher_rank_single,
+  SUM(CASE WHEN scv_reason = 'higher_rank' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS higher_rank_multi,
+  -- Unknown (VCV-level outcomes or unidentified)
+  SUM(CASE WHEN scv_reason = 'unknown' AND scv_reason_count = 1 THEN 1 ELSE 0 END) AS unknown_single,
+  SUM(CASE WHEN scv_reason = 'unknown' AND scv_reason_count > 1 THEN 1 ELSE 0 END) AS unknown_multi,
+  -- Summary totals
+  SUM(CASE WHEN scv_reason_count = 1 THEN 1 ELSE 0 END) AS single_reason_total,
+  SUM(CASE WHEN scv_reason_count > 1 THEN 1 ELSE 0 END) AS multi_reason_total,
+  COUNT(*) AS total_variants
+FROM reason_combos
 GROUP BY snapshot_release_date, conflict_type, outlier_status, change_status
 ORDER BY snapshot_release_date, conflict_type, outlier_status, change_status;

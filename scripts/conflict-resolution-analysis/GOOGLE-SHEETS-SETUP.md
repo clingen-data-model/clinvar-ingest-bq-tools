@@ -199,72 +199,83 @@ ORDER BY snapshot_release_date
 
 ---
 
-### Chart 5a: Primary vs Contributing Reasons
+### Chart 5a: SCV Reason Trends Over Time
 
-**Purpose**: Compare how often a reason is the primary driver vs a contributing factor
+**Purpose**: Track the SCV-level reasons that drive conflict resolutions and modifications over time, with separate counts for single-reason vs multi-reason changes
 
-**Data Source**: `sheets_multi_reason_detail`
+**Data Source**: `sheets_reason_combinations_wide`
 
-**Chart Type**: Grouped bar chart
+**Chart Type**: Stacked column chart or stacked area chart
 
 **Query**:
+
 ```sql
-SELECT * FROM `clinvar_ingest.sheets_multi_reason_detail`
-ORDER BY snapshot_release_date, reason
+SELECT * FROM `clinvar_ingest.sheets_reason_combinations_wide`
+WHERE change_status = 'resolved'
+ORDER BY snapshot_release_date
 ```
 
 **Configuration**:
 
-1. Add slicers for `snapshot_month`, `conflict_type`, `outlier_status`, and `change_status`
-2. Insert → Chart → Grouped bar chart
-3. X-axis: `reason`
-4. Series 1: `as_primary_count` (how often this reason is THE primary driver)
-5. Series 2: `as_secondary_count` (how often this reason contributes but isn't primary)
+1. Add slicers for `conflict_type` and `outlier_status`
+2. Insert → Chart → Stacked column chart
+3. X-axis: `snapshot_month`
+4. Series: Select the reason columns you want to compare
 
-**Alternative Query** (aggregated totals for simpler chart):
+**Available Columns**:
+
+Each reason has two columns: `{reason}_single` and `{reason}_multi`
+
+| Reason | Single Column | Multi Column | Applies To |
+|--------|---------------|--------------|------------|
+| Reclassified | `reclassified_single` | `reclassified_multi` | Resolution, Modification |
+| Flagged | `flagged_single` | `flagged_multi` | Resolution, Modification |
+| Removed | `removed_single` | `removed_multi` | Resolution, Modification |
+| Added | `added_single` | `added_multi` | Modification only |
+| Rank Downgraded | `rank_downgraded_single` | `rank_downgraded_multi` | Resolution, Modification |
+| Expert Panel | `expert_panel_single` | `expert_panel_multi` | Resolution |
+| Higher Rank | `higher_rank_single` | `higher_rank_multi` | Resolution |
+| Unknown | `unknown_single` | `unknown_multi` | Rare fallback only |
+
+*Summary Columns*:
+
+| Column | Description |
+|--------|-------------|
+| `single_reason_total` | Count of changes with exactly one SCV reason |
+| `multi_reason_total` | Count of changes with 2+ SCV reasons |
+| `total_variants` | Total variants changed |
+
+**Key Design Principles**:
+
+1. **Single vs Multi Columns**: Each reason has `_single` (only reason) and `_multi` (primary reason with others) columns. This lets you see how often each reason occurs alone vs. in combination.
+
+2. **VCV Outcomes Resolve to Underlying SCV Reason**: When the `primary_reason` is a VCV-level outcome (like `outlier_status_changed`, `conflict_type_changed`, or `vcv_rank_changed`), the view looks up the underlying SCV reason from the `scv_reasons` array. For example, most `outlier_status_changed` cases are caused by `scv_rank_downgraded` (the outlier SCV was demoted from the contributing tier).
+
+3. **single_submitter_withdrawn Mapping**: This is NOT a separate reason - it's a context where the underlying SCV reason (flagged/removed/reclassified) was sufficient because only one submitter existed. It maps to the underlying SCV reason from the `scv_reasons` array.
+
+4. **added for Modifications Only**: The `added` reason only appears for modifications because when SCVs are added and a conflict resolves, a higher-priority reason (`expert_panel` or `higher_rank`) takes precedence.
+
+5. **Minimal Unknown**: The `unknown` category only appears when no SCV reason can be identified in either `primary_reason` or the `scv_reasons` array. This is rare.
+
+**Alternative - Long format for custom analysis**:
+
+Use `sheets_reason_combinations` for per-reason rows with single/multi counts:
 
 ```sql
 SELECT
-  reason,
+  snapshot_month,
+  scv_reason,
   change_status,
-  SUM(as_primary_count) AS as_primary_count,
-  SUM(as_secondary_count) AS as_secondary_count,
-  SUM(variant_count) AS variant_count
-FROM `clinvar_ingest.sheets_multi_reason_detail`
-GROUP BY reason, change_status
-ORDER BY SUM(as_primary_count) DESC
+  SUM(single_reason_count) AS single_count,
+  SUM(multi_reason_count) AS multi_count,
+  SUM(total_variant_count) AS total_count
+FROM `clinvar_ingest.sheets_reason_combinations`
+WHERE change_status = 'resolved'
+GROUP BY snapshot_month, scv_reason, change_status
+ORDER BY snapshot_month, total_count DESC
 ```
 
-**Tip**: Filter to `change_status = 'resolved'` to focus on resolution reasons only.
-
----
-
-### Chart 6a: Conflict Percentage Dashboard (KPIs)
-
-**Purpose**: Show current conflict rate as percentage of all variants
-
-**Data Source**: `sheets_monthly_overview`
-
-**Chart Type**: Scorecard or single-value chart
-
-**Query** (latest 2 months for comparison):
-
-```sql
-SELECT * FROM `clinvar_ingest.sheets_monthly_overview`
-ORDER BY snapshot_release_date DESC
-LIMIT 2
-```
-
-**Configuration**:
-- Value: `pct_total_conflicts` (latest month)
-- Comparison: Previous month value
-
-**Additional KPIs**:
-- `pct_clinsig_conflicts`: Clinically significant conflict rate
-- `net_change`: Monthly net change
-- `resolved_conflicts`: Resolutions this month
-
-**Tip**: Use separate scorecard charts for each KPI. Set the comparison value from the second row (previous month) to show trend direction.
+**Tip**: Use `WHERE change_status = 'modified'` to analyze modification reasons instead.
 
 ## Step 4: Dashboard Layout
 
@@ -273,13 +284,6 @@ LIMIT 2
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  [Date Slicer]  [Conflict Type Slicer]  [Outlier Slicer]   │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  ┌─────────────────────┐  ┌─────────────────────┐          │
-│  │  Conflict Rate KPI  │  │  Net Change KPI     │          │
-│  │  (Scorecard)        │  │  (Scorecard)        │          │
-│  └─────────────────────┘  └─────────────────────┘          │
-│                                                             │
 ├─────────────────────────────────────────────────────────────┤
 │                                                             │
 │  ┌──────────────────────────────────────────────────────┐  │

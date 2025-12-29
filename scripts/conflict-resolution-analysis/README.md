@@ -117,6 +117,8 @@ The goal is to answer questions like:
 | `sheets_monthly_overview` | Single row per month, pre-aggregated for simple dashboards |
 | `sheets_change_status_wide` | Change status as columns, for stacked bar charts with slicers |
 | `sheets_change_reasons_wide` | Reasons as columns, for stacked bar charts with slicers |
+| `sheets_reason_combinations` | Reason combinations (e.g., "reclassified + removed"), for pattern analysis |
+| `sheets_reason_combinations_wide` | Reason combinations as columns, for stacked charts over time |
 
 ## Key Metrics
 
@@ -142,42 +144,28 @@ Conflicts can be sliced by the star rank tier that determines the VCV's classifi
 
 The `conflict_rank_tier` dimension enables analysis of whether conflicts at different quality tiers behave differently—for example, whether 1-star conflicts resolve faster than 0-star conflicts.
 
-### Resolution Reasons
+### Resolution and Modification Reasons
 
-Why conflicts get resolved (in priority order):
+The pipeline tracks **SCV-level reasons** (what caused the change) separately from **VCV-level outcomes** (effects of the change). Only SCV reasons are used for categorizing resolutions and modifications.
 
-| Reason | Description |
-|--------|-------------|
-| `expert_panel_added` | Expert panel (3/4-star) submission now masks conflict |
-| `single_submitter_withdrawn` | Only had one submitter who withdrew |
-| `higher_rank_scv_added` | New 1-star SCV(s) superseded a 0-star conflict |
-| `vcv_rank_changed` | Existing SCV upgraded from 0-star to 1-star |
-| `scv_flagged` | Contributing submission(s) were flagged by ClinVar |
-| `scv_removed` | Contributing submission(s) were withdrawn/deleted |
-| `scv_rank_downgraded` | Contributing SCV demoted out of contributing tier (excludes flagged) |
-| `scv_reclassified` | Contributing submitter changed their classification |
-| `outlier_reclassified` | Outlier submitter changed their classification |
+**SCV Reasons (Causes):**
 
-**Note**: `higher_rank_scv_added` and `vcv_rank_changed` only apply to 0-star conflicts being superseded by 1-star SCVs. For 1-star conflicts, only `expert_panel_added` can supersede them (no 2-star SCVs exist in ClinVar).
+| Reason | Description | Applies To |
+|--------|-------------|------------|
+| `reclassified` | Contributing SCV changed classification | Resolution, Modification |
+| `flagged` | ClinVar flagged a contributing SCV | Resolution, Modification |
+| `removed` | Contributing SCV was withdrawn | Resolution, Modification |
+| `rank_downgraded` | SCV demoted from contributing tier | Resolution, Modification |
+| `expert_panel` | Expert panel (3/4-star) SCV added | Resolution |
+| `higher_rank` | 1-star SCV supersedes 0-star conflict | Resolution |
+| `added` | New SCV added to contributing tier | Modification only |
 
-**Note**: `scv_added` is not a resolution reason because when SCVs are added and a conflict resolves, a higher-priority reason (like `expert_panel_added` or `higher_rank_scv_added`) always takes precedence.
+**VCV Outcomes (Effects - tracked but not used as reasons):**
 
-**Note**: Lower-tier reasons have been removed because they don't impact the VCV's classification. Only contributing tier SCV changes are tracked.
+- `outlier_status_changed`, `conflict_type_changed`, `vcv_rank_changed`
+- These are resolved to their underlying SCV reason in the `sheets_reason_combinations` views
 
-### Modification Reasons
-
-Why conflicts changed but weren't resolved (in priority order):
-
-| Reason | Description |
-|--------|-------------|
-| `scv_reclassified` | Contributing SCV classification changed, still conflicting |
-| `scv_flagged` | Contributing submission(s) flagged but conflict remains |
-| `scv_removed` | Contributing submission(s) removed but conflict remains |
-| `scv_added` | New submission(s) added to contributing tier |
-| `vcv_rank_changed` | Different tier now determines classification |
-| `outlier_status_changed` | Gained or lost outlier status |
-| `conflict_type_changed` | Changed between clinsig and non-clinsig |
-| `unknown` | No identifiable reason (fallback) |
+For detailed documentation including multi-reason tracking, special cases, and example queries, see **[RESOLUTION-REASONS.md](RESOLUTION-REASONS.md)**.
 
 ### Multi-Reason Tracking
 
@@ -320,3 +308,13 @@ The variant is no longer in conflict because all submitters now agree.
 
   This excludes edge cases where the VCV classification is stale (e.g., SCVs were removed/flagged but VCV not yet updated).
 - **Primary reason assignment**: Each VCV change receives a single `primary_reason` for aggregation, while `scv_reasons` array captures all contributing factors.
+- **No double-counting across categories**: Each variant appears exactly once per month in `monthly_conflict_changes`, ensuring accurate sums across `conflict_type` and `outlier_status` dimensions. The categorization uses `COALESCE(curr_X, prev_X)` logic:
+
+  | Change Status | Category Source | Rationale                              |
+  |---------------|-----------------|----------------------------------------|
+  | `new`         | `curr_` values  | `prev_` is NULL (wasn't conflicting)   |
+  | `resolved`    | `prev_` values  | `curr_` is NULL (no longer conflicting)|
+  | `modified`    | `curr_` values  | Both exist; uses current state         |
+  | `unchanged`   | `curr_` values  | Both exist and are equal               |
+
+  This means a variant that transitions from "With Outlier" to "No Outlier" (a modification) is counted once under "No Outlier"—not double-counted as both a resolution from one category and a new conflict in another. Summing counts across all `conflict_type` × `outlier_status` combinations gives accurate totals.
