@@ -49,7 +49,13 @@ variant_snapshots AS (
     ms.snapshot_release_date,
     ms.clinsig_conflict,
     ms.has_outlier,
-    ms.conflict_rank_tier,
+    -- Derive conflict_rank_tier from rank
+    CASE
+      WHEN ms.rank = 0 THEN '0-star'
+      WHEN ms.rank = 1 THEN '1-star'
+      WHEN ms.rank IN (3, 4) THEN '3-4-star'
+      ELSE CAST(ms.rank AS STRING) || '-star'
+    END AS conflict_rank_tier,
     ms.agg_sig_type,
     -- Calculate months since first CVC submission
     DATE_DIFF(ms.snapshot_release_date, cv.first_cvc_submission_date, MONTH) AS months_since_cvc_submission,
@@ -73,7 +79,13 @@ baseline_snapshots AS (
     ms.snapshot_release_date,
     ms.clinsig_conflict,
     ms.has_outlier,
-    ms.conflict_rank_tier,
+    -- Derive conflict_rank_tier from rank
+    CASE
+      WHEN ms.rank = 0 THEN '0-star'
+      WHEN ms.rank = 1 THEN '1-star'
+      WHEN ms.rank IN (3, 4) THEN '3-4-star'
+      ELSE CAST(ms.rank AS STRING) || '-star'
+    END AS conflict_rank_tier,
     ms.agg_sig_type,
     -1 AS months_since_cvc_submission,
     FALSE AS is_first_post_cvc_snapshot
@@ -185,13 +197,13 @@ scv_attribution AS (
       -- CVC-prompted deletion (submitter responded during grace period)
       WHEN rsd.scv_change_status = 'removed'
         AND crc.outcome = 'deleted'
-        AND rsd.snapshot_release_date >= crc.cvc_submission_date
+        AND rsd.snapshot_release_date >= crc.submission_date
         AND rsd.snapshot_release_date <= DATE_ADD(crc.expected_flag_date, INTERVAL 30 DAY)
         THEN 'cvc_prompted_deletion'
       -- CVC-prompted reclassification (submitter responded during grace period)
       WHEN rsd.has_classification_change = TRUE
         AND crc.outcome = 'resubmitted, reclassified'
-        AND rsd.snapshot_release_date >= crc.cvc_submission_date
+        AND rsd.snapshot_release_date >= crc.submission_date
         AND rsd.snapshot_release_date <= DATE_ADD(crc.expected_flag_date, INTERVAL 30 DAY)
         THEN 'cvc_prompted_reclassification'
       -- CVC submitted but outcome doesn't match - might be organic
@@ -199,7 +211,7 @@ scv_attribution AS (
         THEN 'cvc_submitted_but_organic'
       -- No CVC involvement
       ELSE 'organic'
-    END AS scv_attribution
+    END AS attribution_type
   FROM resolved_scv_details rsd
   LEFT JOIN cvc_resolution_candidates crc
     ON crc.scv_id = rsd.scv_id
@@ -212,11 +224,11 @@ variant_attribution AS (
     snapshot_release_date,
     variation_id,
     -- Count SCVs by attribution type
-    COUNTIF(scv_attribution = 'cvc_flagged') AS cvc_flagged_scvs,
-    COUNTIF(scv_attribution = 'cvc_prompted_deletion') AS cvc_prompted_deletion_scvs,
-    COUNTIF(scv_attribution = 'cvc_prompted_reclassification') AS cvc_prompted_reclassification_scvs,
-    COUNTIF(scv_attribution = 'cvc_submitted_but_organic') AS cvc_submitted_organic_scvs,
-    COUNTIF(scv_attribution = 'organic') AS organic_scvs,
+    COUNTIF(attribution_type = 'cvc_flagged') AS cvc_flagged_scvs,
+    COUNTIF(attribution_type = 'cvc_prompted_deletion') AS cvc_prompted_deletion_scvs,
+    COUNTIF(attribution_type = 'cvc_prompted_reclassification') AS cvc_prompted_reclassification_scvs,
+    COUNTIF(attribution_type = 'cvc_submitted_but_organic') AS cvc_submitted_organic_scvs,
+    COUNTIF(attribution_type = 'organic') AS organic_scvs,
     -- Collect CVC batch IDs involved
     ARRAY_AGG(DISTINCT cvc_batch_id IGNORE NULLS ORDER BY cvc_batch_id) AS cvc_batch_ids,
     -- Collect CVC curation reasons

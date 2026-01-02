@@ -6,7 +6,7 @@ This pipeline tracks the impact of **ClinVar Curation (CVC) project submissions*
 
 ## Background
 
-The CVC project began in August 2023 with the goal of improving ClinVar data quality by flagging SCVs that meet specific criteria (see [CURATION_CRITERIA_GUIDE.md](../../clinvar-curation/CURATION_CRITERIA_GUIDE.md)). When an SCV is flagged and the submitter doesn't respond within 60 days, the flag is applied and that SCV is excluded from conflict calculations.
+The CVC project began in August 2023 with the goal of improving ClinVar data quality by flagging SCVs that meet specific criteria (see [CURATION_CRITERIA_GUIDE.md](../CURATION_CRITERIA_GUIDE.md)). When an SCV is flagged and the submitter doesn't respond within 60 days, the flag is applied and that SCV is excluded from conflict calculations.
 
 ### CVC Submission Timeline
 
@@ -172,6 +172,149 @@ ORDER BY batch_id;
 - **Conflict resolution data**: Updated when parent pipeline runs (after new monthly ClinVar release)
 - **First batch date**: September 7, 2023
 - **Total batches through Dec 2025**: 27 batches, 5,694 SCV submissions
+
+## How the Pipeline Works (Non-Technical Overview)
+
+This section explains what each query file does in plain language, without requiring SQL knowledge.
+
+### Step 0: Enrich Batch Information (`00-cvc-batch-enriched-view.sql`)
+
+**What it does:** Adds important dates to each batch of CVC submissions.
+
+When curators submit a batch of flagging candidates to ClinVar, they need to know:
+
+- When did ClinVar actually process/accept the batch?
+- When does the 60-day grace period end?
+- What's the first ClinVar release after the grace period?
+
+This query takes the batch acceptance dates (maintained in a separate file) and calculates these key dates. The grace period is important because submitters have 60 days to respond to a flagging candidate before the flag is applied.
+
+---
+
+### Step 1: Track All Submitted Variants (`01-cvc-submitted-variants.sql`)
+
+**What it does:** Creates a complete list of every SCV that CVC has ever submitted, with their current outcomes.
+
+Think of this as a master list showing:
+
+- Every submission the CVC project has made
+- Which batch it was part of
+- What happened to it (was it flagged? did the submitter delete it? did they change their classification?)
+- Whether it was a valid submission
+
+This also identifies "resolution candidates" - submissions that led to meaningful outcomes (flagged, deleted, or reclassified), which are the ones that potentially resolved conflicts.
+
+---
+
+### Step 2: Determine Who Gets Credit (`02-cvc-conflict-attribution.sql`)
+
+**What it does:** When a conflict gets resolved, this query figures out whether CVC deserves credit or if it happened naturally (organically).
+
+Imagine a conflict between labs is resolved. This query asks: "Did this happen because of CVC's intervention, or would it have happened anyway?"
+
+It categorizes each resolution as:
+
+- **CVC Flagged**: The SCV was flagged after CVC submitted it
+- **CVC Prompted Deletion**: The submitter deleted their SCV during the grace period (responding to CVC's notification)
+- **CVC Prompted Reclassification**: The submitter changed their classification during the grace period
+- **Organic**: The resolution happened without CVC involvement
+
+This is crucial for measuring CVC's real impact.
+
+---
+
+### Step 3: Calculate Impact Metrics (`03-cvc-impact-analytics.sql`)
+
+**What it does:** Rolls up all the data into summary statistics and dashboards.
+
+This creates monthly summaries showing:
+
+- How many conflicts exist each month
+- How many got resolved
+- What percentage of resolutions were due to CVC vs organic changes
+- How effective each batch has been
+- Which curation reasons (like "outdated data" or "incorrect inheritance") lead to the most resolutions
+
+These summaries are designed to be easily imported into Google Sheets for visualization.
+
+---
+
+### Step 4: Track Flagging Candidate Outcomes (`04-flagging-candidate-outcomes.sql`)
+
+**What it does:** For each flagging candidate submission, tracks exactly what happened to it over time.
+
+When CVC submits an SCV as a flagging candidate, several things can happen:
+
+- It gets flagged (after the 60-day window)
+- The submitter removes their SCV
+- The submitter reclassifies (changes their interpretation)
+- The submitter updates their SCV but keeps the same classification
+- It's still pending
+
+This query captures the SCV's state at three key moments:
+
+1. When CVC submitted it
+2. At the first release after the 60-day grace period
+3. Currently
+
+This helps track whether submitters are responding to CVC notifications and how they're responding.
+
+---
+
+### Step 5: Detect Version Bumps (`05-version-bump-detection.sql`)
+
+**What it does:** Identifies when submitters resubmit their SCVs without making any real changes.
+
+A "version bump" is when a submitter creates a new version of their SCV, but nothing substantive changed:
+
+- Same classification
+- Same evaluation date
+- Same condition (trait)
+- Same rank
+
+Why does this matter? Version bumps may be used to reset the 60-day grace period. If a submitter is notified of a flagging candidate, they could theoretically avoid the flag by resubmitting their SCV without changes, resetting the clock.
+
+This query compares consecutive versions of each SCV to detect:
+
+- Which SCVs had version bumps
+- When the bumps occurred
+- Which submitters do this most often
+
+---
+
+### Step 6: Identify Grace Period Gaming (`06-version-bump-flagging-intersection.sql`)
+
+**What it does:** Combines the flagging candidate data with version bump data to detect potential gaming of the system.
+
+This query answers:
+
+- How many flagging candidates received version bumps after being submitted?
+- Did the version bump happen during the 60-day grace period?
+- Did the version bump appear to prevent a flag from being applied?
+
+This is important for understanding whether submitters are responding appropriately to CVC notifications or potentially trying to avoid flags without addressing the underlying data quality issues.
+
+The query also breaks this down by submitter to identify patterns.
+
+---
+
+### Summary of Data Flow
+
+```text
+External Files                      CVC Curation Tables
+    ↓                                      ↓
+batch-accepted-dates.tsv ─→ 00 ─→ cvc_batches_enriched
+                                          ↓
+rejected-scvs.tsv        ─→ cvc_rejected_scvs (external table)
+                                          ↓
+                    ┌─────────────────────┴──────────────────────┐
+                    ↓                                            ↓
+         01 - Submitted Variants                   04 - Flagging Candidate Outcomes
+                    ↓                                            ↓
+         02 - Conflict Attribution                 05 - Version Bump Detection
+                    ↓                                            ↓
+         03 - Impact Analytics                     06 - Version Bump Intersection
+```
 
 ## Related Documentation
 

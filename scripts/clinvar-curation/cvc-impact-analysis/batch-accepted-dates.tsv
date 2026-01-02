@@ -1,0 +1,36 @@
+# CVC Batch Acceptance Dates
+# This file tracks when ClinVar processed/accepted each batch submission
+# The batch_accepted_date determines when the 60-day grace period starts for flagging candidates
+#
+# Format: batch_id	batch_accepted_date	notes
+# batch_accepted_date: The date ClinVar processed the batch (YYYY-MM-DD)
+# notes: Optional notes about the batch processing
+#
+batch_id	batch_accepted_date	notes
+101	2023-09-26	First batch
+102	2023-12-04	Second batch
+103	2023-12-27	Third batch
+104	2024-02-05	Fourth batch
+105	2024-03-05	Fifth batch
+106	2024-04-08	Sixth batch
+107	2024-05-13	Seventh batch
+108	2024-06-07	Eighth batch
+109	2024-07-01	Ninth batch
+110	2024-07-16	Tenth batch
+111	2024-07-23	Eleventh batch
+112	2024-08-27	Twelfth batch
+113	2024-09-24	Thirteenth batch
+114	2024-10-25	Fourteenth batch
+115	2024-12-02	Fifteenth batch
+116	2024-12-20	Sixteenth batch
+117	2025-02-14	Seventeenth batch
+118	2025-03-11	Eighteenth batch
+119	2025-04-18	Nineteenth batch
+120	2025-05-20	Twentieth batch
+121	2025-06-03	Twenty-first batch
+122	2025-07-16	Twenty-second batch
+123	2025-08-26	Twenty-third batch
+124	2025-09-09	Twenty-fourth batch
+125	2025-11-13	Twenty-fifth batch
+126	2025-11-17	Twenty-sixth batch
+127	2025-12-29	Twenty-seventh batch
