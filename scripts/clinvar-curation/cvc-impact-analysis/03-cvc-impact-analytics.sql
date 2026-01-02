@@ -82,14 +82,45 @@ cvc_submissions AS (
   GROUP BY DATE_TRUNC(submission_date, MONTH)
 ),
 
--- Get cumulative CVC statistics
-cumulative_cvc AS (
+-- Get cumulative CVC statistics calculated at each submission month
+cumulative_at_submission AS (
   SELECT
     submission_month,
     SUM(scvs_submitted) OVER (ORDER BY submission_month) AS cumulative_scvs_submitted,
     SUM(variants_targeted) OVER (ORDER BY submission_month) AS cumulative_variants_targeted,
     SUM(scvs_flagged) OVER (ORDER BY submission_month) AS cumulative_scvs_flagged
   FROM cvc_submissions
+),
+
+-- Generate all months from the first CVC submission to latest snapshot
+-- This ensures we have a row for every month, even without submissions
+all_months AS (
+  SELECT DISTINCT DATE_TRUNC(snapshot_release_date, MONTH) AS month
+  FROM `clinvar_ingest.monthly_conflict_snapshots`
+  WHERE snapshot_release_date >= '2023-09-01'
+),
+
+-- Join all months with cumulative data, carrying forward the last known value
+cumulative_cvc AS (
+  SELECT
+    am.month AS submission_month,
+    -- Use LAST_VALUE to carry forward the cumulative total from the most recent
+    -- month that had submissions (or NULL if before first submission)
+    LAST_VALUE(cas.cumulative_scvs_submitted IGNORE NULLS) OVER (
+      ORDER BY am.month
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cumulative_scvs_submitted,
+    LAST_VALUE(cas.cumulative_variants_targeted IGNORE NULLS) OVER (
+      ORDER BY am.month
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cumulative_variants_targeted,
+    LAST_VALUE(cas.cumulative_scvs_flagged IGNORE NULLS) OVER (
+      ORDER BY am.month
+      ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+    ) AS cumulative_scvs_flagged
+  FROM all_months am
+  LEFT JOIN cumulative_at_submission cas
+    ON am.month = cas.submission_month
 )
 
 SELECT

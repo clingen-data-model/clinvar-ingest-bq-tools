@@ -4,6 +4,43 @@ This guide explains how to set up Google Sheets dashboards using the visualizati
 
 ---
 
+## Dashboard Overview (README Sheet)
+
+Use the table below as a README sheet in your Google Sheets file. Replace `[Link]` with actual hyperlinks to each chart's sheet.
+
+| Chart | Name | Purpose | BigQuery View | Link |
+|-------|------|---------|---------------|------|
+| 1a | Flagging Candidate Attrition Funnel | Compares total submitted flagging candidates with their outcome breakdown as a stacked bar | `sheets_flagging_candidate_funnel_pivoted` | [Link] |
+| 1b | Flagging Candidate Outcome Pie | Shows the proportion of each outcome category as a pie chart | `sheets_flagging_candidate_pie` | [Link] |
+| 2 | Version Bump Impact by Submitter | Per-submitter breakdown of flagging candidate outcomes showing which submitters are version-bumping | `sheets_version_bump_impact_by_submitter` | [Link] |
+| 3 | Version Bump Timing Distribution | Shows WHEN version bumps occur relative to the 60-day grace period to detect strategic timing | `sheets_version_bump_timing` | [Link] |
+| 4 | CVC Monthly Impact Summary | Monthly trends in CVC-attributed vs organic conflict resolutions (filtered to exclude bulk downgrades) | `sheets_cvc_impact_monthly_filtered` | [Link] |
+| 5 | CVC Attribution Breakdown | Detailed monthly breakdown of resolution attribution types (filtered to exclude bulk downgrades) | `sheets_cvc_attribution_breakdown_filtered` | [Link] |
+| 6A | Batch Effectiveness: Rates | Grouped bar chart comparing resolution rate vs flag rate across CVC batches | `sheets_cvc_batch_effectiveness` | [Link] |
+| 6B | Batch Effectiveness: Volume | Stacked bar showing variants resolved vs unresolved for each batch | `sheets_cvc_batch_effectiveness` | [Link] |
+| 6C | Batch Effectiveness: Maturity | Bubble chart showing batch age (X) vs resolution rate (Y) with bubble size = submission volume | `sheets_cvc_batch_effectiveness` | [Link] |
+| 7 | Cumulative Impact | Cumulative growth of CVC submissions, flags, and resolutions over time | `sheets_cvc_cumulative_impact` | [Link] |
+
+### Key Insights by Chart
+
+| Chart | Key Question Answered |
+|-------|----------------------|
+| 1a/1b | What happens to flagging candidate submissions? How many get flagged vs other outcomes? |
+| 2 | Which submitters are avoiding flags through version bumps? |
+| 3 | Are submitters strategically timing version bumps to avoid the 60-day grace period deadline? |
+| 4 | How do CVC-attributed resolutions compare to organic resolutions over time? |
+| 5 | What's driving CVC-attributed resolutions—flags, prompted deletions, or prompted reclassifications? |
+| 6A/B/C | Which CVC batches have been most effective at driving conflict resolutions? |
+| 7 | How has CVC's cumulative impact grown since the program started? |
+
+### Data Refresh
+
+- **Source**: BigQuery `clinvar_curator` dataset
+- **Refresh frequency**: After each ClinVar release (~monthly) or when new CVC batches are submitted
+- **Last pipeline run**: Check `cvc_impact_summary` table for latest `snapshot_release_date`
+
+---
+
 ## Outcome Category Reference
 
 All flagging candidate submissions are categorized into exactly one of the following mutually exclusive outcome categories. Categories are numbered for consistent ordering across charts.
@@ -293,15 +330,30 @@ Google Sheets does not support reference lines on stacked column charts. Alterna
 
 ---
 
-## Chart 4: CVC Monthly Impact Summary
+## Chart 4: CVC Monthly Impact Summary (Filtered)
 
-**View:** `sheets_cvc_impact_monthly`
+**View:** `sheets_cvc_impact_monthly_filtered`
 
-**Purpose:** Shows monthly trends in CVC impact on conflict resolution.
+**Purpose:** Shows monthly trends in CVC impact on conflict resolution, excluding bulk SCV downgrade events for cleaner trend analysis.
+
+### Background: Why Filtered?
+
+Two major bulk downgrade events significantly impacted resolution counts:
+
+| Date         | Submitter                      | Event                              | Resolutions Excluded |
+|--------------|--------------------------------|------------------------------------|----------------------|
+| October 2024 | PreventionGenetics (ID 239772) | ~15,000 SCVs downgraded 1→0 stars  | 2,831                |
+| July 2025    | Counsyl (ID 320494)            | ~4,000 SCVs downgraded 1→0 stars   | 800                  |
+
+These bulk events can mask underlying trends in the data. The filtered view excludes resolutions where:
+
+1. `primary_reason = 'scv_rank_downgraded'`
+2. The snapshot is in an affected month (Oct 2024, Jul 2025)
+3. At least one SCV in that resolution was from the bulk downgrade submitter
 
 ### Setup Steps
 
-1. Connect to `clinvar_curator.sheets_cvc_impact_monthly`
+1. Connect to `clinvar_curator.sheets_cvc_impact_monthly_filtered`
 2. Select all data
 3. Insert → Chart
 4. Choose **Line chart** or **Area chart**
@@ -314,22 +366,29 @@ Google Sheets does not support reference lines on stacked column charts. Alterna
 | X-axis | `month_label` |
 | Series | `cvc_attributed_resolutions`, `organic_resolutions` |
 
+### Additional Column
+
+The view includes an `excluded_bulk_downgrades` column showing how many resolutions were filtered out for that month. This provides transparency about the filtering impact.
+
 ### Interpretation
 
 - Compare CVC-attributed resolutions to organic resolutions over time
 - Look for trends as CVC submission volume increases
+- Filtered view shows cleaner baseline without outlier spikes
+
+> **Note:** An unfiltered view (`sheets_cvc_impact_monthly`) is also available if you need the full picture including bulk downgrade events.
 
 ---
 
-## Chart 5: CVC Attribution Breakdown
+## Chart 5: CVC Attribution Breakdown (Filtered)
 
-**View:** `sheets_cvc_attribution_breakdown`
+**View:** `sheets_cvc_attribution_breakdown_filtered`
 
-**Purpose:** Shows detailed breakdown of how resolutions are attributed.
+**Purpose:** Shows detailed breakdown of how resolutions are attributed, excluding bulk SCV downgrade events for cleaner trend analysis.
 
 ### Setup Steps
 
-1. Connect to `clinvar_curator.sheets_cvc_attribution_breakdown`
+1. Connect to `clinvar_curator.sheets_cvc_attribution_breakdown_filtered`
 2. Select all data
 3. Insert → Chart
 4. Choose **Stacked Area chart** or **Stacked Bar chart**
@@ -352,57 +411,11 @@ Google Sheets does not support reference lines on stacked column charts. Alterna
 | Organic | Resolution unrelated to CVC |
 | CVC_Submitted_Organic_Outcome | CVC submitted but outcome was organic |
 
----
+### Transparency Column
 
-## Chart 4 & 5 (Filtered): Excluding Bulk Downgrade Events
+The view includes an `excluded_bulk_downgrades` column showing how many resolutions were filtered out for that month.
 
-**Views:** `sheets_cvc_impact_monthly_filtered` and `sheets_cvc_attribution_breakdown_filtered`
-
-**Purpose:** Alternative versions of Charts 4 and 5 that exclude conflict resolutions caused by bulk SCV star rating downgrades, providing a cleaner baseline for analyzing organic resolution trends.
-
-### Background
-
-Two major bulk downgrade events significantly impacted resolution counts:
-
-| Date         | Submitter                      | Event                              | Resolutions Excluded |
-|--------------|--------------------------------|------------------------------------|----------------------|
-| October 2024 | PreventionGenetics (ID 239772) | ~15,000 SCVs downgraded 1→0 stars  | 2,831                |
-| July 2025    | Counsyl (ID 320494)            | ~4,000 SCVs downgraded 1→0 stars   | 800                  |
-
-These bulk events can mask underlying trends in the data. The filtered views allow you to:
-
-- See organic resolution trends without outlier spikes
-- Compare CVC impact against a cleaner baseline
-- Identify whether resolution patterns are driven by systematic submitter behavior
-
-### Exclusion Method
-
-A resolution is excluded if:
-
-1. `primary_reason = 'scv_rank_downgraded'`
-2. The snapshot is in an affected month (Oct 2024, Jul 2025)
-3. At least one SCV in that resolution was from the bulk downgrade submitter
-
-### Additional Column
-
-Both filtered views include an `excluded_bulk_downgrades` column showing how many resolutions were filtered out for that month. This provides transparency about the filtering impact.
-
-### Setup Steps
-
-Same as Charts 4 and 5, but connect to the `_filtered` views:
-
-- `clinvar_curator.sheets_cvc_impact_monthly_filtered`
-- `clinvar_curator.sheets_cvc_attribution_breakdown_filtered`
-
-### When to Use Filtered vs Unfiltered
-
-| Use Case                                    | Recommended View          |
-|---------------------------------------------|---------------------------|
-| Full picture of all resolutions             | Unfiltered (Charts 4 & 5) |
-| Analyzing CVC impact vs organic trends      | Filtered                  |
-| Understanding submitter behavior patterns   | Unfiltered                |
-| Manuscript figures showing typical patterns | Filtered                  |
-| Comparing monthly resolution rates          | Filtered                  |
+> **Note:** An unfiltered view (`sheets_cvc_attribution_breakdown`) is also available if you need the full picture including bulk downgrade events.
 
 ---
 
@@ -410,22 +423,136 @@ Same as Charts 4 and 5, but connect to the `_filtered` views:
 
 **View:** `sheets_cvc_batch_effectiveness`
 
-**Purpose:** Compare effectiveness metrics across CVC batches.
+**Purpose:** Compare effectiveness metrics across CVC batches to see which batches have been most successful at driving resolutions.
 
-### Setup Steps
+**Implementation:** The dashboard uses all three chart options (A, B, and C) to provide different perspectives on batch effectiveness.
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `batch_id` | CVC batch identifier (101, 102, etc.) |
+| `batch_month` | Month/year label for the batch (e.g., "Aug '23") |
+| `scvs_submitted` | Total SCVs submitted in this batch |
+| `variants_targeted` | Unique variants targeted by this batch |
+| `variants_resolved` | Number of targeted variants that have since resolved |
+| `resolution_rate_pct` | % of targeted variants that resolved |
+| `flag_rate_pct` | % of submissions that resulted in flags being applied |
+| `days_since_submission` | Days since batch was submitted (older = more mature) |
+
+---
+
+### Chart 6A: Grouped Bar Chart (Comparing Rates)
+
+**Best for:** Comparing resolution and flag rates across batches
+
+#### Setup Steps
 
 1. Connect to `clinvar_curator.sheets_cvc_batch_effectiveness`
-2. Select all data
-3. Insert → Chart
-4. Choose **Bar chart** or **Table**
+2. Click **Extract** to pull data into a regular sheet
+3. Select columns: `batch_month`, `resolution_rate_pct`, `flag_rate_pct`
+4. Insert → Chart → **Bar chart**
 
-### Key Metrics
+#### Chart Configuration
 
-| Metric | Description |
-|--------|-------------|
-| `resolution_rate_pct` | % of targeted variants that resolved |
-| `flag_rate_pct` | % of submissions that resulted in flags |
-| `days_since_submission` | Batch maturity (older batches have more time to show results) |
+| Setting | Value |
+|---------|-------|
+| Chart type | Bar chart (vertical) |
+| X-axis | `batch_month` |
+| Series 1 | `resolution_rate_pct` (Blue) |
+| Series 2 | `flag_rate_pct` (Green) |
+| Stacking | None (grouped bars side by side) |
+
+#### Customize Tab Settings
+
+- **Chart & axis titles**: Title = "Batch Effectiveness: Resolution vs Flag Rates"
+- **Series**: Set Resolution Rate to blue (#4285F4), Flag Rate to green (#1B7F37)
+- **Legend**: Position = Bottom
+
+---
+
+### Chart 6B: Stacked Bar Chart (Volume Breakdown)
+
+**Best for:** Showing submission volume and how many resolved
+
+#### Setup Steps
+
+1. Connect to `clinvar_curator.sheets_cvc_batch_effectiveness`
+2. Click **Extract** to pull data into a regular sheet
+3. Select columns: `batch_month`, `variants_resolved`, `variants_targeted`
+4. **Important**: Create a calculated column `variants_unresolved` = `variants_targeted` - `variants_resolved`
+5. Select: `batch_month`, `variants_resolved`, `variants_unresolved`
+6. Insert → Chart → **Stacked bar chart**
+
+#### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Stacked bar chart (vertical) |
+| X-axis | `batch_month` |
+| Series 1 | `variants_resolved` (Green - bottom of stack) |
+| Series 2 | `variants_unresolved` (Gray - top of stack) |
+
+---
+
+### Chart 6C: Bubble Chart (Maturity vs Effectiveness) ⭐ Recommended
+
+**Best for:** Seeing if older batches have higher resolution rates, with bubble size showing batch volume
+
+> **This is the primary implementation** used in the dashboard for visualizing batch maturity vs effectiveness.
+
+#### Setup Steps (Bubble Chart)
+
+Google Sheets bubble charts require columns in a specific order. Follow these steps exactly:
+
+1. Connect to `clinvar_curator.sheets_cvc_batch_effectiveness`
+2. Click **Extract** to pull data into a regular sheet
+3. **Rearrange columns in this exact order** (left to right):
+   - Column A: `batch_month` (this becomes the ID/Label)
+   - Column B: `days_since_submission` (this becomes X-axis)
+   - Column C: `resolution_rate_pct` (this becomes Y-axis)
+   - Column D: `scvs_submitted` (this becomes bubble Size)
+4. Select all four columns (A through D, including headers)
+5. Insert → Chart → Choose **Bubble chart**
+
+Google Sheets auto-assigns columns based on position:
+- 1st column → ID (label)
+- 2nd column → X-axis
+- 3rd column → Y-axis
+- 4th column → Size (optional)
+
+#### Bubble Chart Setup Tab Configuration
+
+After inserting the chart, verify in the **Setup** tab:
+
+| Field | Should Be Set To |
+|-------|------------------|
+| ID | `batch_month` (Column A) |
+| X-axis | `days_since_submission` (Column B) |
+| Y-axis | `resolution_rate_pct` (Column C) |
+| Size | `scvs_submitted` (Column D) |
+
+If the Size field shows "None" or wrong column:
+
+1. Click the **Size** dropdown
+2. Select `scvs_submitted`
+3. If it's not listed, your columns may not be in the correct order—rearrange and recreate the chart
+
+#### Showing Labels on Bubbles
+
+1. **Customize** tab → **Bubble** section
+2. Check **Show bubble labels**
+3. Labels will display the `batch_month` value on each bubble
+
+---
+
+### Interpretation (All Chart 6 Options)
+
+- **Resolution rate** shows what % of variants CVC targeted have since resolved (by any means)
+- **Flag rate** shows what % of SCVs actually got flagged (direct CVC success)
+- Older batches (`days_since_submission` > 365) should have higher resolution rates as more time has passed
+- If flag rate is high but resolution rate is low, flags may not be driving resolutions
+- Batch 107 (Apr '24) shows unusually low resolution rate (13.5%) despite high flag rate (43.4%) - see [BATCH-107-ANALYSIS.md](BATCH-107-ANALYSIS.md) for investigation
 
 ---
 
