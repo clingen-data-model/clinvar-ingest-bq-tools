@@ -68,6 +68,14 @@
 105	SCV003444353	2	mistaken submission	2024-03-05
 106	SCV000838857	2	deleted SCV	2024-04-08
 106	SCV001138573	1	SCV current but with previous version	2024-04-08
+109	SCV000493560	28	SCV current but with previous version	2024-06-17
+109	SCV000608710	26	SCV current but with previous version	2024-06-17
+109	SCV000608751	26	SCV current but with previous version	2024-06-17
+109	SCV000780867	24	SCV current but with previous version	2024-06-17
+109	SCV000891511	1	SCV current but with previous version	2024-06-23
+109	SCV001148785	22	SCV current but with previous version	2024-06-17
+109	SCV001747865	15	SCV current but with previous version	2024-06-17
+109	SCV004195413	1	SCV current but with previous version	2024-06-17
 110	SCV000249847	10	duplicate scv_accession.version, already in clingen_flagged	2024-07-16
 110	SCV000250462	13	duplicate scv_accession.version, already in clingen_flagged	2024-07-16
 110	SCV005039210	1	SCV current but with previous version	2024-07-16
@@ -86,6 +94,7 @@
 114	SCV001248486	25	SCV current but with previous version	2024-10-25
 114	SCV001248782	25	SCV current but with previous version	2024-10-25
 114	SCV004142959	9	SCV current but with previous version	2024-10-25
+115	SCV005373563	1	SCV current but with previous version	2024-12-02
 117	SCV000363344	3	duplicate scv_accession.version, already in clingen_flagged	2025-02-14
 117	SCV002522377	2	duplicate scv_accession.version, already in clingen_flagged	2025-02-14
 117	SCV004482221	1	duplicate scv_accession.version, already in clingen_flagged	2025-02-14
@@ -139,3 +148,98 @@
 126	SCV002011389	3	duplicate scv_accession.version, already in clingen_flagged	2025-11-17
 126	SCV002822534	21	SCV current but with previous version	2025-11-17
 126	SCV004834253	1	duplicate scv_accession.version, already in clingen_flagged	2025-11-17
+127	SCV000267430	1	previously submitted flagging candidates	2025-12-29
+127	SCV000331383	5	previously submitted flagging candidates	2025-12-29
+127	SCV000807527	2	previously submitted flagging candidates	2025-12-29
+127	SCV000809046	1	previously submitted flagging candidates	2025-12-29
+127	SCV001571751	2	previously submitted flagging candidates	2025-12-29
+127	SCV003814377	3	previously submitted flagging candidates	2025-12-29
+127	SCV004211495	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211496	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211505	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211509	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211513	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211523	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211525	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211528	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211532	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211538	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211548	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211549	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211550	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211551	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211553	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211558	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211562	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211564	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211568	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211570	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211572	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211576	1	previously submitted flagging candidates	2025-12-29
+127	SCV004211578	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213735	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213738	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213739	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213742	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213745	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213746	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213747	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213749	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213750	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213753	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213754	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213755	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213758	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213759	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213760	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213763	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213764	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213765	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213769	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213770	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213772	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213774	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213775	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213776	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213779	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213780	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213782	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213786	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213787	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213788	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213789	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213790	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213792	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213793	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213795	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213797	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213798	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213800	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213802	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213808	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213809	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213810	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213812	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213814	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213815	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213816	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213817	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213819	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213820	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213821	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213822	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213823	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213824	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213826	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213827	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213828	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213831	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213832	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213834	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213836	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213837	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213838	1	previously submitted flagging candidates	2025-12-29
+127	SCV004213839	1	previously submitted flagging candidates	2025-12-29
+127	SCV004820813	2	previously submitted flagging candidates	2025-12-29
+127	SCV004822571	1	previously submitted flagging candidates	2025-12-29
+127	SCV005425063	1	previously submitted flagging candidates	2025-12-29

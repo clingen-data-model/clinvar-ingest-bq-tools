@@ -40,7 +40,8 @@ submitted_outcomes AS (
     sov.curator,
     sov.annotated_date,
     sov.annotation_release_date,
-    sov.valid_submission,
+    -- Derive valid_submission from invalid_submission_reason
+    (sov.invalid_submission_reason IS NULL) AS valid_submission,
     sov.invalid_submission_reason,
     sov.outcome,
     sov.report_release_date,

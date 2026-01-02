@@ -298,11 +298,11 @@ AS
 SELECT
   snapshot_release_date,
   FORMAT_DATE('%b %Y', snapshot_release_date) AS month_label,
-  cvc_flagged_resolutions AS "CVC Flagged",
-  cvc_prompted_deletion AS "Submitter Deleted (CVC Prompted)",
-  cvc_prompted_reclassification AS "Submitter Reclassified (CVC Prompted)",
-  organic_resolutions AS "Organic",
-  cvc_submitted_organic AS "CVC Submitted (Organic Outcome)"
+  cvc_flagged_resolutions AS CVC_Flagged,
+  cvc_prompted_deletion AS Submitter_Deleted_CVC_Prompted,
+  cvc_prompted_reclassification AS Submitter_Reclassified_CVC_Prompted,
+  organic_resolutions AS Organic,
+  cvc_submitted_organic AS CVC_Submitted_Organic_Outcome
 FROM `clinvar_curator.cvc_impact_summary`
 ORDER BY snapshot_release_date
 ;
@@ -351,4 +351,201 @@ SELECT
   SUM(total_resolutions) OVER (ORDER BY snapshot_release_date) AS cumulative_total_resolutions
 FROM `clinvar_curator.cvc_impact_summary`
 ORDER BY snapshot_release_date
+;
+
+
+-- =============================================================================
+-- Filtered Views: Excluding Bulk SCV Downgrade Events
+-- =============================================================================
+--
+-- Purpose:
+--   These views provide alternate versions of Chart 4 and Chart 5 data that
+--   exclude conflict resolutions caused by bulk SCV star rating downgrades.
+--
+-- Background:
+--   Two major bulk downgrade events significantly impacted resolution counts:
+--   1. October 2024: PreventionGenetics (submitter_id: 239772) downgraded
+--      ~15,000 SCVs from 1-star to 0-star, causing 2,864 conflict resolutions
+--   2. July 2025: Counsyl (submitter_id: 320494) downgraded ~4,000 SCVs
+--      from 1-star to 0-star, causing 800 conflict resolutions
+--
+--   These bulk events can skew the visualization of organic resolution trends.
+--   The filtered views allow comparing CVC impact against a baseline that
+--   excludes these outlier events.
+--
+-- Identification Method:
+--   Resolutions are excluded when ALL of the following are true:
+--   - primary_reason = 'scv_rank_downgraded'
+--   - snapshot_release_date is in affected months (2024-10-09, 2025-07-06)
+--   - At least one contributing SCV in that resolution was from the
+--     submitter doing the bulk downgrade (verified via scv_changes join)
+--
+-- =============================================================================
+
+-- Table to identify bulk downgrade resolutions
+-- This is a lookup table of (snapshot_date, variation_id) pairs to exclude
+CREATE OR REPLACE TABLE `clinvar_curator.cvc_bulk_downgrade_exclusions`
+AS
+WITH
+-- Known bulk downgrade events
+bulk_events AS (
+  SELECT '2024-10-09' AS snapshot_date, 239772 AS submitter_id, 'PreventionGenetics' AS submitter_name UNION ALL
+  SELECT '2025-07-06', 320494, 'Counsyl'
+),
+
+-- Find resolutions where primary reason is scv_rank_downgraded in those months
+-- and at least one SCV from the bulk submitter was involved
+bulk_resolutions AS (
+  SELECT DISTINCT
+    cd.snapshot_release_date,
+    cd.variation_id,
+    be.submitter_name AS bulk_event_submitter
+  FROM `clinvar_ingest.conflict_vcv_change_detail` cd
+  JOIN bulk_events be
+    ON CAST(cd.snapshot_release_date AS STRING) = be.snapshot_date
+  JOIN `clinvar_ingest.monthly_conflict_scv_changes` scv
+    ON cd.variation_id = scv.variation_id
+    AND cd.snapshot_release_date = scv.snapshot_release_date
+  WHERE cd.vcv_change_status = 'resolved'
+    AND cd.primary_reason = 'scv_rank_downgraded'
+    AND scv.scv_change_status = 'rank_changed'
+    AND CAST(scv.curr_submitter_id AS INT64) = be.submitter_id
+)
+
+SELECT
+  snapshot_release_date,
+  variation_id,
+  bulk_event_submitter,
+  'bulk_scv_rank_downgrade' AS exclusion_reason
+FROM bulk_resolutions
+ORDER BY snapshot_release_date, variation_id
+;
+
+
+-- =============================================================================
+-- Chart 4 Filtered: Monthly Impact Summary (Excluding Bulk Downgrades)
+-- =============================================================================
+--
+-- Same as sheets_cvc_impact_monthly but excludes resolutions from bulk
+-- SCV downgrade events to show organic resolution trends more clearly.
+--
+-- =============================================================================
+
+CREATE OR REPLACE VIEW `clinvar_curator.sheets_cvc_impact_monthly_filtered`
+AS
+WITH
+-- Get filtered resolution counts (excluding bulk downgrades)
+filtered_resolutions AS (
+  SELECT
+    cd.snapshot_release_date,
+    COUNT(*) AS total_resolutions,
+    COUNTIF(cd.conflict_type = 'Clinsig') AS clinsig_resolutions,
+    COUNTIF(cd.conflict_type = 'Non-clinsig') AS nonclinsig_resolutions,
+    COUNTIF(cd.outlier_status = 'With Outlier') AS outlier_resolutions
+  FROM `clinvar_ingest.conflict_vcv_change_detail` cd
+  LEFT JOIN `clinvar_curator.cvc_bulk_downgrade_exclusions` excl
+    ON cd.variation_id = excl.variation_id
+    AND cd.snapshot_release_date = excl.snapshot_release_date
+  WHERE cd.vcv_change_status = 'resolved'
+    AND excl.variation_id IS NULL  -- Exclude bulk downgrades
+  GROUP BY cd.snapshot_release_date
+),
+
+-- Get filtered CVC attribution (excluding bulk downgrades)
+filtered_attribution AS (
+  SELECT
+    ra.snapshot_release_date,
+    COUNTIF(ra.variant_attribution = 'cvc_attributed') AS cvc_attributed_resolutions,
+    COUNTIF(ra.primary_attribution = 'cvc_flagged') AS cvc_flagged_resolutions,
+    COUNTIF(ra.primary_attribution = 'cvc_prompted_deletion') AS cvc_prompted_deletion,
+    COUNTIF(ra.primary_attribution = 'cvc_prompted_reclassification') AS cvc_prompted_reclassification,
+    COUNTIF(ra.variant_attribution = 'organic') AS organic_resolutions,
+    COUNTIF(ra.variant_attribution = 'cvc_submitted_organic') AS cvc_submitted_organic
+  FROM `clinvar_curator.cvc_resolution_attribution` ra
+  LEFT JOIN `clinvar_curator.cvc_bulk_downgrade_exclusions` excl
+    ON ra.variation_id = excl.variation_id
+    AND ra.snapshot_release_date = excl.snapshot_release_date
+  WHERE excl.variation_id IS NULL  -- Exclude bulk downgrades
+  GROUP BY ra.snapshot_release_date
+)
+
+SELECT
+  ims.snapshot_release_date,
+  FORMAT_DATE('%b %Y', ims.snapshot_release_date) AS month_label,
+  ims.total_conflicts,
+  COALESCE(fr.total_resolutions, 0) AS total_resolutions,
+  COALESCE(fa.cvc_attributed_resolutions, 0) AS cvc_attributed_resolutions,
+  COALESCE(fa.organic_resolutions, 0) AS organic_resolutions,
+  -- Recalculate attribution rate with filtered numbers
+  CASE
+    WHEN fr.total_resolutions > 0
+    THEN ROUND(100.0 * COALESCE(fa.cvc_attributed_resolutions, 0) / fr.total_resolutions, 1)
+    ELSE 0
+  END AS cvc_attribution_rate_pct,
+  CASE
+    WHEN fr.total_resolutions > 0
+    THEN ROUND(100.0 * COALESCE(fa.organic_resolutions, 0) / fr.total_resolutions, 1)
+    ELSE 0
+  END AS organic_rate_pct,
+  ims.cumulative_scvs_submitted,
+  ims.cumulative_scvs_flagged,
+  -- Include exclusion count for transparency
+  COALESCE(
+    (SELECT COUNT(*) FROM `clinvar_curator.cvc_bulk_downgrade_exclusions` e
+     WHERE e.snapshot_release_date = ims.snapshot_release_date),
+    0
+  ) AS excluded_bulk_downgrades
+FROM `clinvar_curator.cvc_impact_summary` ims
+LEFT JOIN filtered_resolutions fr
+  ON fr.snapshot_release_date = ims.snapshot_release_date
+LEFT JOIN filtered_attribution fa
+  ON fa.snapshot_release_date = ims.snapshot_release_date
+ORDER BY ims.snapshot_release_date
+;
+
+
+-- =============================================================================
+-- Chart 5 Filtered: Attribution Breakdown (Excluding Bulk Downgrades)
+-- =============================================================================
+--
+-- Same as sheets_cvc_attribution_breakdown but excludes resolutions from bulk
+-- SCV downgrade events for cleaner stacked chart visualization.
+--
+-- =============================================================================
+
+CREATE OR REPLACE VIEW `clinvar_curator.sheets_cvc_attribution_breakdown_filtered`
+AS
+WITH
+filtered_attribution AS (
+  SELECT
+    ra.snapshot_release_date,
+    COUNTIF(ra.primary_attribution = 'cvc_flagged') AS cvc_flagged_resolutions,
+    COUNTIF(ra.primary_attribution = 'cvc_prompted_deletion') AS cvc_prompted_deletion,
+    COUNTIF(ra.primary_attribution = 'cvc_prompted_reclassification') AS cvc_prompted_reclassification,
+    COUNTIF(ra.variant_attribution = 'organic') AS organic_resolutions,
+    COUNTIF(ra.variant_attribution = 'cvc_submitted_organic') AS cvc_submitted_organic
+  FROM `clinvar_curator.cvc_resolution_attribution` ra
+  LEFT JOIN `clinvar_curator.cvc_bulk_downgrade_exclusions` excl
+    ON ra.variation_id = excl.variation_id
+    AND ra.snapshot_release_date = excl.snapshot_release_date
+  WHERE excl.variation_id IS NULL  -- Exclude bulk downgrades
+  GROUP BY ra.snapshot_release_date
+)
+
+SELECT
+  fa.snapshot_release_date,
+  FORMAT_DATE('%b %Y', fa.snapshot_release_date) AS month_label,
+  fa.cvc_flagged_resolutions AS CVC_Flagged,
+  fa.cvc_prompted_deletion AS Submitter_Deleted_CVC_Prompted,
+  fa.cvc_prompted_reclassification AS Submitter_Reclassified_CVC_Prompted,
+  fa.organic_resolutions AS Organic,
+  fa.cvc_submitted_organic AS CVC_Submitted_Organic_Outcome,
+  -- Include exclusion count for transparency
+  COALESCE(
+    (SELECT COUNT(*) FROM `clinvar_curator.cvc_bulk_downgrade_exclusions` e
+     WHERE e.snapshot_release_date = fa.snapshot_release_date),
+    0
+  ) AS excluded_bulk_downgrades
+FROM filtered_attribution fa
+ORDER BY fa.snapshot_release_date
 ;
