@@ -279,6 +279,8 @@ These tables are designed to work with BigQuery Data Connector in Google Sheets:
 | `06-resolution-modification-analytics.sql` | Creates final analytics tables with reason categorization |
 | `07-google-sheets-analytics.sql` | Creates optimized views for Google Sheets with slicers |
 | `scv-reason-breakdown-queries.sql` | Example queries for exploring resolved variants with their SCVs |
+| `scv-removed-deep-dive-2025-05.sql` | Ad-hoc deep-dive query analyzing SCV removals in May 2025 |
+| `sync-sql-to-gcs.sh` | Syncs SQL files to GCS bucket for Cloud Scheduler execution |
 | `GOOGLE-SHEETS-SETUP.md` | Guide for building Google Sheets dashboards with charts and slicers |
 | `RESOLUTION-REASONS.md` | Detailed documentation of all resolution and modification reasons |
 | `DESIGN-scv-level-tracking.md` | Technical design document for SCV-level change tracking |

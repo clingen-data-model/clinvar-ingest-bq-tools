@@ -173,6 +173,53 @@ ORDER BY batch_id;
 - **First batch date**: September 7, 2023
 - **Total batches through Dec 2025**: 27 batches, 5,694 SCV submissions
 
+## Directory Contents
+
+### Pipeline Scripts
+
+| File | Description |
+|------|-------------|
+| `00-run-cvc-impact-analysis.sh` | Main pipeline runner with `--dry-run`, `--force`, `--check-only`, `--skip-load` options |
+| `00-cvc-batch-enriched-view.sql` | Adds grace period dates to batch metadata |
+| `01-cvc-submitted-variants.sql` | Creates master list of CVC-submitted SCVs |
+| `02-cvc-conflict-attribution.sql` | Attributes resolutions to CVC vs organic |
+| `03-cvc-impact-analytics.sql` | Creates summary views and analytics |
+| `04-flagging-candidate-outcomes.sql` | Tracks outcomes of flagging candidates |
+| `05-version-bump-detection.sql` | Detects version bumps (4-field comparison) |
+| `06-version-bump-flagging-intersection.sql` | Analyzes version bumps on CVC-submitted SCVs |
+| `full-record-version-bump-detection.sql` | Comprehensive 19-field version bump detection |
+
+### Data Loaders
+
+| File | Description |
+|------|-------------|
+| `load-batch-accepted-dates.sh` | Loads `batch-accepted-dates.tsv` into BigQuery |
+| `load-rejected-scvs.sh` | Loads `rejected-scvs.tsv` into BigQuery |
+
+### Ad-Hoc Query Scripts
+
+| File | Description |
+|------|-------------|
+| `query-accepted-vs-rejected.sql` | Compares accepted vs rejected submissions by batch |
+| `query-pending-rejected-scvs.sh` | Finds pending/rejected SCVs (with `--batch` and `--tsv` options) |
+| `query-submission-flagging-status.sql` | Checks which submissions actually got flagged in ClinVar |
+
+### Data Files
+
+| File | Description |
+|------|-------------|
+| `batch-accepted-dates.tsv` | Maps batch IDs to ClinVar acceptance dates (determines grace period start) |
+| `rejected-scvs.tsv` | SCVs rejected by ClinVar with rejection reasons |
+
+### Documentation
+
+| File | Description |
+|------|-------------|
+| `README.md` | This file - pipeline overview and usage |
+| `GOOGLE-SHEETS-SETUP.md` | Guide for creating dashboards from BigQuery views |
+| `BATCH-107-ANALYSIS.md` | Deep-dive into Batch 107's low resolution rate |
+| `NON-CONTRIBUTING-SCV-ANALYSIS.md` | Analysis of submissions against non-contributing SCVs |
+
 ## How the Pipeline Works (Non-Technical Overview)
 
 This section explains what each query file does in plain language, without requiring SQL knowledge.
@@ -295,6 +342,34 @@ This query answers:
 This is important for understanding whether submitters are responding appropriately to CVC notifications or potentially trying to avoid flags without addressing the underlying data quality issues.
 
 The query also breaks this down by submitter to identify patterns.
+
+---
+
+### Full Record Version Bump Detection (`full-record-version-bump-detection.sql`)
+
+**What it does:** A more comprehensive version bump detector that compares ALL 19 substantive fields between consecutive SCV versions.
+
+While Step 5 uses a "standard" 4-field comparison (classification, evaluation date, trait, rank), this script compares every field that a submitter controls:
+
+- Classification fields (label, abbrev, submitted, comment, type)
+- Review status and rank
+- Statement type and proposition types
+- Method type and origin
+- Affected status and local key
+- Trait set ID
+
+This creates several analysis views:
+
+- **By SCV**: Which SCVs have had multiple true bumps (repeat offenders)
+- **By Submitter**: Which submitters have the most true bumps
+- **By Release**: Monthly trends in version bump activity
+- **Summary**: Overall statistics comparing "true" vs "standard" bump detection
+
+This helps distinguish between:
+
+1. **True bumps**: Absolutely nothing changed except version/date
+2. **Standard bumps**: Core 4 fields unchanged, but minor fields may have changed
+3. **Substantive changes**: Actual meaningful updates
 
 ---
 
