@@ -13,13 +13,18 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 | 1a | Flagging Candidate Attrition Funnel | Compares total submitted flagging candidates with their outcome breakdown as a stacked bar | `sheets_flagging_candidate_funnel_pivoted` | [Link] |
 | 1b | Flagging Candidate Outcome Pie | Shows the proportion of each outcome category as a pie chart | `sheets_flagging_candidate_pie` | [Link] |
 | 2 | Version Bump Impact by Submitter | Per-submitter breakdown of flagging candidate outcomes showing which submitters are version-bumping | `sheets_version_bump_impact_by_submitter` | [Link] |
-| 3 | Version Bump Timing Distribution | Shows WHEN version bumps occur relative to the 60-day grace period to detect strategic timing | `sheets_version_bump_timing` | [Link] |
-| 4 | CVC Monthly Impact Summary | Monthly trends in CVC-attributed vs organic conflict resolutions (filtered to exclude bulk downgrades) | `sheets_cvc_impact_monthly_filtered` | [Link] |
-| 5 | CVC Attribution Breakdown | Detailed monthly breakdown of resolution attribution types (filtered to exclude bulk downgrades) | `sheets_cvc_attribution_breakdown_filtered` | [Link] |
+| 3a | Version Bump Timing Distribution | Shows WHEN version bumps occur relative to the 60-day grace period to detect strategic timing | `sheets_version_bump_timing` | [Link] |
+| 3b | Version Bump Timing Summary | Simplified 2-bar comparison of within-grace vs after-grace totals | `sheets_version_bump_timing_summary` | [Link] |
+| 4 | CVC Monthly Impact Summary | Monthly trends in CVC-attributed vs organic conflict resolutions | `sheets_cvc_impact_monthly` | [Link] |
+| 5a | CVC Attribution Breakdown | Detailed monthly breakdown of resolution attribution types | `sheets_cvc_attribution_breakdown` | [Link] |
+| 5b | CVC Attribution Pie | All-time summary pie chart of attribution categories (unfiltered) | `sheets_cvc_attribution_breakdown_pie` | [Link] |
 | 6A | Batch Effectiveness: Rates | Grouped bar chart comparing resolution rate vs flag rate across CVC batches | `sheets_cvc_batch_effectiveness` | [Link] |
 | 6B | Batch Effectiveness: Volume | Stacked bar showing variants resolved vs unresolved for each batch | `sheets_cvc_batch_effectiveness` | [Link] |
 | 6C | Batch Effectiveness: Maturity | Bubble chart showing batch age (X) vs resolution rate (Y) with bubble size = submission volume | `sheets_cvc_batch_effectiveness` | [Link] |
 | 7 | Cumulative Impact | Cumulative growth of CVC submissions, flags, and resolutions over time | `sheets_cvc_cumulative_impact` | [Link] |
+| 8a | True Version Bumps by Month | Monthly timeline showing true version bumps (no field changes at all) | `sheets_full_record_bumps_by_month` | [Link] |
+| 8b | True Version Bumps by Submitter | Horizontal bar showing submitters with the most true version bumps | `cvc_full_record_bumps_by_submitter` | [Link] |
+| 8c | True Version Bump Summary | Overall statistics for true version bumps across all data | `cvc_full_record_bumps_summary` | [Link] |
 
 ### Key Insights by Chart
 
@@ -27,11 +32,12 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 |-------|----------------------|
 | 1a/1b | What happens to flagging candidate submissions? How many get flagged vs other outcomes? |
 | 2 | Which submitters are avoiding flags through version bumps? |
-| 3 | Are submitters strategically timing version bumps to avoid the 60-day grace period deadline? |
+| 3a/3b | Are submitters strategically timing version bumps to avoid the 60-day grace period deadline? |
 | 4 | How do CVC-attributed resolutions compare to organic resolutions over time? |
-| 5 | What's driving CVC-attributed resolutions—flags, prompted deletions, or prompted reclassifications? |
+| 5a/5b | What's driving CVC-attributed resolutions—flags, prompted deletions, or prompted reclassifications? |
 | 6A/B/C | Which CVC batches have been most effective at driving conflict resolutions? |
 | 7 | How has CVC's cumulative impact grown since the program started? |
+| 8a/8b/8c | Which submitters and releases have "true" version bumps (resubmissions with zero field changes)? |
 
 ### Data Refresh
 
@@ -266,19 +272,21 @@ To reorder series in Google Sheets:
 1. `Flagged` (green)
 2. `Reclassified` (blue)
 3. `Removed` (light blue)
-4. `Pending_Other` (gray)
-5. `Version_Bump_During_Grace` (orange)
-6. `Version_Bump_After_Grace` (red)
+4. `Substantive_Changes` (yellow)
+5. `Pending_Other` (gray)
+6. `Version_Bump_During_Grace` (orange)
+7. `Version_Bump_After_Grace` (red)
 
 ### Interpretation
 
 - Submitters with large orange/red segments are avoiding flags through version bumps
+- Yellow segments indicate submitters made real changes (last_evaluated, trait_set_id, etc.) but kept same classification
 - Compare the green (flagged) portion across submitters
 - Submitters with mostly green/blue segments are responding appropriately
 
 ---
 
-## Chart 3: Version Bump Timing Distribution
+## Chart 3a: Version Bump Timing Distribution
 
 **View:** `sheets_version_bump_timing`
 
@@ -330,30 +338,56 @@ Google Sheets does not support reference lines on stacked column charts. Alterna
 
 ---
 
-## Chart 4: CVC Monthly Impact Summary (Filtered)
+## Chart 3b: Version Bump Timing Summary
 
-**View:** `sheets_cvc_impact_monthly_filtered`
+**View:** `sheets_version_bump_timing_summary`
 
-**Purpose:** Shows monthly trends in CVC impact on conflict resolution, excluding bulk SCV downgrade events for cleaner trend analysis.
-
-### Background: Why Filtered?
-
-Two major bulk downgrade events significantly impacted resolution counts:
-
-| Date         | Submitter                      | Event                              | Resolutions Excluded |
-|--------------|--------------------------------|------------------------------------|----------------------|
-| October 2024 | PreventionGenetics (ID 239772) | ~15,000 SCVs downgraded 1→0 stars  | 2,831                |
-| July 2025    | Counsyl (ID 320494)            | ~4,000 SCVs downgraded 1→0 stars   | 800                  |
-
-These bulk events can mask underlying trends in the data. The filtered view excludes resolutions where:
-
-1. `primary_reason = 'scv_rank_downgraded'`
-2. The snapshot is in an affected month (Oct 2024, Jul 2025)
-3. At least one SCV in that resolution was from the bulk downgrade submitter
+**Purpose:** Simplified 2-bar comparison showing totals within vs after the 60-day grace period for easy summing.
 
 ### Setup Steps
 
-1. Connect to `clinvar_curator.sheets_cvc_impact_monthly_filtered`
+1. Connect to `clinvar_curator.sheets_version_bump_timing_summary`
+2. Click **Extract** to pull the data into a regular sheet
+3. Select all data (excluding sort_order column)
+4. Insert → Chart
+5. Choose **Column chart** (grouped bars)
+
+### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Column or Bar |
+| X-axis | `grace_period_label` |
+| Series 1 | `version_bumps_no_change` (red/orange) |
+| Series 2 | `version_changes_substantive` (blue) |
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `grace_period_label` | "Within Grace (0-60 days)" or "After Grace (61+ days)" |
+| `total_version_changes` | Total version changes in this period |
+| `unique_scvs` | Count of distinct SCVs with changes |
+| `version_bumps_no_change` | Changes with no substantive modifications (concerning) |
+| `version_changes_substantive` | Changes with real content modifications (neutral/positive) |
+
+### Interpretation
+
+- Compare the red bars (version bumps) between the two periods
+- If "After Grace" has significant version bumps, submitters are avoiding flags after the deadline
+- Substantive changes (blue) in either period indicate real updates were made
+
+---
+
+## Chart 4: CVC Monthly Impact Summary
+
+**View:** `sheets_cvc_impact_monthly`
+
+**Purpose:** Shows monthly trends in CVC impact on conflict resolution.
+
+### Setup Steps
+
+1. Connect to `clinvar_curator.sheets_cvc_impact_monthly`
 2. Select all data
 3. Insert → Chart
 4. Choose **Line chart** or **Area chart**
@@ -366,29 +400,24 @@ These bulk events can mask underlying trends in the data. The filtered view excl
 | X-axis | `month_label` |
 | Series | `cvc_attributed_resolutions`, `organic_resolutions` |
 
-### Additional Column
-
-The view includes an `excluded_bulk_downgrades` column showing how many resolutions were filtered out for that month. This provides transparency about the filtering impact.
-
 ### Interpretation
 
 - Compare CVC-attributed resolutions to organic resolutions over time
 - Look for trends as CVC submission volume increases
-- Filtered view shows cleaner baseline without outlier spikes
 
-> **Note:** An unfiltered view (`sheets_cvc_impact_monthly`) is also available if you need the full picture including bulk downgrade events.
+> **Note:** A filtered view (`sheets_cvc_impact_monthly_filtered`) is available if you want to exclude bulk downgrade events.
 
 ---
 
-## Chart 5: CVC Attribution Breakdown (Filtered)
+## Chart 5a: CVC Attribution Breakdown
 
-**View:** `sheets_cvc_attribution_breakdown_filtered`
+**View:** `sheets_cvc_attribution_breakdown`
 
-**Purpose:** Shows detailed breakdown of how resolutions are attributed, excluding bulk SCV downgrade events for cleaner trend analysis.
+**Purpose:** Shows detailed breakdown of how resolutions are attributed.
 
 ### Setup Steps
 
-1. Connect to `clinvar_curator.sheets_cvc_attribution_breakdown_filtered`
+1. Connect to `clinvar_curator.sheets_cvc_attribution_breakdown`
 2. Select all data
 3. Insert → Chart
 4. Choose **Stacked Area chart** or **Stacked Bar chart**
@@ -411,11 +440,55 @@ The view includes an `excluded_bulk_downgrades` column showing how many resoluti
 | Organic | Resolution unrelated to CVC |
 | CVC_Submitted_Organic_Outcome | CVC submitted but outcome was organic |
 
-### Transparency Column
+> **Note:** A filtered view (`sheets_cvc_attribution_breakdown_filtered`) is available if you want to exclude bulk downgrade events.
 
-The view includes an `excluded_bulk_downgrades` column showing how many resolutions were filtered out for that month.
+---
 
-> **Note:** An unfiltered view (`sheets_cvc_attribution_breakdown`) is also available if you need the full picture including bulk downgrade events.
+## Chart 5b: CVC Attribution Pie Chart
+
+**View:** `sheets_cvc_attribution_breakdown_pie`
+
+**Purpose:** All-time summary pie chart showing the proportion of each attribution category across all resolutions.
+
+### Setup Steps
+
+1. Connect to `clinvar_curator.sheets_cvc_attribution_breakdown_pie`
+2. Click **Extract** to pull the data into a regular sheet
+3. Select all data
+4. Insert → Chart
+5. Choose **Pie chart**
+
+### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Pie |
+| Labels | `category` |
+| Values | `total_count` |
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `category` | Attribution type (CVC Flagged, Organic, etc.) |
+| `total_count` | Total resolutions in this category across all time |
+| `pct` | Percentage of total resolutions |
+
+### Slice Colors
+
+| Category | Color | Hex Code |
+|----------|-------|----------|
+| CVC Flagged | Dark Green | #1B7F37 |
+| Submitter Deleted (CVC Prompted) | Light Green | #6AA84F |
+| Submitter Reclassified (CVC Prompted) | Medium Green | #93C47D |
+| Organic | Blue | #4285F4 |
+| CVC Submitted, Organic Outcome | Light Blue | #A4C2F4 |
+
+### Interpretation
+
+- Green slices represent CVC-attributed resolutions (direct CVC impact)
+- Blue slices represent organic resolutions (not attributed to CVC)
+- Shows all-time totals aggregated across all months
 
 ---
 
@@ -576,6 +649,189 @@ If the Size field shows "None" or wrong column:
 | Chart type | Line |
 | X-axis | `month_label` |
 | Series | `cumulative_scvs_submitted`, `cumulative_cvc_resolutions`, `cumulative_organic_resolutions` |
+
+---
+
+## Chart 8a: True vs Standard Version Bumps by Month
+
+**View:** `sheets_full_record_bumps_by_month`
+
+**Purpose:** Shows monthly trends comparing "true" version bumps (strictest, 19-field) vs "standard" version bumps (4-field, used in Charts 2-3). This reveals how many standard bumps are actually true bumps with zero changes.
+
+### Important Note on "True" vs "Standard" Version Bumps
+
+| Detection Method | Fields Compared | View |
+|------------------|-----------------|------|
+| **Standard** (Charts 2-3) | 4 fields: classif_type, submitted_classification, last_evaluated, trait_set_id | `cvc_version_bumps` |
+| **True/Full Record** (Charts 8) | 19 fields: all substantive SCV fields | `cvc_full_record_version_bumps` |
+
+**Key Insight:** True version bumps are a **subset** of standard version bumps. The difference (`Standard_Only_Bumps`) represents cases where the 4 key fields didn't change, but other fields (like `rank`, `review_status`, `classification_comment`, etc.) did change.
+
+### Setup Steps
+
+1. Connect to `clinvar_curator.sheets_full_record_bumps_by_month`
+2. Click **Extract** to pull data into a regular sheet
+3. Select columns: `month_label`, `True_Bumps_Strict`, `Standard_Only_Bumps`, `Substantive_Changes`
+4. Insert → Chart
+5. Choose **Stacked Column chart**
+
+### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Stacked Column |
+| X-axis | `month_label` |
+| Series 1 | `True_Bumps_Strict` (red - most concerning) |
+| Series 2 | `Standard_Only_Bumps` (orange - 4 fields same, others changed) |
+| Series 3 | `Substantive_Changes` (blue - real changes) |
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `release_month` | First day of the month (for sorting) |
+| `month_label` | Human-readable label (e.g., "Jan 2024") |
+| `total_version_changes` | All version changes in this month |
+| `True_Bumps_Strict` | True bumps: ALL 19 fields identical (most concerning) |
+| `Standard_Only_Bumps` | Standard bumps that aren't true: 4 key fields same, but other fields changed |
+| `Substantive_Changes` | Neither true nor standard bump (real changes made) |
+| `true_also_standard` | Count of true bumps also detected by standard (should equal true bumps) |
+| `true_only` | True bumps NOT detected by standard (should be 0 - sanity check) |
+| `true_bump_pct` | % of changes that were true bumps |
+| `standard_bump_pct` | % of changes that were standard bumps |
+| `pct_standard_that_are_true` | What % of standard bumps are also true bumps |
+| `unique_scvs_true_bumped` | Distinct SCVs with true bumps |
+| `unique_scvs_standard_bumped` | Distinct SCVs with standard bumps |
+
+### Series Colors
+
+| Series | Color | Hex Code |
+|--------|-------|----------|
+| `True_Bumps_Strict` | Red | #CC0000 |
+| `Standard_Only_Bumps` | Orange | #E69138 |
+| `Substantive_Changes` | Blue | #4285F4 |
+
+### Interpretation
+
+- **Red (True Bumps)**: Most concerning - literally nothing changed except version/date
+- **Orange (Standard Only)**: Detected by 4-field check but not 19-field - some minor fields changed
+- **Blue (Substantive)**: Real changes made to classification-relevant fields
+- `pct_standard_that_are_true` tells you what portion of "standard" bumps are the strictest type
+- If `true_only > 0`, there's a data issue (true bumps should always be a subset of standard)
+
+---
+
+## Chart 8b: True Version Bumps by Submitter
+
+**View:** `cvc_full_record_bumps_by_submitter`
+
+**Purpose:** Identifies which submitters have the most true version bumps across all their SCVs.
+
+### Setup Steps
+
+1. Connect to `clinvar_curator.cvc_full_record_bumps_by_submitter`
+2. Click **Extract** to pull data into a regular sheet
+3. Sort by `true_version_bumps` descending (should already be sorted)
+4. Select columns: `submitter_name`, `true_version_bumps`, `substantive_changes`
+5. Insert → Chart
+6. Choose **Horizontal Stacked Bar chart**
+
+### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Horizontal Stacked Bar |
+| Y-axis | `submitter_name` |
+| Series 1 | `true_version_bumps` (red) |
+| Series 2 | `substantive_changes` (blue) |
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `submitter_id` | ClinVar submitter ID |
+| `submitter_name` | Current submitter organization name |
+| `unique_scvs_with_bumps` | Distinct SCVs that have had at least one true bump |
+| `total_version_changes` | Total version changes across all submitter's SCVs |
+| `true_version_bumps` | Count of true version bumps (zero field changes) |
+| `substantive_changes` | Count of version changes with actual modifications |
+| `true_bump_pct` | Percentage of changes that were true bumps |
+| `avg_bumps_per_scv` | Average true bumps per SCV (for SCVs with bumps) |
+| `first_true_bump_date` | Earliest true version bump by this submitter |
+| `last_true_bump_date` | Most recent true version bump |
+
+### Series Colors
+
+| Series | Color | Hex Code |
+|--------|-------|----------|
+| `true_version_bumps` | Red | #CC0000 |
+| `substantive_changes` | Blue | #4285F4 |
+
+### Interpretation
+
+- Submitters with high `true_version_bumps` are frequently resubmitting without making any changes
+- High `avg_bumps_per_scv` indicates repeat behavior on the same SCVs
+- Compare `true_bump_pct` across submitters to identify outliers
+- Look at date range (`first_true_bump_date` to `last_true_bump_date`) to see if behavior is ongoing
+
+---
+
+## Chart 8c: True vs Standard Version Bump Summary
+
+**View:** `cvc_full_record_bumps_summary`
+
+**Purpose:** Provides high-level KPIs comparing true (strict) and standard (relaxed) version bump detection across all data.
+
+### Setup Steps (KPI Cards)
+
+1. Connect to `clinvar_curator.cvc_full_record_bumps_summary`
+2. Click **Extract** to pull data into a regular sheet
+3. Create individual cells or a scorecard layout displaying key metrics
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `total_version_changes` | Total consecutive version changes in the dataset |
+| `total_true_version_bumps` | True bumps: ALL 19 fields identical |
+| `total_standard_version_bumps` | Standard bumps: 4 key fields identical |
+| `true_also_standard` | True bumps also detected by standard (should = true bumps) |
+| `true_only` | True bumps NOT in standard (should be 0 - sanity check) |
+| `standard_only` | Standard bumps that aren't true (4 fields same, others changed) |
+| `total_substantive_changes` | Changes where classification-relevant fields changed |
+| `overall_true_bump_pct` | % of all changes that are true bumps |
+| `overall_standard_bump_pct` | % of all changes that are standard bumps |
+| `pct_standard_that_are_true` | What % of standard bumps are also true bumps |
+| `unique_scvs_with_version_changes` | Distinct SCVs that have had version changes |
+| `unique_scvs_with_true_bumps` | Distinct SCVs with at least one true bump |
+| `unique_scvs_with_standard_bumps` | Distinct SCVs with at least one standard bump |
+| `unique_submitters_with_version_changes` | Submitters who have made version changes |
+| `unique_submitters_with_true_bumps` | Submitters with at least one true bump |
+| `earliest_version_change` | First version change date in dataset |
+| `latest_version_change` | Most recent version change date |
+
+### Display Format
+
+Since this is a single-row summary, display as KPI cards:
+
+| KPI | Metric |
+|-----|--------|
+| **True Version Bumps** | `total_true_version_bumps` |
+| **Standard Version Bumps** | `total_standard_version_bumps` |
+| **% Standard That Are True** | `pct_standard_that_are_true`% |
+| **True Bump Rate** | `overall_true_bump_pct`% |
+| **SCVs with True Bumps** | `unique_scvs_with_true_bumps` |
+| **Submitters Involved** | `unique_submitters_with_true_bumps` |
+
+### Key Insight
+
+The `pct_standard_that_are_true` metric tells you what portion of the version bumps detected by the 4-field standard method are actually "true" bumps with zero changes. A high percentage means most standard bumps are the most concerning type.
+
+### Alternative: Scorecard Chart
+
+1. Select individual metric cells
+2. Insert → Chart → Scorecard
+3. Create one scorecard per key metric
 
 ---
 

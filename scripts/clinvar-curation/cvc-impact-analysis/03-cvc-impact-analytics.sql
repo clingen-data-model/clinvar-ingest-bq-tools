@@ -338,6 +338,38 @@ FROM `clinvar_curator.cvc_impact_summary`
 ORDER BY snapshot_release_date
 ;
 
+-- Attribution breakdown pie chart (all-time totals, unfiltered)
+CREATE OR REPLACE VIEW `clinvar_curator.sheets_cvc_attribution_breakdown_pie`
+AS
+SELECT
+  category,
+  total_count,
+  ROUND(100.0 * total_count / SUM(total_count) OVER (), 1) AS pct
+FROM (
+  SELECT 'CVC Flagged' AS category,
+         SUM(cvc_flagged_resolutions) AS total_count
+  FROM `clinvar_curator.cvc_impact_summary`
+  UNION ALL
+  SELECT 'Submitter Deleted (CVC Prompted)' AS category,
+         SUM(cvc_prompted_deletion) AS total_count
+  FROM `clinvar_curator.cvc_impact_summary`
+  UNION ALL
+  SELECT 'Submitter Reclassified (CVC Prompted)' AS category,
+         SUM(cvc_prompted_reclassification) AS total_count
+  FROM `clinvar_curator.cvc_impact_summary`
+  UNION ALL
+  SELECT 'Organic' AS category,
+         SUM(organic_resolutions) AS total_count
+  FROM `clinvar_curator.cvc_impact_summary`
+  UNION ALL
+  SELECT 'CVC Submitted, Organic Outcome' AS category,
+         SUM(cvc_submitted_organic) AS total_count
+  FROM `clinvar_curator.cvc_impact_summary`
+)
+WHERE total_count > 0
+ORDER BY total_count DESC
+;
+
 -- Batch effectiveness for comparison charts
 CREATE OR REPLACE VIEW `clinvar_curator.sheets_cvc_batch_effectiveness`
 AS

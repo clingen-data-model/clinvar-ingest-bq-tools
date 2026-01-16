@@ -197,9 +197,10 @@ ORDER BY scvs_bumped_during_grace DESC;
 --       1. "Flagged" (green) - Success: flag was applied
 --       2. "Reclassified" (blue) - Success: submitter changed classification
 --       3. "Removed" (light blue) - Success: submitter removed SCV
---       4. "Pending/Other" (gray) - Still in progress
---       5. "Version Bump During Grace" (orange) - Concerning: avoided flag during grace period
---       6. "Version Bump After Grace" (red) - Pattern: continued bumping after grace
+--       4. "Substantive_Changes" (yellow) - Neutral: real updates but kept classification
+--       5. "Pending/Other" (gray) - Still in progress
+--       6. "Version Bump During Grace" (orange) - Concerning: avoided flag during grace period
+--       7. "Version Bump After Grace" (red) - Pattern: continued bumping after grace
 --
 -- =============================================================================
 
@@ -211,6 +212,11 @@ SELECT
   COUNT(DISTINCT CASE WHEN fvi.current_outcome = 'flagged' THEN fvi.scv_id END) AS Flagged,
   COUNT(DISTINCT CASE WHEN fvi.current_outcome = 'scv_reclassified' THEN fvi.scv_id END) AS Reclassified,
   COUNT(DISTINCT CASE WHEN fvi.current_outcome = 'scv_removed' THEN fvi.scv_id END) AS Removed,
+  -- Substantive changes (real updates but kept same classification)
+  COUNT(DISTINCT CASE
+    WHEN fvi.current_outcome = 'scv_updated_same_classification' AND fvi.is_version_bump = FALSE
+    THEN fvi.scv_id
+  END) AS Substantive_Changes,
   -- Pending or other
   COUNT(DISTINCT CASE
     WHEN fvi.current_outcome NOT IN ('flagged', 'scv_reclassified', 'scv_removed', 'scv_updated_same_classification')
@@ -672,4 +678,55 @@ SELECT
   COUNTIF(is_version_bump = FALSE) AS version_changes_substantive
 FROM timing_data
 GROUP BY sort_order, days_bucket_label
+ORDER BY sort_order;
+
+
+-- =============================================================================
+-- Google Sheets View: Timeline - Version Bump Timing Summary (Grace Period)
+-- =============================================================================
+--
+-- Visualization: Simple 2-bar Column Chart
+-- Purpose: Simplified view showing totals BEFORE vs AFTER the 60-day grace period
+--          Makes summing easier for quick comparison
+--
+-- Chart Setup in Google Sheets:
+--   - Chart Type: Column/Bar Chart
+--   - X-axis: grace_period_status
+--   - Series 1: version_bumps_no_change (red/orange)
+--   - Series 2: version_changes_substantive (blue)
+--
+-- =============================================================================
+
+CREATE OR REPLACE VIEW `clinvar_curator.sheets_version_bump_timing_summary`
+AS
+WITH timing_data AS (
+  SELECT
+    CASE
+      WHEN DATE_DIFF(bump_date, batch_accepted_date, DAY) < 0 THEN 'before_acceptance'
+      WHEN DATE_DIFF(bump_date, batch_accepted_date, DAY) BETWEEN 0 AND 60 THEN 'within_grace'
+      ELSE 'after_grace'
+    END AS grace_period_status,
+    scv_id,
+    is_version_bump
+  FROM `clinvar_curator.cvc_flagging_version_bump_intersection`
+  WHERE bump_date IS NOT NULL
+)
+SELECT
+  CASE timing_data.grace_period_status
+    WHEN 'within_grace' THEN 1
+    WHEN 'after_grace' THEN 2
+    ELSE 0
+  END AS sort_order,
+  CASE timing_data.grace_period_status
+    WHEN 'within_grace' THEN 'Within Grace (0-60 days)'
+    WHEN 'after_grace' THEN 'After Grace (61+ days)'
+    ELSE 'Before Acceptance'
+  END AS grace_period_label,
+  COUNT(*) AS total_version_changes,
+  COUNT(DISTINCT scv_id) AS unique_scvs,
+  COUNTIF(is_version_bump = TRUE) AS version_bumps_no_change,
+  COUNTIF(is_version_bump = FALSE) AS version_changes_substantive
+FROM timing_data
+WHERE timing_data.grace_period_status != 'before_acceptance'
+GROUP BY timing_data.grace_period_status
 ORDER BY sort_order;

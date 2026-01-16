@@ -9,7 +9,6 @@
 --   - classification (classif_type)
 --   - submitted_classification text
 --   - last_evaluated date
---   - rank
 --   - trait_set_id
 --
 --   This is important because version bumps may be used to:
@@ -39,7 +38,6 @@ scv_versions AS (
     -- Use ANY_VALUE for fields that should be consistent within a version
     ANY_VALUE(classif_type) AS classif_type,
     ANY_VALUE(classification_abbrev) AS classification_abbrev,
-    ANY_VALUE(rank) AS rank,
     ANY_VALUE(submitted_classification) AS submitted_classification,
     ANY_VALUE(last_evaluated) AS last_evaluated,
     ANY_VALUE(submitter_id) AS submitter_id,
@@ -62,19 +60,16 @@ version_comparisons AS (
     -- Current version values
     curr.classif_type AS current_classif_type,
     curr.classification_abbrev AS current_classification,
-    curr.rank AS current_rank,
     curr.submitted_classification AS current_submitted_classification,
     curr.last_evaluated AS current_last_evaluated,
     -- Previous version values
     prev.classif_type AS previous_classif_type,
     prev.classification_abbrev AS previous_classification,
-    prev.rank AS previous_rank,
     prev.submitted_classification AS previous_submitted_classification,
     prev.last_evaluated AS previous_last_evaluated,
     prev.trait_set_id AS previous_trait_set_id,
     -- Determine what changed (NULL-safe comparisons: NULL=NULL is TRUE, NULL vs non-NULL is FALSE)
     (curr.classif_type != prev.classif_type) AS classif_type_changed,
-    (curr.rank != prev.rank) AS rank_changed,
     (COALESCE(curr.submitted_classification, '') != COALESCE(prev.submitted_classification, '')) AS submitted_classification_changed,
     -- NULL-safe comparison for last_evaluated: both NULL = no change, one NULL = change
     NOT (curr.last_evaluated IS NOT DISTINCT FROM prev.last_evaluated) AS last_evaluated_changed,
@@ -97,29 +92,24 @@ SELECT
   -- Classification info
   current_classif_type,
   current_classification,
-  current_rank,
   -- Change flags
   classif_type_changed,
-  rank_changed,
   submitted_classification_changed,
   last_evaluated_changed,
   trait_set_id_changed,
   -- Is this a version bump? (no substantive changes)
   (NOT classif_type_changed
-   AND NOT rank_changed
    AND NOT submitted_classification_changed
    AND NOT last_evaluated_changed
    AND NOT trait_set_id_changed) AS is_version_bump,
   -- What changed (if anything)
   CASE
     WHEN NOT classif_type_changed
-     AND NOT rank_changed
      AND NOT submitted_classification_changed
      AND NOT last_evaluated_changed
      AND NOT trait_set_id_changed THEN 'no_change_version_bump'
     ELSE ARRAY_TO_STRING(ARRAY_CONCAT(
       IF(classif_type_changed, ['classification'], []),
-      IF(rank_changed, ['rank'], []),
       IF(submitted_classification_changed, ['submitted_classification'], []),
       IF(last_evaluated_changed, ['last_evaluated'], []),
       IF(trait_set_id_changed, ['trait_set_id'], [])
@@ -140,7 +130,6 @@ ORDER BY current_start_date DESC, scv_id, current_version;
 --   substantive_changes               - Count of version changes with actual content changes
 --   version_bump_pct                  - Percentage of changes that were version bumps
 --   classification_changes            - Count of changes where classif_type changed
---   rank_changes                      - Count of changes where rank changed
 --   submitted_classification_changes  - Count of changes where submitted_classification text changed
 --   last_evaluated_changes            - Count of changes where last_evaluated date changed
 --   trait_set_id_changes              - Count of changes where trait_set_id changed
@@ -149,19 +138,36 @@ ORDER BY current_start_date DESC, scv_id, current_version;
 
 CREATE OR REPLACE VIEW `clinvar_curator.cvc_version_bump_summary`
 AS
+WITH versioned_data AS (
+  SELECT
+    scv_id,
+    current_version,
+    current_start_date,
+    is_version_bump,
+    classif_type_changed,
+    submitted_classification_changed,
+    last_evaluated_changed,
+    trait_set_id_changed,
+    -- Create unique key for each version transition to prevent double-counting
+    CONCAT(scv_id, '-', CAST(current_version AS STRING)) AS version_transition_key
+  FROM `clinvar_curator.cvc_version_bumps`
+)
 SELECT
   current_start_date AS release_date,
-  COUNT(*) AS total_version_changes,
-  COUNTIF(is_version_bump) AS version_bumps,
-  COUNTIF(NOT is_version_bump) AS substantive_changes,
-  ROUND(COUNTIF(is_version_bump) * 100.0 / COUNT(*), 1) AS version_bump_pct,
-  -- Breakdown of changes
-  COUNTIF(classif_type_changed) AS classification_changes,
-  COUNTIF(rank_changed) AS rank_changes,
-  COUNTIF(submitted_classification_changed) AS submitted_classification_changes,
-  COUNTIF(last_evaluated_changed) AS last_evaluated_changes,
-  COUNTIF(trait_set_id_changed) AS trait_set_id_changes
-FROM `clinvar_curator.cvc_version_bumps`
+  -- Count unique version transitions (scv_id + version), not rows
+  COUNT(DISTINCT version_transition_key) AS total_version_changes,
+  COUNT(DISTINCT CASE WHEN is_version_bump THEN version_transition_key END) AS version_bumps,
+  COUNT(DISTINCT CASE WHEN NOT is_version_bump THEN version_transition_key END) AS substantive_changes,
+  ROUND(
+    COUNT(DISTINCT CASE WHEN is_version_bump THEN version_transition_key END) * 100.0 /
+    NULLIF(COUNT(DISTINCT version_transition_key), 0), 1
+  ) AS version_bump_pct,
+  -- Breakdown of changes (unique transitions where each type changed)
+  COUNT(DISTINCT CASE WHEN classif_type_changed THEN version_transition_key END) AS classification_changes,
+  COUNT(DISTINCT CASE WHEN submitted_classification_changed THEN version_transition_key END) AS submitted_classification_changes,
+  COUNT(DISTINCT CASE WHEN last_evaluated_changed THEN version_transition_key END) AS last_evaluated_changes,
+  COUNT(DISTINCT CASE WHEN trait_set_id_changed THEN version_transition_key END) AS trait_set_id_changes
+FROM versioned_data
 GROUP BY current_start_date
 ORDER BY current_start_date DESC;
 
@@ -186,21 +192,39 @@ ORDER BY current_start_date DESC;
 
 CREATE OR REPLACE VIEW `clinvar_curator.cvc_version_bumps_by_submitter`
 AS
+WITH versioned_data AS (
+  SELECT
+    scv_id,
+    current_version,
+    submitter_id,
+    current_start_date,
+    is_version_bump,
+    -- Create unique key for each version transition to prevent double-counting
+    CONCAT(scv_id, '-', CAST(current_version AS STRING)) AS version_transition_key
+  FROM `clinvar_curator.cvc_version_bumps`
+)
 SELECT
-  vb.submitter_id,
+  vd.submitter_id,
   sub.current_name AS submitter_name,
-  COUNT(DISTINCT vb.scv_id) AS unique_scv_ids,
-  COUNT(*) AS total_version_changes,
-  COUNTIF(vb.is_version_bump) AS version_bumps,
-  ROUND(COUNTIF(vb.is_version_bump) * 1.0 / NULLIF(COUNT(DISTINCT vb.scv_id), 0), 2) AS avg_bumps_per_scv,
-  COUNTIF(NOT vb.is_version_bump) AS substantive_changes,
-  ROUND(COUNTIF(vb.is_version_bump) * 100.0 / COUNT(*), 1) AS version_bump_pct,
-  MIN(CASE WHEN vb.is_version_bump THEN vb.current_start_date END) AS first_version_bump_date,
-  MAX(CASE WHEN vb.is_version_bump THEN vb.current_start_date END) AS last_version_bump_date
-FROM `clinvar_curator.cvc_version_bumps` vb
+  COUNT(DISTINCT vd.scv_id) AS unique_scv_ids,
+  -- Count unique version transitions (scv_id + version), not rows
+  COUNT(DISTINCT vd.version_transition_key) AS total_version_changes,
+  COUNT(DISTINCT CASE WHEN vd.is_version_bump THEN vd.version_transition_key END) AS version_bumps,
+  ROUND(
+    COUNT(DISTINCT CASE WHEN vd.is_version_bump THEN vd.version_transition_key END) * 1.0 /
+    NULLIF(COUNT(DISTINCT vd.scv_id), 0), 2
+  ) AS avg_bumps_per_scv,
+  COUNT(DISTINCT CASE WHEN NOT vd.is_version_bump THEN vd.version_transition_key END) AS substantive_changes,
+  ROUND(
+    COUNT(DISTINCT CASE WHEN vd.is_version_bump THEN vd.version_transition_key END) * 100.0 /
+    NULLIF(COUNT(DISTINCT vd.version_transition_key), 0), 1
+  ) AS version_bump_pct,
+  MIN(CASE WHEN vd.is_version_bump THEN vd.current_start_date END) AS first_version_bump_date,
+  MAX(CASE WHEN vd.is_version_bump THEN vd.current_start_date END) AS last_version_bump_date
+FROM versioned_data vd
 LEFT JOIN `clinvar_ingest.clinvar_submitters` sub
-  ON vb.submitter_id = sub.id
+  ON vd.submitter_id = sub.id
   AND sub.deleted_release_date IS NULL
-GROUP BY vb.submitter_id, sub.current_name
-HAVING COUNTIF(vb.is_version_bump) > 0
+GROUP BY vd.submitter_id, sub.current_name
+HAVING COUNT(DISTINCT CASE WHEN vd.is_version_bump THEN vd.version_transition_key END) > 0
 ORDER BY version_bumps DESC;
