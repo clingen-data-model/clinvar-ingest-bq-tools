@@ -35,13 +35,13 @@
 --   total_scvs                   - All path SCVs for this gene
 --   clinsig_scv_count            - P/LP SCVs only
 --   total_variants               - All distinct path variants
---   variants_with_clinsig_scv    - Variants with at least one P/LP SCV
+--   total_clinsig_variants       - Variants with at least one P/LP SCV
 --   concordant_clinsig_variants  - agg_sig_type = 4 (P/LP, no conflict)
 --   plp_vs_blb_variants          - agg_sig_type = 5 (P/LP vs B/LB)
 --   plp_vs_vus_variants          - agg_sig_type = 6 (P/LP vs VUS)
 --   plp_vs_vus_blb_variants      - agg_sig_type = 7 (P/LP vs VUS + B/LB)
---   total_clinsig_variants       - agg_sig_type >= 4
---   clinsig_variant_pct          - total_clinsig_variants / total_variants * 100
+--   total_clinsig_conflict_variants - agg_sig_type >= 5 (all conflict types)
+--   clinsig_conflict_pct         - total_clinsig_conflict_variants / total_variants * 100
 --   release_date                 - ClinVar release date used for this snapshot
 --
 -- Output View:
@@ -83,7 +83,7 @@ scv_counts AS (
     COUNT(DISTINCT CASE WHEN scv.clinsig_type = 2 THEN scv.id END) AS clinsig_scv_count,
     COUNT(DISTINCT scv.variation_id) AS total_variants,
     -- Variants with at least one P/LP SCV
-    COUNT(DISTINCT CASE WHEN scv.clinsig_type = 2 THEN scv.variation_id END) AS variants_with_clinsig_scv,
+    COUNT(DISTINCT CASE WHEN scv.clinsig_type = 2 THEN scv.variation_id END) AS total_clinsig_variants,
     dv.release_date
   FROM dsm_variants dv
   JOIN `clinvar_ingest.clinvar_scvs` scv
@@ -120,7 +120,7 @@ variant_counts AS (
     COUNTIF(agg_sig_type = 5) AS plp_vs_blb_variants,
     COUNTIF(agg_sig_type = 6) AS plp_vs_vus_variants,
     COUNTIF(agg_sig_type = 7) AS plp_vs_vus_blb_variants,
-    COUNTIF(agg_sig_type >= 4) AS total_clinsig_variants
+    COUNTIF(agg_sig_type >= 5) AS total_clinsig_conflict_variants
   FROM variant_agg
   GROUP BY gene_symbol, gene_id
 )
@@ -131,13 +131,13 @@ SELECT
   sc.total_scvs,
   sc.clinsig_scv_count,
   sc.total_variants,
-  sc.variants_with_clinsig_scv,
+  sc.total_clinsig_variants,
   COALESCE(vc.concordant_clinsig_variants, 0) AS concordant_clinsig_variants,
   COALESCE(vc.plp_vs_blb_variants, 0) AS plp_vs_blb_variants,
   COALESCE(vc.plp_vs_vus_variants, 0) AS plp_vs_vus_variants,
   COALESCE(vc.plp_vs_vus_blb_variants, 0) AS plp_vs_vus_blb_variants,
-  COALESCE(vc.total_clinsig_variants, 0) AS total_clinsig_variants,
-  ROUND(SAFE_DIVIDE(vc.total_clinsig_variants, sc.total_variants) * 100, 2) AS clinsig_variant_pct,
+  COALESCE(vc.total_clinsig_conflict_variants, 0) AS total_clinsig_conflict_variants,
+  ROUND(SAFE_DIVIDE(vc.total_clinsig_conflict_variants, sc.total_variants) * 100, 2) AS clinsig_conflict_pct,
   sc.release_date
 FROM scv_counts sc
 LEFT JOIN variant_counts vc

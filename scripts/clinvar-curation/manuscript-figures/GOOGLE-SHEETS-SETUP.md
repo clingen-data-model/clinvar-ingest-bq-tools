@@ -10,7 +10,8 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 
 | Figure | Name | View | Script | Chart Type | Link |
 |--------|------|------|--------|------------|------|
-| 1 | ClinVar Landscape | `clinvar_ingest.manuscript_clinvar_landscape` | `01-clinvar-landscape.sql` | Scatter Plot | [Link] |
+| 1a | ClinVar Landscape (Conflict Count) | `clinvar_ingest.manuscript_clinvar_landscape` | `01-clinvar-landscape.sql` | Scatter Plot | [Link] |
+| 1b | ClinVar Landscape (Conflict Rate) | `clinvar_ingest.manuscript_clinvar_landscape` | `01-clinvar-landscape.sql` | Scatter Plot | [Link] |
 
 ---
 
@@ -35,54 +36,21 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 **View:** `clinvar_ingest.manuscript_clinvar_landscape`
 **Script:** `01-clinvar-landscape.sql`
 
-**Purpose:** Visualizes the ClinVar Germline Variant Pathogenicity Classification landscape across GenCC Definitive/Strong/Moderate (DSM) genes. Each gene is plotted as a point to show the relationship between submission volume and the proportion of clinically significant variants.
+**Purpose:** Visualizes the ClinVar Germline Variant Pathogenicity Classification landscape across GenCC Definitive/Strong/Moderate (DSM) genes. Each gene is plotted as a point to show the relationship between submission volume and clinically significant conflicts. Two versions of the scatter plot show different perspectives: absolute conflict count (1a) and conflict rate as a percentage of total variants (1b).
 
 ### Data Source
 
-Connect to the view `clinvar_ingest.manuscript_clinvar_landscape` in BigQuery. The view is created by running `01-clinvar-landscape.sql`.
+Connect to the view `clinvar_ingest.manuscript_clinvar_landscape` in BigQuery. The view is created by running `01-clinvar-landscape.sql`. Both charts use the same extracted data.
 
-### Setup Steps
+### Setup Steps (shared)
 
 1. Connect to `clinvar_ingest.manuscript_clinvar_landscape` via Data Connector
 2. Click **Extract** to pull the data into a regular sheet
-3. Select the extracted data columns: `gene_symbol`, `total_scvs` (X), `clinsig_variant_pct` (Y)
-4. Insert > Chart
-5. Choose **Scatter chart**
-
-### Chart Configuration
-
-| Setting | Value |
-|---------|-------|
-| Chart type | Scatter |
-| X-axis | `total_scvs` |
-| Y-axis | `clinsig_variant_pct` |
-| Point labels | `gene_symbol` (optional, see below) |
-
-### Axis Configuration
-
-| Axis | Label | Notes |
-|------|-------|-------|
-| X-axis | Total SCVs (Pathogenicity Submissions) | Log scale recommended for readability due to wide range |
-| Y-axis | Clinically Significant Variants (%) | Percentage of variants with agg_sig_type >= 4 |
-
-### Customize Tab Settings
-
-1. **Chart & axis titles**:
-   - Chart title: "ClinVar Pathogenicity Classification Landscape by Gene"
-   - Chart subtitle: "GenCC Definitive/Strong/Moderate Genes"
-   - X-axis title: "Total Pathogenicity SCVs"
-   - Y-axis title: "% Clinically Significant Variants"
-2. **Series**:
-   - Point size: 4-6px
-   - Point color: #4285F4 (blue)
-   - Point opacity: 70% (helps when dots overlap)
-3. **Gridlines and ticks**:
-   - X-axis: Consider logarithmic scale if data range is wide
-4. **Legend**: None (single series)
+3. Create two charts from the same extracted data (see 1a and 1b below)
 
 ### Showing Gene Labels
 
-Gene labels can be shown selectively to avoid clutter:
+Gene labels can be shown selectively to avoid clutter on both charts:
 
 1. **Option A - Top N genes only**: Filter the extracted data to the top 20-30 genes by `clinsig_scv_count`, then enable point labels
 2. **Option B - On hover**: Google Sheets scatter charts show data on hover by default
@@ -93,20 +61,105 @@ To enable point labels:
 2. Set **Label** to `gene_symbol`
 3. In **Customize** > **Series**, check **Data labels**
 
-### Key Columns Used
+### Shared Customize Tab Settings
+
+1. **Series**:
+   - Point size: 4-6px
+   - Point color: #4285F4 (blue)
+   - Point opacity: 70% (helps when dots overlap)
+2. **Gridlines and ticks**:
+   - X-axis: Consider logarithmic scale if data range is wide
+3. **Legend**: None (single series)
+
+---
+
+### Figure 1a: Conflict Count
+
+**Chart type:** Scatter plot showing absolute number of clinically significant conflict variants per gene.
+
+#### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Scatter |
+| X-axis | `total_scvs` |
+| Y-axis | `total_clinsig_conflict_variants` |
+| Point labels | `gene_symbol` (optional) |
+
+#### Axis Configuration
+
+| Axis | Label | Notes |
+|------|-------|-------|
+| X-axis | Total Pathogenicity SCVs | Log scale recommended |
+| Y-axis | Clinically Significant Conflict Variants | Count of variants with agg_sig_type >= 5 |
+
+#### Chart & Axis Titles
+
+- Chart title: "ClinVar Conflict Burden by Gene"
+- Chart subtitle: "GenCC Definitive/Strong/Moderate Genes"
+- X-axis title: "Total Pathogenicity SCVs"
+- Y-axis title: "Clinically Significant Conflict Variants"
+
+#### Key Columns Used
 
 | Column | Chart Role | Description |
 |--------|-----------|-------------|
 | `gene_symbol` | Label | Gene symbol (e.g., BRCA1) |
 | `total_scvs` | X-axis | All pathogenicity SCVs for this gene |
-| `clinsig_variant_pct` | Y-axis | `total_clinsig_variants / total_variants * 100` |
+| `total_clinsig_conflict_variants` | Y-axis | Variants with agg_sig_type >= 5 |
 
-### Interpretation
+#### Interpretation
 
-- **Upper-right quadrant**: Genes with many submissions AND a high percentage of clinically significant variants (well-studied, clinically important)
-- **Lower-right quadrant**: Genes with many submissions but a low percentage of clinically significant variants (heavily submitted but mostly VUS/Benign)
-- **Upper-left quadrant**: Genes with few submissions but a high proportion are clinically significant (potentially underrepresented)
-- **Lower-left quadrant**: Genes with few submissions and low clinical significance rate
+- **Upper-right quadrant**: Genes with many submissions AND many conflict variants (high-volume, high absolute conflict burden)
+- **Lower-right quadrant**: Genes with many submissions but few conflict variants (high-volume, concordant)
+- **Upper-left quadrant**: Genes with few submissions but many conflicts (unexpected — worth investigating)
+- **Lower-left quadrant**: Genes with few submissions and few conflicts
+
+---
+
+### Figure 1b: Conflict Rate
+
+**Chart type:** Scatter plot showing the percentage of variants in clinically significant conflict per gene.
+
+#### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Scatter |
+| X-axis | `total_scvs` |
+| Y-axis | `clinsig_conflict_pct` |
+| Point labels | `gene_symbol` (optional) |
+
+#### Axis Configuration
+
+| Axis | Label | Notes |
+|------|-------|-------|
+| X-axis | Total Pathogenicity SCVs | Log scale recommended |
+| Y-axis | Clinically Significant Conflict Rate (%) | `total_clinsig_conflict_variants / total_variants * 100` |
+
+#### Chart & Axis Titles
+
+- Chart title: "ClinVar Conflict Rate by Gene"
+- Chart subtitle: "GenCC Definitive/Strong/Moderate Genes"
+- X-axis title: "Total Pathogenicity SCVs"
+- Y-axis title: "% Variants in Clinically Significant Conflict"
+
+#### Key Columns Used
+
+| Column | Chart Role | Description |
+|--------|-----------|-------------|
+| `gene_symbol` | Label | Gene symbol (e.g., BRCA1) |
+| `total_scvs` | X-axis | All pathogenicity SCVs for this gene |
+| `clinsig_conflict_pct` | Y-axis | `total_clinsig_conflict_variants / total_variants * 100` |
+
+#### Interpretation
+
+- **Upper-right quadrant**: Genes with many submissions AND a high conflict rate (high-volume, contentious)
+- **Lower-right quadrant**: Genes with many submissions but a low conflict rate (high-volume, concordant)
+- **Upper-left quadrant**: Genes with few submissions but a high conflict rate (low-volume, contentious)
+- **Lower-left quadrant**: Genes with few submissions and low conflict rate
+
+---
 
 ### Additional Scatter Plot Variants
 
@@ -114,7 +167,7 @@ The same dataset can support alternative views:
 
 | Variant | X-axis | Y-axis | Insight |
 |---------|--------|--------|---------|
-| Conflict burden | `total_clinsig_variants` | `plp_vs_blb_variants + plp_vs_vus_variants + plp_vs_vus_blb_variants` | Which genes have the most conflicting variants? |
+| Conflict burden | `total_clinsig_variants` | `total_clinsig_conflict_variants` | Which genes have the most conflicting variants relative to their P/LP count? |
 | Concordance rate | `total_scvs` | `concordant_clinsig_variants / total_clinsig_variants * 100` | Which high-volume genes have the highest P/LP concordance? |
 
 ---
