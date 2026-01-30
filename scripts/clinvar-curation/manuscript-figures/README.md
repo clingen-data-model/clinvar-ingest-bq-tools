@@ -24,3 +24,21 @@ All scripts operate on the **Germline Variant Pathogenicity Classification Submi
 - **`clinvar_ingest.gencc_dsm_genes`** - GenCC gene list filtered to Definitive, Strong, and Moderate disease-gene validity classifications
 - **`clinvar_ingest.clinvar_genes`** - ClinVar gene records with HGNC IDs, used to bridge `gencc_dsm_genes` (by `hgnc_id`) to `clinvar_single_gene_variations` (by `gene_id`)
 - **`clinvar_ingest.clinvar_single_gene_variations`** - Variants mapped to a single gene (excludes multi-gene variants)
+
+
+
+
+TODO
+https://docs.google.com/spreadsheets/d/1aLk5SB7e1DGtV2JvYp6jfW_iLKSqOV6Ys5g4c18iY8M/edit?gid=225392840#gid=225392840
+
+Figure 2C. CvC Categories of Prioritizing variant conflicts
+No. of SCVs in annotation workflow by source
+- order of categories: community requests, interlab conflicts, clinsig outliers, discordance, vcep
+
+Figure 3 Flagging Outcomes
+
+3.a (was 3.B)
+3.b (was 3.C)
+3.c (was 3.E)
+3.d (was 3.A)
+3.e (was 3.D)

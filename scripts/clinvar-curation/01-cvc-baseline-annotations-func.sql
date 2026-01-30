@@ -74,7 +74,7 @@ AS
         ) as prior_scv_annotations
 
       FROM anno as a
-      JOIN anno as prior_a
+      JOIN `clinvar_curator.cvc_annotations_view` as prior_a
       ON
         prior_a.scv_id = a.scv_id
         AND

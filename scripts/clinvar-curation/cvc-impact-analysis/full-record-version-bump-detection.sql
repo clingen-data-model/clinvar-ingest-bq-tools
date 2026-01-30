@@ -3,9 +3,18 @@
 -- =============================================================================
 --
 -- Purpose:
---   Compares the ENTIRE SCV record between consecutive versions to identify
---   true "version bumps" where only the version number and submission_date
---   changed, with no other substantive changes to the record.
+--   Compares the ENTIRE SCV record between consecutive versions to categorize
+--   version changes into three types:
+--
+--   1. DUPLICATE BUMP: ALL 19 fields identical - the submission is a duplicate
+--      of the prior version and should not have had a version bump at all.
+--
+--   2. NON-SUBSTANTIVE CHANGE BUMP: The 4 key classification fields are the same
+--      (classification, last_evaluated, trait, rank) but other fields changed.
+--      Detected by the standard 4-field check in cvc_version_bumps.
+--
+--   3. SUBSTANTIVE CHANGE BUMP: Real changes were made to classification-relevant
+--      fields - this is a legitimate version update.
 --
 -- Fields compared (all fields except version, submission_date, and temporal tracking):
 --   - statement_type
@@ -40,10 +49,10 @@
 --   - start_release_date, end_release_date, deleted_release_date (temporal tracking)
 --
 -- Output Tables/Views:
---   - clinvar_curator.cvc_full_record_version_bumps (base table)
---   - clinvar_curator.cvc_full_record_bumps_by_scv (SCVs with multiple true bumps)
---   - clinvar_curator.cvc_full_record_bumps_by_submitter (submitter analysis)
---   - clinvar_curator.cvc_full_record_bumps_by_release (release analysis)
+--   - clinvar_curator.cvc_full_record_version_bumps (base table with is_duplicate_bump flag)
+--   - clinvar_curator.cvc_duplicate_bumps_by_scv (SCVs with duplicate bumps)
+--   - clinvar_curator.cvc_duplicate_bumps_by_submitter (submitter analysis)
+--   - clinvar_curator.cvc_duplicate_bumps_by_release (release analysis)
 --
 -- =============================================================================
 
@@ -141,7 +150,9 @@ SELECT
   submitter_id,
   variation_id,
 
-  -- Is this a TRUE version bump? (ALL fields identical except version/submission_date)
+  -- Is this a DUPLICATE BUMP? (ALL fields identical except version/submission_date)
+  -- A duplicate bump means the submission is identical to the prior version
+  -- and should not have had a version increment at all.
   (statement_type_same
    AND original_proposition_type_same
    AND gks_proposition_type_same
@@ -160,7 +171,7 @@ SELECT
    AND origin_same
    AND affected_status_same
    AND method_type_same
-   AND trait_set_id_same) AS is_true_version_bump,
+   AND trait_set_id_same) AS is_duplicate_bump,
 
   -- Count how many fields changed
   (CASE WHEN NOT statement_type_same THEN 1 ELSE 0 END
@@ -210,26 +221,26 @@ FROM version_comparisons;
 
 
 -- =============================================================================
--- Analysis View: True Version Bumps by SCV
+-- Analysis View: Duplicate Bumps by SCV
 -- =============================================================================
 --
--- Shows SCVs that have had multiple true version bumps (repeat offenders)
+-- Shows SCVs that have had duplicate bumps (identical resubmissions)
 --
 -- Columns:
 --   scv_id                    - The SCV identifier
 --   submitter_id              - Submitter who owns this SCV
 --   submitter_name            - Current name of the submitter
 --   total_version_changes     - Total number of version changes for this SCV
---   true_version_bumps        - Number of true version bumps (no field changes)
+--   duplicate_bumps           - Number of duplicate bumps (no field changes at all)
 --   substantive_changes       - Number of version changes with actual changes
---   true_bump_pct             - Percentage of changes that were true bumps
---   first_true_bump_date      - First time this SCV had a true version bump
---   last_true_bump_date       - Most recent true version bump
+--   duplicate_bump_pct        - Percentage of changes that were duplicate bumps
+--   first_duplicate_bump_date - First time this SCV had a duplicate bump
+--   last_duplicate_bump_date  - Most recent duplicate bump
 --   latest_version            - Current version of the SCV
 --
 -- =============================================================================
 
-CREATE OR REPLACE VIEW `clinvar_curator.cvc_full_record_bumps_by_scv`
+CREATE OR REPLACE VIEW `clinvar_curator.cvc_duplicate_bumps_by_scv`
 AS
 SELECT
   vb.scv_id,
@@ -237,45 +248,45 @@ SELECT
   sub.current_name AS submitter_name,
   -- Count unique version transitions (by current_version) to prevent double-counting
   COUNT(DISTINCT vb.current_version) AS total_version_changes,
-  COUNT(DISTINCT CASE WHEN vb.is_true_version_bump THEN vb.current_version END) AS true_version_bumps,
-  COUNT(DISTINCT CASE WHEN NOT vb.is_true_version_bump THEN vb.current_version END) AS substantive_changes,
+  COUNT(DISTINCT CASE WHEN vb.is_duplicate_bump THEN vb.current_version END) AS duplicate_bumps,
+  COUNT(DISTINCT CASE WHEN NOT vb.is_duplicate_bump THEN vb.current_version END) AS substantive_changes,
   ROUND(
-    COUNT(DISTINCT CASE WHEN vb.is_true_version_bump THEN vb.current_version END) * 100.0 /
+    COUNT(DISTINCT CASE WHEN vb.is_duplicate_bump THEN vb.current_version END) * 100.0 /
     NULLIF(COUNT(DISTINCT vb.current_version), 0), 1
-  ) AS true_bump_pct,
-  MIN(CASE WHEN vb.is_true_version_bump THEN vb.current_start_date END) AS first_true_bump_date,
-  MAX(CASE WHEN vb.is_true_version_bump THEN vb.current_start_date END) AS last_true_bump_date,
+  ) AS duplicate_bump_pct,
+  MIN(CASE WHEN vb.is_duplicate_bump THEN vb.current_start_date END) AS first_duplicate_bump_date,
+  MAX(CASE WHEN vb.is_duplicate_bump THEN vb.current_start_date END) AS last_duplicate_bump_date,
   MAX(vb.current_version) AS latest_version
 FROM `clinvar_curator.cvc_full_record_version_bumps` vb
 LEFT JOIN `clinvar_ingest.clinvar_submitters` sub
   ON vb.submitter_id = sub.id
   AND sub.deleted_release_date IS NULL
 GROUP BY vb.scv_id, vb.submitter_id, sub.current_name
-HAVING COUNT(DISTINCT CASE WHEN vb.is_true_version_bump THEN vb.current_version END) > 0
-ORDER BY true_version_bumps DESC, scv_id;
+HAVING COUNT(DISTINCT CASE WHEN vb.is_duplicate_bump THEN vb.current_version END) > 0
+ORDER BY duplicate_bumps DESC, scv_id;
 
 
 -- =============================================================================
--- Analysis View: True Version Bumps by Submitter
+-- Analysis View: Duplicate Bumps by Submitter
 -- =============================================================================
 --
--- Shows which submitters have the most true version bumps across all their SCVs
+-- Shows which submitters have the most duplicate bumps across all their SCVs
 --
 -- Columns:
 --   submitter_id              - Submitter identifier
 --   submitter_name            - Current name of the submitter
---   unique_scvs_with_bumps    - Number of distinct SCVs with at least one true bump
+--   unique_scvs_with_bumps    - Number of distinct SCVs with at least one duplicate bump
 --   total_version_changes     - Total version changes across all submitter's SCVs
---   true_version_bumps        - Total true version bumps
+--   duplicate_bumps           - Total duplicate bumps (identical resubmissions)
 --   substantive_changes       - Total version changes with actual changes
---   true_bump_pct             - Percentage of changes that were true bumps
---   avg_bumps_per_scv         - Average true bumps per SCV (for SCVs with bumps)
---   first_true_bump_date      - First true version bump by this submitter
---   last_true_bump_date       - Most recent true version bump
+--   duplicate_bump_pct        - Percentage of changes that were duplicate bumps
+--   avg_bumps_per_scv         - Average duplicate bumps per SCV (for SCVs with bumps)
+--   first_duplicate_bump_date - First duplicate bump by this submitter
+--   last_duplicate_bump_date  - Most recent duplicate bump
 --
 -- =============================================================================
 
-CREATE OR REPLACE VIEW `clinvar_curator.cvc_full_record_bumps_by_submitter`
+CREATE OR REPLACE VIEW `clinvar_curator.cvc_duplicate_bumps_by_submitter`
 AS
 WITH versioned_data AS (
   SELECT
@@ -283,7 +294,7 @@ WITH versioned_data AS (
     vb.scv_id,
     vb.current_version,
     vb.current_start_date,
-    vb.is_true_version_bump,
+    vb.is_duplicate_bump,
     -- Create unique key for each version transition to prevent double-counting
     CONCAT(vb.scv_id, '-', CAST(vb.current_version AS STRING)) AS version_transition_key
   FROM `clinvar_curator.cvc_full_record_version_bumps` vb
@@ -291,59 +302,63 @@ WITH versioned_data AS (
 SELECT
   vd.submitter_id,
   sub.current_name AS submitter_name,
-  COUNT(DISTINCT CASE WHEN vd.is_true_version_bump THEN vd.scv_id END) AS unique_scvs_with_bumps,
+  COUNT(DISTINCT CASE WHEN vd.is_duplicate_bump THEN vd.scv_id END) AS unique_scvs_with_bumps,
   -- Count unique version transitions (scv_id + version), not rows
   COUNT(DISTINCT vd.version_transition_key) AS total_version_changes,
-  COUNT(DISTINCT CASE WHEN vd.is_true_version_bump THEN vd.version_transition_key END) AS true_version_bumps,
-  COUNT(DISTINCT CASE WHEN NOT vd.is_true_version_bump THEN vd.version_transition_key END) AS substantive_changes,
+  COUNT(DISTINCT CASE WHEN vd.is_duplicate_bump THEN vd.version_transition_key END) AS duplicate_bumps,
+  COUNT(DISTINCT CASE WHEN NOT vd.is_duplicate_bump THEN vd.version_transition_key END) AS substantive_changes,
   ROUND(
-    COUNT(DISTINCT CASE WHEN vd.is_true_version_bump THEN vd.version_transition_key END) * 100.0 /
+    COUNT(DISTINCT CASE WHEN vd.is_duplicate_bump THEN vd.version_transition_key END) * 100.0 /
     NULLIF(COUNT(DISTINCT vd.version_transition_key), 0), 1
-  ) AS true_bump_pct,
+  ) AS duplicate_bump_pct,
   ROUND(
-    COUNT(DISTINCT CASE WHEN vd.is_true_version_bump THEN vd.version_transition_key END) * 1.0 /
-    NULLIF(COUNT(DISTINCT CASE WHEN vd.is_true_version_bump THEN vd.scv_id END), 0),
+    COUNT(DISTINCT CASE WHEN vd.is_duplicate_bump THEN vd.version_transition_key END) * 1.0 /
+    NULLIF(COUNT(DISTINCT CASE WHEN vd.is_duplicate_bump THEN vd.scv_id END), 0),
     2
   ) AS avg_bumps_per_scv,
-  MIN(CASE WHEN vd.is_true_version_bump THEN vd.current_start_date END) AS first_true_bump_date,
-  MAX(CASE WHEN vd.is_true_version_bump THEN vd.current_start_date END) AS last_true_bump_date
+  MIN(CASE WHEN vd.is_duplicate_bump THEN vd.current_start_date END) AS first_duplicate_bump_date,
+  MAX(CASE WHEN vd.is_duplicate_bump THEN vd.current_start_date END) AS last_duplicate_bump_date
 FROM versioned_data vd
 LEFT JOIN `clinvar_ingest.clinvar_submitters` sub
   ON vd.submitter_id = sub.id
   AND sub.deleted_release_date IS NULL
 GROUP BY vd.submitter_id, sub.current_name
-HAVING COUNT(DISTINCT CASE WHEN vd.is_true_version_bump THEN vd.version_transition_key END) > 0
-ORDER BY true_version_bumps DESC;
+HAVING COUNT(DISTINCT CASE WHEN vd.is_duplicate_bump THEN vd.version_transition_key END) > 0
+ORDER BY duplicate_bumps DESC;
 
 
 -- =============================================================================
--- Analysis View: True Version Bumps by Month (with Standard Bump Comparison)
+-- Analysis View: Version Bump Categories by Month
 -- =============================================================================
 --
--- Shows monthly aggregation of true version bumps for trend analysis
+-- Shows monthly aggregation of version bump types for trend analysis
 -- Aggregates by the first day of each month for consistency with other charts
--- Includes comparison with standard version bumps (4-field detection)
+--
+-- Categories:
+--   - Duplicate Bump: ALL 19 fields identical (submission is a duplicate)
+--   - Non-substantive Change Bump: 4 key fields same, but minor fields changed
+--   - Substantive Change Bump: Real changes to classification-relevant fields
 --
 -- Columns:
 --   release_month             - First day of the month (for sorting/joining)
 --   month_label               - Human-readable month label (e.g., "Jan 2024")
 --   total_version_changes     - Total version changes in this month
---   true_version_bumps        - Number of true version bumps (19-field, strictest)
---   standard_version_bumps    - Number of standard version bumps (4-field)
---   true_also_standard        - True bumps that were also detected by standard (should be all)
---   true_only                 - True bumps NOT detected by standard (should be 0)
---   standard_only             - Standard bumps that weren't true bumps (4 fields same, others changed)
---   substantive_changes       - Number of version changes with actual changes
---   true_bump_pct             - Percentage that were true bumps
---   unique_scvs_bumped        - Distinct SCVs with true bumps in this month
---   unique_submitters_bumping - Distinct submitters with true bumps
+--   duplicate_bumps           - Identical resubmissions (19-field match)
+--   nonsubstantive_bumps      - 4 key fields same, minor fields changed
+--   duplicate_also_nonsubstantive - Duplicate bumps detected by both methods
+--   duplicate_only            - Duplicate bumps NOT detected by 4-field check (should be 0)
+--   nonsubstantive_only       - Non-substantive bumps that aren't duplicates
+--   substantive_changes       - Real changes to classification-relevant fields
+--   duplicate_bump_pct        - Percentage that were duplicate bumps
+--   unique_scvs_bumped        - Distinct SCVs with duplicate bumps in this month
+--   unique_submitters_bumping - Distinct submitters with duplicate bumps
 --
 -- =============================================================================
 
-CREATE OR REPLACE VIEW `clinvar_curator.cvc_full_record_bumps_by_release`
+CREATE OR REPLACE VIEW `clinvar_curator.cvc_duplicate_bumps_by_release`
 AS
 WITH
--- Join true (19-field) and standard (4-field) version bump data
+-- Join duplicate (19-field) and non-substantive (4-field) version bump data
 -- Include current_version to create unique version transition key
 combined_data AS (
   SELECT
@@ -351,8 +366,8 @@ combined_data AS (
     frb.scv_id,
     frb.current_version,
     frb.submitter_id,
-    frb.is_true_version_bump,
-    COALESCE(std.is_version_bump, FALSE) AS is_standard_version_bump,
+    frb.is_duplicate_bump,
+    COALESCE(std.is_version_bump, FALSE) AS is_nonsubstantive_bump,
     -- Create unique key for each version transition to prevent double-counting
     CONCAT(frb.scv_id, '-', CAST(frb.current_version AS STRING)) AS version_transition_key
   FROM `clinvar_curator.cvc_full_record_version_bumps` frb
@@ -365,78 +380,84 @@ SELECT
   FORMAT_DATE('%b %Y', release_month) AS month_label,
   -- Count unique version transitions (scv_id + version), not rows
   COUNT(DISTINCT version_transition_key) AS total_version_changes,
-  -- True version bumps (strictest - 19 fields)
-  COUNT(DISTINCT CASE WHEN is_true_version_bump THEN version_transition_key END) AS true_version_bumps,
-  -- Standard version bumps (4 fields)
-  COUNT(DISTINCT CASE WHEN is_standard_version_bump THEN version_transition_key END) AS standard_version_bumps,
+  -- Duplicate bumps (strictest - 19 fields identical)
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN version_transition_key END) AS duplicate_bumps,
+  -- Non-substantive bumps (4 key fields same)
+  COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END) AS nonsubstantive_bumps,
   -- Overlap analysis
-  COUNT(DISTINCT CASE WHEN is_true_version_bump AND is_standard_version_bump THEN version_transition_key END) AS true_also_standard,
-  COUNT(DISTINCT CASE WHEN is_true_version_bump AND NOT is_standard_version_bump THEN version_transition_key END) AS true_only,
-  COUNT(DISTINCT CASE WHEN NOT is_true_version_bump AND is_standard_version_bump THEN version_transition_key END) AS standard_only,
-  -- Substantive changes (neither true nor standard bump)
-  COUNT(DISTINCT CASE WHEN NOT is_true_version_bump AND NOT is_standard_version_bump THEN version_transition_key END) AS substantive_changes,
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump AND is_nonsubstantive_bump THEN version_transition_key END) AS duplicate_also_nonsubstantive,
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump AND NOT is_nonsubstantive_bump THEN version_transition_key END) AS duplicate_only,
+  COUNT(DISTINCT CASE WHEN NOT is_duplicate_bump AND is_nonsubstantive_bump THEN version_transition_key END) AS nonsubstantive_only,
+  -- Substantive changes (neither duplicate nor non-substantive bump)
+  COUNT(DISTINCT CASE WHEN NOT is_duplicate_bump AND NOT is_nonsubstantive_bump THEN version_transition_key END) AS substantive_changes,
   -- Percentages (based on unique transitions)
   ROUND(
-    COUNT(DISTINCT CASE WHEN is_true_version_bump THEN version_transition_key END) * 100.0 /
+    COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN version_transition_key END) * 100.0 /
     NULLIF(COUNT(DISTINCT version_transition_key), 0), 1
-  ) AS true_bump_pct,
+  ) AS duplicate_bump_pct,
   ROUND(
-    COUNT(DISTINCT CASE WHEN is_standard_version_bump THEN version_transition_key END) * 100.0 /
+    COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END) * 100.0 /
     NULLIF(COUNT(DISTINCT version_transition_key), 0), 1
-  ) AS standard_bump_pct,
+  ) AS nonsubstantive_bump_pct,
   -- Unique counts
-  COUNT(DISTINCT CASE WHEN is_true_version_bump THEN scv_id END) AS unique_scvs_true_bumped,
-  COUNT(DISTINCT CASE WHEN is_standard_version_bump THEN scv_id END) AS unique_scvs_standard_bumped,
-  COUNT(DISTINCT CASE WHEN is_true_version_bump THEN submitter_id END) AS unique_submitters_bumping
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN scv_id END) AS unique_scvs_duplicate_bumped,
+  COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN scv_id END) AS unique_scvs_nonsubstantive_bumped,
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN submitter_id END) AS unique_submitters_bumping
 FROM combined_data
 GROUP BY release_month
 ORDER BY release_month DESC;
 
 
 -- =============================================================================
--- Google Sheets View: True vs Standard Version Bumps by Month
+-- Google Sheets View: Version Bump Categories by Month
 -- =============================================================================
 --
 -- Optimized for Google Sheets charting with consistent column naming
--- Shows the relationship between true (strict) and standard (relaxed) detection
+-- Shows the three categories of version changes:
+--   - Duplicate Bumps: Identical resubmissions (most concerning)
+--   - Non-substantive Change Bumps: 4 key fields same, minor changes only
+--   - Substantive Changes: Real updates (legitimate)
 --
 -- =============================================================================
 
-CREATE OR REPLACE VIEW `clinvar_curator.sheets_full_record_bumps_by_month`
+CREATE OR REPLACE VIEW `clinvar_curator.sheets_duplicate_bumps_by_month`
 AS
 SELECT
   release_month,
   month_label,
   total_version_changes,
   -- For stacked chart showing bump breakdown
-  true_version_bumps AS True_Bumps_Strict,
-  standard_only AS Standard_Only_Bumps,
-  substantive_changes AS Substantive_Changes,
+  duplicate_bumps AS Duplicate_Bumps,
+  nonsubstantive_only AS Nonsubstantive_Change_Bumps,
+  substantive_changes AS Substantive_Change_Bumps,
   -- Overlap metrics
-  true_also_standard,
-  true_only,
+  duplicate_also_nonsubstantive,
+  duplicate_only,
   -- Percentages
-  true_bump_pct,
-  standard_bump_pct,
-  -- Show what % of standard bumps are also true bumps
-  ROUND(true_also_standard * 100.0 / NULLIF(standard_version_bumps, 0), 1) AS pct_standard_that_are_true,
+  duplicate_bump_pct,
+  nonsubstantive_bump_pct,
+  -- Show what % of non-substantive bumps are also duplicates
+  ROUND(duplicate_also_nonsubstantive * 100.0 / NULLIF(nonsubstantive_bumps, 0), 1) AS pct_nonsubstantive_that_are_duplicate,
   -- Unique counts
-  unique_scvs_true_bumped,
-  unique_scvs_standard_bumped,
+  unique_scvs_duplicate_bumped,
+  unique_scvs_nonsubstantive_bumped,
   unique_submitters_bumping
-FROM `clinvar_curator.cvc_full_record_bumps_by_release`
+FROM `clinvar_curator.cvc_duplicate_bumps_by_release`
 ORDER BY release_month;
 
 
 -- =============================================================================
--- Summary View: Overall Statistics (with Standard Bump Comparison)
+-- Summary View: Overall Version Bump Statistics
 -- =============================================================================
 --
--- High-level summary of true version bump activity with comparison to standard
+-- High-level summary comparing:
+--   - Duplicate Bumps: Identical resubmissions (19 fields same)
+--   - Non-substantive Change Bumps: 4 key fields same
+--   - Substantive Changes: Real updates
 --
 -- =============================================================================
 
-CREATE OR REPLACE VIEW `clinvar_curator.cvc_full_record_bumps_summary`
+CREATE OR REPLACE VIEW `clinvar_curator.cvc_duplicate_bumps_summary`
 AS
 WITH combined AS (
   SELECT
@@ -444,8 +465,8 @@ WITH combined AS (
     frb.current_version,
     frb.submitter_id,
     frb.current_start_date,
-    frb.is_true_version_bump,
-    COALESCE(std.is_version_bump, FALSE) AS is_standard_version_bump,
+    frb.is_duplicate_bump,
+    COALESCE(std.is_version_bump, FALSE) AS is_nonsubstantive_bump,
     -- Create unique key for each version transition to prevent double-counting
     CONCAT(frb.scv_id, '-', CAST(frb.current_version AS STRING)) AS version_transition_key
   FROM `clinvar_curator.cvc_full_record_version_bumps` frb
@@ -456,35 +477,35 @@ WITH combined AS (
 SELECT
   -- Count unique version transitions (scv_id + version), not rows
   COUNT(DISTINCT version_transition_key) AS total_version_changes,
-  -- True bumps (19-field strict)
-  COUNT(DISTINCT CASE WHEN is_true_version_bump THEN version_transition_key END) AS total_true_version_bumps,
-  -- Standard bumps (4-field)
-  COUNT(DISTINCT CASE WHEN is_standard_version_bump THEN version_transition_key END) AS total_standard_version_bumps,
+  -- Duplicate bumps (19-field identical)
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN version_transition_key END) AS total_duplicate_bumps,
+  -- Non-substantive bumps (4-field same)
+  COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END) AS total_nonsubstantive_bumps,
   -- Overlap
-  COUNT(DISTINCT CASE WHEN is_true_version_bump AND is_standard_version_bump THEN version_transition_key END) AS true_also_standard,
-  COUNT(DISTINCT CASE WHEN is_true_version_bump AND NOT is_standard_version_bump THEN version_transition_key END) AS true_only,
-  COUNT(DISTINCT CASE WHEN NOT is_true_version_bump AND is_standard_version_bump THEN version_transition_key END) AS standard_only,
-  -- Substantive
-  COUNT(DISTINCT CASE WHEN NOT is_true_version_bump AND NOT is_standard_version_bump THEN version_transition_key END) AS total_substantive_changes,
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump AND is_nonsubstantive_bump THEN version_transition_key END) AS duplicate_also_nonsubstantive,
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump AND NOT is_nonsubstantive_bump THEN version_transition_key END) AS duplicate_only,
+  COUNT(DISTINCT CASE WHEN NOT is_duplicate_bump AND is_nonsubstantive_bump THEN version_transition_key END) AS nonsubstantive_only,
+  -- Substantive changes
+  COUNT(DISTINCT CASE WHEN NOT is_duplicate_bump AND NOT is_nonsubstantive_bump THEN version_transition_key END) AS total_substantive_changes,
   -- Percentages
   ROUND(
-    COUNT(DISTINCT CASE WHEN is_true_version_bump THEN version_transition_key END) * 100.0 /
+    COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN version_transition_key END) * 100.0 /
     NULLIF(COUNT(DISTINCT version_transition_key), 0), 1
-  ) AS overall_true_bump_pct,
+  ) AS overall_duplicate_bump_pct,
   ROUND(
-    COUNT(DISTINCT CASE WHEN is_standard_version_bump THEN version_transition_key END) * 100.0 /
+    COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END) * 100.0 /
     NULLIF(COUNT(DISTINCT version_transition_key), 0), 1
-  ) AS overall_standard_bump_pct,
+  ) AS overall_nonsubstantive_bump_pct,
   ROUND(
-    COUNT(DISTINCT CASE WHEN is_true_version_bump AND is_standard_version_bump THEN version_transition_key END) * 100.0 /
-    NULLIF(COUNT(DISTINCT CASE WHEN is_standard_version_bump THEN version_transition_key END), 0), 1
-  ) AS pct_standard_that_are_true,
+    COUNT(DISTINCT CASE WHEN is_duplicate_bump AND is_nonsubstantive_bump THEN version_transition_key END) * 100.0 /
+    NULLIF(COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END), 0), 1
+  ) AS pct_nonsubstantive_that_are_duplicate,
   -- Unique counts
   COUNT(DISTINCT scv_id) AS unique_scvs_with_version_changes,
-  COUNT(DISTINCT CASE WHEN is_true_version_bump THEN scv_id END) AS unique_scvs_with_true_bumps,
-  COUNT(DISTINCT CASE WHEN is_standard_version_bump THEN scv_id END) AS unique_scvs_with_standard_bumps,
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN scv_id END) AS unique_scvs_with_duplicate_bumps,
+  COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN scv_id END) AS unique_scvs_with_nonsubstantive_bumps,
   COUNT(DISTINCT submitter_id) AS unique_submitters_with_version_changes,
-  COUNT(DISTINCT CASE WHEN is_true_version_bump THEN submitter_id END) AS unique_submitters_with_true_bumps,
+  COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN submitter_id END) AS unique_submitters_with_duplicate_bumps,
   MIN(current_start_date) AS earliest_version_change,
   MAX(current_start_date) AS latest_version_change
 FROM combined;

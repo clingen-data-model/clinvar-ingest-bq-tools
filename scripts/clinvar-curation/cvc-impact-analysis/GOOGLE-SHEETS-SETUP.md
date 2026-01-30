@@ -22,9 +22,9 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 | 6B | Batch Effectiveness: Volume | Stacked bar showing variants resolved vs unresolved for each batch | `sheets_cvc_batch_effectiveness` | [Link] |
 | 6C | Batch Effectiveness: Maturity | Bubble chart showing batch age (X) vs resolution rate (Y) with bubble size = submission volume | `sheets_cvc_batch_effectiveness` | [Link] |
 | 7 | Cumulative Impact | Cumulative growth of CVC submissions, flags, and resolutions over time | `sheets_cvc_cumulative_impact` | [Link] |
-| 8a | True Version Bumps by Month | Monthly timeline showing true version bumps (no field changes at all) | `sheets_full_record_bumps_by_month` | [Link] |
-| 8b | True Version Bumps by Submitter | Horizontal bar showing submitters with the most true version bumps | `cvc_full_record_bumps_by_submitter` | [Link] |
-| 8c | True Version Bump Summary | Overall statistics for true version bumps across all data | `cvc_full_record_bumps_summary` | [Link] |
+| 8a | Version Bump Categories by Month | Monthly timeline showing duplicate, non-substantive, and substantive version changes | `sheets_duplicate_bumps_by_month` | [Link] |
+| 8b | Duplicate Bumps by Submitter | Horizontal bar showing submitters with the most duplicate bumps (identical resubmissions) | `cvc_duplicate_bumps_by_submitter` | [Link] |
+| 8c | Version Bump Summary | Overall statistics comparing duplicate, non-substantive, and substantive changes | `cvc_duplicate_bumps_summary` | [Link] |
 
 ### Key Insights by Chart
 
@@ -37,7 +37,7 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 | 5a/5b | What's driving CVC-attributed resolutions—flags, prompted deletions, or prompted reclassifications? |
 | 6A/B/C | Which CVC batches have been most effective at driving conflict resolutions? |
 | 7 | How has CVC's cumulative impact grown since the program started? |
-| 8a/8b/8c | Which submitters and releases have "true" version bumps (resubmissions with zero field changes)? |
+| 8a/8b/8c | Which submitters and releases have duplicate bumps (identical resubmissions with zero field changes)? |
 
 ### Data Refresh
 
@@ -652,26 +652,27 @@ If the Size field shows "None" or wrong column:
 
 ---
 
-## Chart 8a: True vs Standard Version Bumps by Month
+## Chart 8a: Version Bump Categories by Month
 
-**View:** `sheets_full_record_bumps_by_month`
+**View:** `sheets_duplicate_bumps_by_month`
 
-**Purpose:** Shows monthly trends comparing "true" version bumps (strictest, 19-field) vs "standard" version bumps (4-field, used in Charts 2-3). This reveals how many standard bumps are actually true bumps with zero changes.
+**Purpose:** Shows monthly trends comparing three categories of version changes to identify concerning resubmission patterns.
 
-### Important Note on "True" vs "Standard" Version Bumps
+### Version Bump Categories
 
-| Detection Method | Fields Compared | View |
-|------------------|-----------------|------|
-| **Standard** (Charts 2-3) | 4 fields: classif_type, submitted_classification, last_evaluated, trait_set_id | `cvc_version_bumps` |
-| **True/Full Record** (Charts 8) | 19 fields: all substantive SCV fields | `cvc_full_record_version_bumps` |
+| Category | Description | Fields Compared | Concern Level |
+|----------|-------------|-----------------|---------------|
+| **Duplicate Bump** | Identical resubmission - no fields changed at all | 19 fields | Most concerning |
+| **Non-substantive Change Bump** | 4 key classification fields unchanged, but minor fields changed | 4 fields | Moderate concern |
+| **Substantive Change Bump** | Real changes to classification-relevant fields | N/A | Legitimate update |
 
-**Key Insight:** True version bumps are a **subset** of standard version bumps. The difference (`Standard_Only_Bumps`) represents cases where the 4 key fields didn't change, but other fields (like `rank`, `review_status`, `classification_comment`, etc.) did change.
+**Key Insight:** Duplicate bumps are a **subset** of non-substantive bumps. The difference (`Nonsubstantive_Change_Bumps`) represents cases where the 4 key fields didn't change, but other fields (like `rank`, `review_status`, `classification_comment`, etc.) did change.
 
 ### Setup Steps
 
-1. Connect to `clinvar_curator.sheets_full_record_bumps_by_month`
+1. Connect to `clinvar_curator.sheets_duplicate_bumps_by_month`
 2. Click **Extract** to pull data into a regular sheet
-3. Select columns: `month_label`, `True_Bumps_Strict`, `Standard_Only_Bumps`, `Substantive_Changes`
+3. Select columns: `month_label`, `Duplicate_Bumps`, `Nonsubstantive_Change_Bumps`, `Substantive_Change_Bumps`
 4. Insert → Chart
 5. Choose **Stacked Column chart**
 
@@ -681,9 +682,9 @@ If the Size field shows "None" or wrong column:
 |---------|-------|
 | Chart type | Stacked Column |
 | X-axis | `month_label` |
-| Series 1 | `True_Bumps_Strict` (red - most concerning) |
-| Series 2 | `Standard_Only_Bumps` (orange - 4 fields same, others changed) |
-| Series 3 | `Substantive_Changes` (blue - real changes) |
+| Series 1 | `Duplicate_Bumps` (red - most concerning) |
+| Series 2 | `Nonsubstantive_Change_Bumps` (orange - 4 fields same, others changed) |
+| Series 3 | `Substantive_Change_Bumps` (blue - real changes) |
 
 ### Data Columns
 
@@ -692,47 +693,47 @@ If the Size field shows "None" or wrong column:
 | `release_month` | First day of the month (for sorting) |
 | `month_label` | Human-readable label (e.g., "Jan 2024") |
 | `total_version_changes` | All version changes in this month |
-| `True_Bumps_Strict` | True bumps: ALL 19 fields identical (most concerning) |
-| `Standard_Only_Bumps` | Standard bumps that aren't true: 4 key fields same, but other fields changed |
-| `Substantive_Changes` | Neither true nor standard bump (real changes made) |
-| `true_also_standard` | Count of true bumps also detected by standard (should equal true bumps) |
-| `true_only` | True bumps NOT detected by standard (should be 0 - sanity check) |
-| `true_bump_pct` | % of changes that were true bumps |
-| `standard_bump_pct` | % of changes that were standard bumps |
-| `pct_standard_that_are_true` | What % of standard bumps are also true bumps |
-| `unique_scvs_true_bumped` | Distinct SCVs with true bumps |
-| `unique_scvs_standard_bumped` | Distinct SCVs with standard bumps |
+| `Duplicate_Bumps` | Identical resubmissions: ALL 19 fields same (most concerning) |
+| `Nonsubstantive_Change_Bumps` | 4 key fields same, but other minor fields changed |
+| `Substantive_Change_Bumps` | Real changes made to classification-relevant fields |
+| `duplicate_also_nonsubstantive` | Duplicate bumps also detected by 4-field check (should equal duplicates) |
+| `duplicate_only` | Duplicates NOT detected by 4-field check (should be 0 - sanity check) |
+| `duplicate_bump_pct` | % of changes that were duplicate bumps |
+| `nonsubstantive_bump_pct` | % of changes that were non-substantive bumps |
+| `pct_nonsubstantive_that_are_duplicate` | What % of non-substantive bumps are actually duplicates |
+| `unique_scvs_duplicate_bumped` | Distinct SCVs with duplicate bumps |
+| `unique_scvs_nonsubstantive_bumped` | Distinct SCVs with non-substantive bumps |
 
 ### Series Colors
 
 | Series | Color | Hex Code |
 |--------|-------|----------|
-| `True_Bumps_Strict` | Red | #CC0000 |
-| `Standard_Only_Bumps` | Orange | #E69138 |
-| `Substantive_Changes` | Blue | #4285F4 |
+| `Duplicate_Bumps` | Red | #CC0000 |
+| `Nonsubstantive_Change_Bumps` | Orange | #E69138 |
+| `Substantive_Change_Bumps` | Blue | #4285F4 |
 
 ### Interpretation
 
-- **Red (True Bumps)**: Most concerning - literally nothing changed except version/date
-- **Orange (Standard Only)**: Detected by 4-field check but not 19-field - some minor fields changed
-- **Blue (Substantive)**: Real changes made to classification-relevant fields
-- `pct_standard_that_are_true` tells you what portion of "standard" bumps are the strictest type
-- If `true_only > 0`, there's a data issue (true bumps should always be a subset of standard)
+- **Red (Duplicate Bumps)**: Most concerning - the submission is identical to the prior version and should not have had a version bump at all
+- **Orange (Non-substantive Change)**: Detected by 4-field check but not 19-field - some minor fields changed but no classification-relevant updates
+- **Blue (Substantive Change)**: Real changes made to classification-relevant fields - legitimate updates
+- `pct_nonsubstantive_that_are_duplicate` tells you what portion of non-substantive bumps are pure duplicates
+- If `duplicate_only > 0`, there's a data issue (duplicates should always be a subset of non-substantive)
 
 ---
 
-## Chart 8b: True Version Bumps by Submitter
+## Chart 8b: Duplicate Bumps by Submitter
 
-**View:** `cvc_full_record_bumps_by_submitter`
+**View:** `cvc_duplicate_bumps_by_submitter`
 
-**Purpose:** Identifies which submitters have the most true version bumps across all their SCVs.
+**Purpose:** Identifies which submitters have the most duplicate bumps (identical resubmissions) across all their SCVs.
 
 ### Setup Steps
 
-1. Connect to `clinvar_curator.cvc_full_record_bumps_by_submitter`
+1. Connect to `clinvar_curator.cvc_duplicate_bumps_by_submitter`
 2. Click **Extract** to pull data into a regular sheet
-3. Sort by `true_version_bumps` descending (should already be sorted)
-4. Select columns: `submitter_name`, `true_version_bumps`, `substantive_changes`
+3. Sort by `duplicate_bumps` descending (should already be sorted)
+4. Select columns: `submitter_name`, `duplicate_bumps`, `substantive_changes`
 5. Insert → Chart
 6. Choose **Horizontal Stacked Bar chart**
 
@@ -742,7 +743,7 @@ If the Size field shows "None" or wrong column:
 |---------|-------|
 | Chart type | Horizontal Stacked Bar |
 | Y-axis | `submitter_name` |
-| Series 1 | `true_version_bumps` (red) |
+| Series 1 | `duplicate_bumps` (red) |
 | Series 2 | `substantive_changes` (blue) |
 
 ### Data Columns
@@ -751,40 +752,40 @@ If the Size field shows "None" or wrong column:
 |--------|-------------|
 | `submitter_id` | ClinVar submitter ID |
 | `submitter_name` | Current submitter organization name |
-| `unique_scvs_with_bumps` | Distinct SCVs that have had at least one true bump |
+| `unique_scvs_with_bumps` | Distinct SCVs that have had at least one duplicate bump |
 | `total_version_changes` | Total version changes across all submitter's SCVs |
-| `true_version_bumps` | Count of true version bumps (zero field changes) |
+| `duplicate_bumps` | Count of duplicate bumps (identical resubmissions) |
 | `substantive_changes` | Count of version changes with actual modifications |
-| `true_bump_pct` | Percentage of changes that were true bumps |
-| `avg_bumps_per_scv` | Average true bumps per SCV (for SCVs with bumps) |
-| `first_true_bump_date` | Earliest true version bump by this submitter |
-| `last_true_bump_date` | Most recent true version bump |
+| `duplicate_bump_pct` | Percentage of changes that were duplicate bumps |
+| `avg_bumps_per_scv` | Average duplicate bumps per SCV (for SCVs with bumps) |
+| `first_duplicate_bump_date` | Earliest duplicate bump by this submitter |
+| `last_duplicate_bump_date` | Most recent duplicate bump |
 
 ### Series Colors
 
 | Series | Color | Hex Code |
 |--------|-------|----------|
-| `true_version_bumps` | Red | #CC0000 |
+| `duplicate_bumps` | Red | #CC0000 |
 | `substantive_changes` | Blue | #4285F4 |
 
 ### Interpretation
 
-- Submitters with high `true_version_bumps` are frequently resubmitting without making any changes
+- Submitters with high `duplicate_bumps` are frequently resubmitting identical records without any changes
 - High `avg_bumps_per_scv` indicates repeat behavior on the same SCVs
-- Compare `true_bump_pct` across submitters to identify outliers
-- Look at date range (`first_true_bump_date` to `last_true_bump_date`) to see if behavior is ongoing
+- Compare `duplicate_bump_pct` across submitters to identify outliers
+- Look at date range (`first_duplicate_bump_date` to `last_duplicate_bump_date`) to see if behavior is ongoing
 
 ---
 
-## Chart 8c: True vs Standard Version Bump Summary
+## Chart 8c: Version Bump Summary
 
-**View:** `cvc_full_record_bumps_summary`
+**View:** `cvc_duplicate_bumps_summary`
 
-**Purpose:** Provides high-level KPIs comparing true (strict) and standard (relaxed) version bump detection across all data.
+**Purpose:** Provides high-level KPIs comparing the three categories of version changes across all data.
 
 ### Setup Steps (KPI Cards)
 
-1. Connect to `clinvar_curator.cvc_full_record_bumps_summary`
+1. Connect to `clinvar_curator.cvc_duplicate_bumps_summary`
 2. Click **Extract** to pull data into a regular sheet
 3. Create individual cells or a scorecard layout displaying key metrics
 
@@ -793,20 +794,20 @@ If the Size field shows "None" or wrong column:
 | Column | Description |
 |--------|-------------|
 | `total_version_changes` | Total consecutive version changes in the dataset |
-| `total_true_version_bumps` | True bumps: ALL 19 fields identical |
-| `total_standard_version_bumps` | Standard bumps: 4 key fields identical |
-| `true_also_standard` | True bumps also detected by standard (should = true bumps) |
-| `true_only` | True bumps NOT in standard (should be 0 - sanity check) |
-| `standard_only` | Standard bumps that aren't true (4 fields same, others changed) |
+| `total_duplicate_bumps` | Duplicate bumps: ALL 19 fields identical (most concerning) |
+| `total_nonsubstantive_bumps` | Non-substantive bumps: 4 key fields identical |
+| `duplicate_also_nonsubstantive` | Duplicate bumps also detected by 4-field check (should = duplicates) |
+| `duplicate_only` | Duplicates NOT in non-substantive (should be 0 - sanity check) |
+| `nonsubstantive_only` | Non-substantive bumps that aren't duplicates (4 fields same, others changed) |
 | `total_substantive_changes` | Changes where classification-relevant fields changed |
-| `overall_true_bump_pct` | % of all changes that are true bumps |
-| `overall_standard_bump_pct` | % of all changes that are standard bumps |
-| `pct_standard_that_are_true` | What % of standard bumps are also true bumps |
+| `overall_duplicate_bump_pct` | % of all changes that are duplicate bumps |
+| `overall_nonsubstantive_bump_pct` | % of all changes that are non-substantive bumps |
+| `pct_nonsubstantive_that_are_duplicate` | What % of non-substantive bumps are duplicates |
 | `unique_scvs_with_version_changes` | Distinct SCVs that have had version changes |
-| `unique_scvs_with_true_bumps` | Distinct SCVs with at least one true bump |
-| `unique_scvs_with_standard_bumps` | Distinct SCVs with at least one standard bump |
+| `unique_scvs_with_duplicate_bumps` | Distinct SCVs with at least one duplicate bump |
+| `unique_scvs_with_nonsubstantive_bumps` | Distinct SCVs with at least one non-substantive bump |
 | `unique_submitters_with_version_changes` | Submitters who have made version changes |
-| `unique_submitters_with_true_bumps` | Submitters with at least one true bump |
+| `unique_submitters_with_duplicate_bumps` | Submitters with at least one duplicate bump |
 | `earliest_version_change` | First version change date in dataset |
 | `latest_version_change` | Most recent version change date |
 
@@ -816,16 +817,16 @@ Since this is a single-row summary, display as KPI cards:
 
 | KPI | Metric |
 |-----|--------|
-| **True Version Bumps** | `total_true_version_bumps` |
-| **Standard Version Bumps** | `total_standard_version_bumps` |
-| **% Standard That Are True** | `pct_standard_that_are_true`% |
-| **True Bump Rate** | `overall_true_bump_pct`% |
-| **SCVs with True Bumps** | `unique_scvs_with_true_bumps` |
-| **Submitters Involved** | `unique_submitters_with_true_bumps` |
+| **Duplicate Bumps** | `total_duplicate_bumps` |
+| **Non-substantive Bumps** | `total_nonsubstantive_bumps` |
+| **% Non-substantive That Are Duplicates** | `pct_nonsubstantive_that_are_duplicate`% |
+| **Duplicate Bump Rate** | `overall_duplicate_bump_pct`% |
+| **SCVs with Duplicate Bumps** | `unique_scvs_with_duplicate_bumps` |
+| **Submitters Involved** | `unique_submitters_with_duplicate_bumps` |
 
 ### Key Insight
 
-The `pct_standard_that_are_true` metric tells you what portion of the version bumps detected by the 4-field standard method are actually "true" bumps with zero changes. A high percentage means most standard bumps are the most concerning type.
+The `pct_nonsubstantive_that_are_duplicate` metric tells you what portion of the non-substantive version bumps (detected by the 4-field check) are actually pure duplicates with zero changes. A high percentage means most non-substantive bumps are identical resubmissions that should not have had a version increment.
 
 ### Alternative: Scorecard Chart
 

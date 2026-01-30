@@ -360,16 +360,16 @@ While Step 5 uses a "standard" 4-field comparison (classification, evaluation da
 
 This creates several analysis views:
 
-- **By SCV**: Which SCVs have had multiple true bumps (repeat offenders)
-- **By Submitter**: Which submitters have the most true bumps
+- **By SCV**: Which SCVs have had multiple duplicate bumps (repeat offenders)
+- **By Submitter**: Which submitters have the most duplicate bumps
 - **By Release**: Monthly trends in version bump activity
-- **Summary**: Overall statistics comparing "true" vs "standard" bump detection
+- **Summary**: Overall statistics comparing bump categories
 
 This helps distinguish between:
 
-1. **True bumps**: Absolutely nothing changed except version/date
-2. **Standard bumps**: Core 4 fields unchanged, but minor fields may have changed
-3. **Substantive changes**: Actual meaningful updates
+1. **Duplicate bumps**: The submission is identical to the prior version - should not have had a version bump at all
+2. **Non-substantive change bumps**: Core 4 classification fields unchanged, but minor fields may have changed
+3. **Substantive change bumps**: Actual meaningful updates to classification-relevant fields
 
 ---
 

@@ -179,37 +179,49 @@ resolved_scv_details AS (
 ),
 
 -- Join resolved SCVs with CVC submissions to determine attribution
+-- Attribution logic:
+--   - CVC submitted version N and version N was flagged/deleted/reclassified = CVC attributed
+--   - CVC submitted version N but version M resolved (M != N) = CVC submitted, organic outcome
+--   - CVC submitted this SCV but other SCVs caused resolution = CVC submitted, organic outcome
+--   - CVC never submitted this SCV = Organic
 scv_attribution AS (
   SELECT
     rsd.*,
     crc.batch_id AS cvc_batch_id,
     crc.submission_date AS cvc_submission_date,
     crc.expected_flag_date AS cvc_expected_flag_date,
+    crc.scv_ver AS cvc_submitted_version,
     crc.outcome AS cvc_outcome,
     crc.outcome_category AS cvc_outcome_category,
     crc.curation_reason AS cvc_curation_reason,
+    -- Check if CVC submitted version matches the version that resolved
+    (crc.scv_ver = rsd.prev_scv_version) AS version_matches,
     CASE
-      -- Direct CVC flag attribution
+      -- Direct CVC flag attribution (version must match)
       WHEN rsd.is_first_time_flagged = TRUE
         AND crc.outcome = 'flagged'
+        AND crc.scv_ver = rsd.prev_scv_version
         AND rsd.snapshot_release_date >= crc.expected_flag_date
         THEN 'cvc_flagged'
-      -- CVC-prompted deletion (submitter responded during grace period)
+      -- CVC-prompted deletion: submitter deleted the SCV CVC submitted
+      -- Any deletion after CVC notification is attributed (no timing restriction)
       WHEN rsd.scv_change_status = 'removed'
         AND crc.outcome = 'deleted'
+        AND crc.scv_ver = rsd.prev_scv_version
         AND rsd.snapshot_release_date >= crc.submission_date
-        AND rsd.snapshot_release_date <= DATE_ADD(crc.expected_flag_date, INTERVAL 30 DAY)
         THEN 'cvc_prompted_deletion'
-      -- CVC-prompted reclassification (submitter responded during grace period)
+      -- CVC-prompted reclassification: submitter changed classification on CVC-submitted version
+      -- Any reclassification after CVC notification is attributed (no timing restriction)
       WHEN rsd.has_classification_change = TRUE
         AND crc.outcome = 'resubmitted, reclassified'
+        AND crc.scv_ver = rsd.prev_scv_version
         AND rsd.snapshot_release_date >= crc.submission_date
-        AND rsd.snapshot_release_date <= DATE_ADD(crc.expected_flag_date, INTERVAL 30 DAY)
         THEN 'cvc_prompted_reclassification'
-      -- CVC submitted but outcome doesn't match - might be organic
+      -- CVC submitted but version mismatch or outcome doesn't align
+      -- This happens when CVC submitted version N but version M resolved
       WHEN crc.scv_id IS NOT NULL
         THEN 'cvc_submitted_but_organic'
-      -- No CVC involvement
+      -- No CVC involvement at all
       ELSE 'organic'
     END AS attribution_type
   FROM resolved_scv_details rsd
