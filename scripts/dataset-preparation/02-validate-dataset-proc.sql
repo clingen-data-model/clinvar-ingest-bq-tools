@@ -66,7 +66,6 @@ BEGIN
     SET all_validation_errors = ARRAY_CONCAT(
       all_validation_errors,
       [CONCAT(
-        all_validation_errors,
         "New SCV classification+statement_type combos found: [",
         ARRAY_TO_STRING(scv_classification_statement_combo_terms, ', '),
         "].\nNOTE: Add clinvar_clinsig_types records to the '00-setup-translation-tables.sql' script and update, then rerun this script."

@@ -205,6 +205,7 @@ VALUES
     ('vlb', 'lb'),
     ('vous', 'vus'),
     ('vus', 'vus'),
+    ('vus-mid', 'vus'),
     ('vlm', 'lp'),
     ('uncertain significance: likely benign', 'vus'),
     ('uncertain significance: likely pathogenic','vus'),
