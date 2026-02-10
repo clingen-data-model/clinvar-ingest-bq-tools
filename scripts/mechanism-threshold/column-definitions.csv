@@ -1,0 +1,29 @@
+Sheet,Column,Description
+Per-Gene,release_date,The ClinVar release date for this data
+Per-Gene,gene_symbol,"The gene name (e.g., BRCA1, TP53)"
+Per-Gene,gene_id,ClinVar's internal gene identifier
+Per-Gene,hi_score,"Haploinsufficiency score from ClinGen Dosage (0-3, or special values)"
+Per-Gene,ts_score,"Triplosensitivity score from ClinGen Dosage (0-3, or special values)"
+Per-Gene,total_variants,Total number of variants in ClinVar for this gene
+Per-Gene,one_star_variants,Variants with 1-star or higher review status
+Per-Gene,plp_variants,Variants classified as Pathogenic or Likely Pathogenic (P/LP)
+Per-Gene,plp_one_star_variants,P/LP variants with 1-star or higher review status
+Per-Gene,plof_variants,Predicted Loss-of-Function variants (nonsense/frameshift/splice)
+Per-Gene,plof_one_star_variants,pLOF variants with 1-star or higher review status
+Per-Gene,plp_plof_variants,Variants that are both P/LP AND pLOF
+Per-Gene,plp_one_star_plof_variants,P/LP + pLOF variants with 1-star or higher review status
+Per-Gene,sample_variation_ids,Up to 10 example ClinVar Variation IDs (for reference)
+Summary,release_date,The ClinVar release date for this data
+Summary,report_type,"Grouping: HI Score Summary, TS Score Summary, or Overall Total"
+Summary,score_category,The specific score value within that category
+Summary,gene_count,Number of genes in this category
+Summary,total_variants,Sum of all variants across genes in this category
+Summary,one_star_variants,Sum of 1-star+ variants
+Summary,plp_variants,Sum of P/LP variants
+Summary,plp_one_star_variants,Sum of P/LP 1-star+ variants
+Summary,plof_variants,Sum of pLOF variants
+Summary,plof_one_star_variants,Sum of pLOF 1-star+ variants
+Summary,plp_plof_variants,Sum of P/LP + pLOF variants
+Summary,plp_one_star_plof_variants,Sum of P/LP + pLOF + 1-star+ variants
+Summary,avg_variants_per_gene,Average total variants per gene
+Summary,avg_plp_1star_plof_per_gene,Average P/LP 1-star pLOF variants per gene

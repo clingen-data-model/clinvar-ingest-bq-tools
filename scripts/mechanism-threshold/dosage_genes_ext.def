@@ -1,0 +1,50 @@
+{
+  "csvOptions": {
+    "skipLeadingRows": 1,
+    "allowJaggedRows": false,
+    "allowQuotedNewlines": true
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "gene_symbol",
+        "type": "STRING",
+        "description": "Gene Symbol or Region Name"
+      },
+      {
+        "name": "hgnc_id",
+        "type": "STRING",
+        "description": "HGNC/Dosage ID"
+      },
+      {
+        "name": "grch37_coords",
+        "type": "STRING",
+        "description": "GRCh37 coordinates"
+      },
+      {
+        "name": "grch38_coords",
+        "type": "STRING",
+        "description": "GRCh38 coordinates"
+      },
+      {
+        "name": "hi_score",
+        "type": "STRING",
+        "description": "Haploinsufficiency Score"
+      },
+      {
+        "name": "ts_score",
+        "type": "STRING",
+        "description": "Triplosensitivity Score"
+      },
+      {
+        "name": "last_evaluated_date",
+        "type": "STRING",
+        "description": "Last Evaluated Date"
+      }
+    ]
+  },
+  "sourceFormat": "CSV",
+  "sourceUris": [
+    "gs://clinvar-ingest/mechanism-threshold/dosage_genes_2.6.26.csv"
+  ]
+}
