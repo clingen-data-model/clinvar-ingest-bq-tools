@@ -142,7 +142,7 @@ BEGIN
         ) as all_scvs,
         STRING_AGG(
           IF(
-            sgrp.class_type = "VUS",
+            sgrp.scv_group_type = "2-VUS",
             sgrp.label,
             NULL
           ),
