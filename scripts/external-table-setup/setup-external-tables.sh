@@ -36,15 +36,15 @@ for table_def in "${table_definitions[@]}"; do
   definition_file="${table_name}.def"
   target_table="${dataset}.${table_name}"
 
-  # Check if the table exists
-  if bq show --format=none "$target_table"; then
+  # Check if the table exists (suppress stderr since "Not found" error is expected)
+  if bq show --format=none "$target_table" 2>/dev/null; then
       echo "Table $target_table exists. Replacing..."
 
       # Delete the existing table
       bq rm -f -t "$target_table"
 
       # Ensure deletion was successful
-      if bq show --format=none "$target_table"; then
+      if bq show --format=none "$target_table" 2>/dev/null; then
           echo "Error: Failed to delete table $target_table"
           exit 1
       fi
@@ -68,32 +68,57 @@ bq query --use_legacy_sql=false --project_id="$PROJECT_ID" "CALL \`clinvar_inges
 # these two sources are used in many downstream queries and having them in native tables will speed up
 # query performance significantly.
 
-# all_releases_native
-bq mk --update --transfer_config \
---project_id="$PROJECT_ID" \
---target_dataset="clinvar_ingest" \
---display_name="Hourly: all_releases() Table Function to Native Table" \
---params="{
-  \"query\":\"SELECT * FROM \`$PROJECT_ID.clinvar_ingest.all_releases\`()\",
-  \"destination_table_name_template\":\"all_releases_native\",
-  \"write_disposition\":\"WRITE_TRUNCATE\"
-}" \
---data_source=scheduled_query \
---schedule='0 * * * *'
+# Function to create or update a scheduled query transfer config
+create_or_update_transfer_config() {
+  local display_name="$1"
+  local target_dataset="$2"
+  local query="$3"
+  local dest_table="$4"
+  local schedule="$5"
 
-echo "Scheduled job for all_releases_native has been successfully created or updated in project $PROJECT_ID."
+  # Check if transfer config already exists by display name
+  local config_id
+  config_id=$(bq ls --transfer_config --transfer_location=us --project_id="$PROJECT_ID" --format=json 2>/dev/null | \
+    python3 -c "import sys, json; configs = json.load(sys.stdin); print(next((c['name'] for c in configs if c.get('displayName') == '$display_name'), ''))" 2>/dev/null)
+
+  local params="{
+    \"query\":\"$query\",
+    \"destination_table_name_template\":\"$dest_table\",
+    \"write_disposition\":\"WRITE_TRUNCATE\"
+  }"
+
+  if [ -n "$config_id" ]; then
+    echo "Transfer config '$display_name' exists. Updating..."
+    bq update --transfer_config \
+      --params="$params" \
+      --schedule="$schedule" \
+      "$config_id"
+    echo "Updated transfer config: $display_name"
+  else
+    echo "Transfer config '$display_name' does not exist. Creating..."
+    bq mk --transfer_config \
+      --project_id="$PROJECT_ID" \
+      --target_dataset="$target_dataset" \
+      --display_name="$display_name" \
+      --params="$params" \
+      --data_source=scheduled_query \
+      --schedule="$schedule"
+    echo "Created transfer config: $display_name"
+  fi
+}
+
+# all_releases_native
+create_or_update_transfer_config \
+  "Hourly: all_releases() Table Function to Native Table" \
+  "clinvar_ingest" \
+  "SELECT * FROM \`$PROJECT_ID.clinvar_ingest.all_releases\`()" \
+  "all_releases_native" \
+  "every 1 hours"
 
 # clinvar_annotations_native
-bq mk --update --transfer_config \
---project_id="$PROJECT_ID" \
---target_dataset="clinvar_curator" \
---display_name="Hourly : clinvar_annotations GSheet to Native Table" \
---params="{
-  \"query\":\"SELECT * FROM \`$PROJECT_ID.clinvar_curator.clinvar_annotations\`\",
-  \"destination_table_name_template\":\"clinvar_annotations_native\",
-  \"write_disposition\":\"WRITE_TRUNCATE\"
-}" \
---data_source=scheduled_query \
---schedule='1 * * * *'
-
-echo "Scheduled job for clinvar_annotations_native has been successfully created or updated in project $PROJECT_ID."
+create_or_update_transfer_config \
+  "Hourly : clinvar_annotations GSheet to Native Table" \
+  "clinvar_curator" \
+  "SELECT * FROM \`$PROJECT_ID.clinvar_curator.clinvar_annotations\`" \
+  "clinvar_annotations_native" \
+  "every 1 hours"

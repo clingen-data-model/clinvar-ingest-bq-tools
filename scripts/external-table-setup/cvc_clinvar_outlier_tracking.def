@@ -1,0 +1,86 @@
+{
+  "googleSheetsOptions": {
+    "skipLeadingRows": 2,
+    "range": "'Tracker'!A:R"
+  },
+  "schema": {
+    "fields": [
+      {
+        "name": "tracker_id",
+        "type": "STRING"
+      },
+      {
+        "name": "comments",
+        "type": "STRING"
+      },
+      {
+        "name": "curated_date",
+        "type": "STRING"
+      },
+      {
+        "name": "assigned_to",
+        "type": "STRING"
+      },
+      {
+        "name": "record_status",
+        "type": "STRING"
+      },
+      {
+        "name": "annotation_status",
+        "type": "STRING"
+      },
+      {
+        "name": "gene",
+        "type": "STRING"
+      },
+      {
+        "name": "vcv_accession",
+        "type": "STRING"
+      },
+      {
+        "name": "variant_name",
+        "type": "STRING"
+      },
+      {
+        "name": "agg_sig_type",
+        "type": "STRING"
+      },
+      {
+        "name": "annotated_agg_sig_type",
+        "type": "STRING"
+      },
+      {
+        "name": "agg_classification",
+        "type": "STRING"
+      },
+      {
+        "name": "annotated_agg_classification",
+        "type": "STRING"
+      },
+      {
+        "name": "outlier_pct",
+        "type": "DECIMAL"
+      },
+      {
+        "name": "annotated_outlier_pct",
+        "type": "DECIMAL"
+      },
+      {
+        "name": "scv_id",
+        "type": "STRING"
+      },
+      {
+        "name": "submitter",
+        "type": "STRING"
+      },
+      {
+        "name": "classification",
+        "type": "STRING"
+      }
+    ]
+  },
+  "sourceFormat": "GOOGLE_SHEETS",
+  "sourceUris": [
+    "https://docs.google.com/spreadsheets/d/11XbauM053vdOWhQzCFiOG0mcZ2MLG97g3ElEGueQaiQ/edit\\#gid\\=1789016855"
+  ]
+}
