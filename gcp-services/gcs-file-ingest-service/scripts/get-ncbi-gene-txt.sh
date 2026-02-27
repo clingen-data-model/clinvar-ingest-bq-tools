@@ -1,17 +1,31 @@
 #!/usr/bin/env bash
 
-# Change to the data directory for all file operations
-cd "$(dirname "$0")/../data" || exit 1
+# Download gene_info.gz from NCBI, extract human genes, and upload to GCS
+# This triggers the Cloud Function to process and load into BigQuery
 
-# Download and extract only the desired fields + OMIM IDs
-# 1) download the full gene info file from ncbi
-#    (this is a large file, ~1.5GB compressed, ~6GB uncompressed)
-# wget ftp://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz    # ftp site with README & data
+set -e
 
-# 2) total lines (for progress calculation)
+NCBI_FTP_URL="https://ftp.ncbi.nih.gov/gene/DATA/gene_info.gz"
+GCS_BUCKET="${GCS_BUCKET:-external-dataset-ingest}"
+OUTPUT_FILE="ncbi_gene.txt"
+
+# Change to data directory
+cd "$(dirname "$0")/../data" || { mkdir -p "$(dirname "$0")/../data" && cd "$(dirname "$0")/../data"; }
+
+# Download gene_info.gz if not present or if --force flag is passed
+if [ ! -f "gene_info.gz" ] || [ "$1" == "--force" ]; then
+    echo "Downloading gene_info.gz from NCBI FTP (~1.5GB)..."
+    wget -O gene_info.gz "$NCBI_FTP_URL"
+else
+    echo "Using existing gene_info.gz (use --force to re-download)"
+fi
+
+echo "Processing gene_info.gz to extract human genes..."
+
+# Count total lines for progress
 total=$(gunzip -c gene_info.gz | wc -l)
 
-# 3) stream, filter, extract + progress → ncbi_gene.txt
+# Stream, filter, extract + progress → ncbi_gene.txt
 gunzip -c gene_info.gz \
   | awk -F'\t' -v total="$total" '
     BEGIN {
@@ -40,7 +54,19 @@ gunzip -c gene_info.gz \
     }
     END {
       # finish the progress line
-      printf("\r[100%] processed!\n") > "/dev/stderr"
+      printf("\r[100%%] processed!\n") > "/dev/stderr"
     }
   ' \
-  > ncbi_gene.txt
+  > "$OUTPUT_FILE"
+
+echo "Extracted $(wc -l < "$OUTPUT_FILE") human genes"
+
+# Upload to GCS if gsutil is available
+if command -v gsutil &> /dev/null; then
+    echo "Uploading to gs://${GCS_BUCKET}/${OUTPUT_FILE}..."
+    gsutil cp "$OUTPUT_FILE" "gs://${GCS_BUCKET}/"
+    echo "Upload complete. Cloud Function will be triggered automatically."
+else
+    echo "gsutil not found. File saved locally at: $(pwd)/$OUTPUT_FILE"
+    echo "Manually upload to GCS bucket to trigger processing."
+fi

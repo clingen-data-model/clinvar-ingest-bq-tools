@@ -1,10 +1,16 @@
 import logging
 import json
 import os
+import urllib.request
 import pandas as pd
 from flask import Flask, request, jsonify
 from google.cloud import storage, bigquery
 from utils import process_tsv_data
+
+# ClinVar FTP URL for organization summary
+CLINVAR_ORG_SUMMARY_URL = (
+    "https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/organization_summary.txt"
+)
 
 app = Flask(__name__)
 
@@ -15,6 +21,39 @@ GCS_BUCKET = os.getenv("GCS_BUCKET")
 
 # Mapping JSON file names to BQ table names
 JSON_TABLES = {"hp.json": "hpo_terms", "mondo.json": "mondo_terms"}
+
+hgnc_gene_schema = [
+    bigquery.SchemaField("hgnc_id", "STRING"),
+    bigquery.SchemaField("symbol", "STRING"),
+    bigquery.SchemaField("name", "STRING"),
+    bigquery.SchemaField("locus_group", "STRING"),
+    bigquery.SchemaField("locus_type", "STRING"),
+    bigquery.SchemaField("status", "STRING"),
+    bigquery.SchemaField("location", "STRING"),
+    bigquery.SchemaField("alias_symbol", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("alias_name", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("prev_symbol", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("prev_name", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("gene_group", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("gene_group_id", "INTEGER", mode="REPEATED"),
+    bigquery.SchemaField("date_approved_reserved", "DATE"),
+    bigquery.SchemaField("date_symbol_changed", "DATE"),
+    bigquery.SchemaField("date_name_changed", "DATE"),
+    bigquery.SchemaField("date_modified", "DATE"),
+    bigquery.SchemaField("entrez_id", "STRING"),
+    bigquery.SchemaField("ensembl_gene_id", "STRING"),
+    bigquery.SchemaField("vega_id", "STRING"),
+    bigquery.SchemaField("ucsc_id", "STRING"),
+    bigquery.SchemaField("refseq_accession", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("ccds_id", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("uniprot_ids", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("pubmed_id", "INTEGER", mode="REPEATED"),
+    bigquery.SchemaField("omim_id", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("orphanet", "INTEGER"),
+    bigquery.SchemaField("enzyme_id", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("mane_select", "STRING", mode="REPEATED"),
+    bigquery.SchemaField("agr", "STRING"),
+]
 
 ncbi_gene_schema = [
     bigquery.SchemaField("id", "STRING"),
@@ -70,6 +109,40 @@ TABLE_CONFIGS = {
 }
 
 
+def fetch_organization_summary_from_ftp():
+    """Fetch the latest organization_summary.txt directly from ClinVar FTP."""
+    logging.info(f"Fetching organization_summary.txt from {CLINVAR_ORG_SUMMARY_URL}")
+    try:
+        with urllib.request.urlopen(CLINVAR_ORG_SUMMARY_URL, timeout=60) as response:
+            content = response.read().decode("utf-8")
+            logging.info(f"Successfully fetched {len(content)} bytes from ClinVar FTP")
+            return content
+    except Exception as e:
+        logging.exception(f"Failed to fetch from ClinVar FTP: {e}")
+        raise
+
+
+def process_organization_summary_from_ftp():
+    """Fetch organization_summary from ClinVar FTP and load into BigQuery."""
+    config = TABLE_CONFIGS.get("submitter_organization")
+    if not config:
+        logging.error("Table 'submitter_organization' is not configured.")
+        return "Table 'submitter_organization' is not configured."
+
+    schema = config.get("schema")
+
+    try:
+        # Fetch latest data directly from ClinVar FTP
+        tsv_data = fetch_organization_summary_from_ftp()
+
+        df = process_tsv_data(tsv_data, config)
+        return load_to_bigquery(df, "submitter_organization", schema=schema)
+
+    except Exception as e:
+        logging.exception("Failed to process organization_summary from FTP")
+        return f"Error processing organization_summary from FTP: {str(e)}"
+
+
 def extract_json_nodes(content, file_name):
     """Extract fields from hp.json, mondo.json based on structure."""
     data = json.loads(content)
@@ -101,6 +174,66 @@ def extract_json_nodes(content, file_name):
 
     logging.info(f"Extracted {len(results)} rows from {file_name}")
     return results
+
+
+def extract_hgnc_genes(content):
+    """Extract gene records from HGNC gene_with_protein_product.json."""
+    data = json.loads(content)
+    docs = data.get("response", {}).get("docs", [])
+    results = []
+
+    for doc in docs:
+        record = {
+            "hgnc_id": doc.get("hgnc_id"),
+            "symbol": doc.get("symbol"),
+            "name": doc.get("name"),
+            "locus_group": doc.get("locus_group"),
+            "locus_type": doc.get("locus_type"),
+            "status": doc.get("status"),
+            "location": doc.get("location"),
+            "alias_symbol": doc.get("alias_symbol", []),
+            "alias_name": doc.get("alias_name", []),
+            "prev_symbol": doc.get("prev_symbol", []),
+            "prev_name": doc.get("prev_name", []),
+            "gene_group": doc.get("gene_group", []),
+            "gene_group_id": doc.get("gene_group_id", []),
+            "date_approved_reserved": doc.get("date_approved_reserved"),
+            "date_symbol_changed": doc.get("date_symbol_changed"),
+            "date_name_changed": doc.get("date_name_changed"),
+            "date_modified": doc.get("date_modified"),
+            "entrez_id": doc.get("entrez_id"),
+            "ensembl_gene_id": doc.get("ensembl_gene_id"),
+            "vega_id": doc.get("vega_id"),
+            "ucsc_id": doc.get("ucsc_id"),
+            "refseq_accession": doc.get("refseq_accession", []),
+            "ccds_id": doc.get("ccds_id", []),
+            "uniprot_ids": doc.get("uniprot_ids", []),
+            "pubmed_id": doc.get("pubmed_id", []),
+            "omim_id": doc.get("omim_id", []),
+            "orphanet": doc.get("orphanet"),
+            "enzyme_id": doc.get("enzyme_id", []),
+            "mane_select": doc.get("mane_select", []),
+            "agr": doc.get("agr"),
+        }
+        results.append(record)
+
+    logging.info(f"Extracted {len(results)} HGNC gene records")
+    return results
+
+
+def process_hgnc_from_gcs(bucket_name, file_name):
+    """Load HGNC gene data into BigQuery."""
+    storage_client = storage.Client()
+    bucket = storage_client.bucket(bucket_name)
+    blob = bucket.blob(file_name)
+    file_content = blob.download_as_text()
+
+    genes = extract_hgnc_genes(file_content)
+    if not genes:
+        return f"No gene data found in {file_name}"
+
+    df = pd.DataFrame(genes)
+    return load_to_bigquery(df, "hgnc_gene", schema=hgnc_gene_schema)
 
 
 def process_json_from_gcs(bucket_name, file_name, table_name):
@@ -181,12 +314,13 @@ def handle_gcs_event():
         if file_name in JSON_TABLES:
             table = JSON_TABLES[file_name]
             message = process_json_from_gcs(bucket_name, file_name, table)
+        elif file_name == "hgnc_gene.json":
+            message = process_hgnc_from_gcs(bucket_name, file_name)
         elif file_name == "ncbi_gene.txt":
             message = process_tsv_from_gcs(bucket_name, file_name, "ncbi_gene")
         elif file_name == "organization_summary.txt":
-            message = process_tsv_from_gcs(
-                bucket_name, file_name, "submitter_organization"
-            )
+            # Fetch latest from ClinVar FTP instead of using uploaded file
+            message = process_organization_summary_from_ftp()
         else:
             logging.info(f"Ignored file: {file_name}")
             message = f"Ignored file: {file_name}"
