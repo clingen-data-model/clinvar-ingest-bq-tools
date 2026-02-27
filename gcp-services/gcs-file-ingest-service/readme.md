@@ -1,54 +1,156 @@
-# To redeploy the gcs-file-ingest-service
+# GCS File Ingest Service
 
-Run `./deploy.sh`
+This Cloud Function ingests reference data files from a GCS bucket and loads them into BigQuery tables.
 
-wait for the build to complete (make take a few minutes).
+## Deployment
 
-once complete
+### Deploy the Cloud Function
 
-Run `./trigger.sh`
+```bash
+./scripts/deploy.sh
+```
+
+Wait for the build to complete (may take a few minutes).
+
+### Set up GCS triggers
+
+```bash
+./scripts/trigger.sh
+```
 
 This will delete and recreate the necessary triggers that watch the GCS bucket for file updates.
 
-# To update any of the four files simply upload them to the following bucket
+## Configuration
 
-## based on the deploy.sh settings at the time this was written
+Based on `deploy.sh` settings:
 
-  `GCS_BUCKET=external-dataset-ingest,BQ_PROJECT=clingen-dev,BQ_DATASET=clinvar_ingest`
+| Setting    | Value                     |
+| ---------- | ------------------------- |
+| GCS Bucket | `external-dataset-ingest` |
+| BQ Project | `clingen-dev`             |
+| BQ Dataset | `clinvar_ingest`          |
 
-## updated files can be sourced from the following locations
+## Reference Data Files
 
-  1. organization_summary.txt
+Upload files to the GCS bucket to trigger automatic ingestion into BigQuery.
 
-    download the file at...
-        `https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/organization_summary.txt`
+### 1. organization_summary.txt
 
-  2. ncbi_gene.txt
+**Source:** ClinVar FTP
+**BigQuery Table:** `clinvar_ingest.submitter_organization`
 
-    run the script
+#### Option A: Use the script (recommended)
 
-        `./get-ncbi-gene-txt.sh`
+```bash
+cd scripts
+./get-organization-summary.sh
+```
 
-    to download the latest dataset of genes from ncbi and extract only
-    the human genes that are NOT of gene type 'biological-region'
+This downloads the file and uploads it to GCS automatically.
 
-  3. hp.json
+#### Option B: Manual download
 
-    downlad the latest hpo terms from...
-        `https://hpo.jax.org/data/ontology#:~:text=download-,DOWNLOAD,-LATEST%20HP.JSON`
+Download from: <https://ftp.ncbi.nlm.nih.gov/pub/clinvar/tab_delimited/organization_summary.txt>
 
-  4. mondo.json
+Then upload to GCS:
 
-      download the latest mondo terms from ...
-        `https://mondo.monarchinitiative.org/pages/download/#:~:text=json%20edition-,mondo.json,-Equivalent%20to%20the`
+```bash
+gsutil cp organization_summary.txt gs://external-dataset-ingest/
+```
 
-### After a new file is copied to the configured GCS bucket...
+---
 
-The following, respective, tables should be updated in BigQuery's clingen-dev project
+### 2. ncbi_gene.txt
 
-  1. clinvar-ingest.submitter_organization  (from organization_summary.txt)
-  2. clinvar-ingest.ncbi_gene               (from ncbi_gene.txt)
-  3. clinvar-ingest.hpo_terms               (from hp.json)
-  4. clinvar-ingest.mondo_terms             (from mondo.json)
+**Source:** NCBI Gene FTP (filtered to human genes)
+**BigQuery Table:** `clinvar_ingest.ncbi_gene`
 
-You can check the table details in BigQuery to verify that the table was updated on a given date.
+```bash
+cd scripts
+./get-ncbi-gene-txt.sh
+```
+
+This script:
+
+1. Downloads the full `gene_info.gz` from NCBI (~1.5GB compressed)
+2. Extracts only human genes (taxonomy ID 9606)
+3. Excludes genes of type 'biological-region'
+4. Uploads the filtered result to GCS
+
+Use `--force` to re-download even if the file exists locally.
+
+---
+
+### 3. hgnc_gene.json
+
+**Source:** HGNC (Human Gene Nomenclature Committee)
+**BigQuery Table:** `clinvar_ingest.hgnc_gene`
+
+```bash
+cd scripts
+./get-hgnc-gene.sh
+```
+
+This script:
+
+1. Downloads multiple HGNC JSON files (protein-coding genes, non-coding RNA)
+2. Merges them into a single `hgnc_gene.json`
+3. Uploads to GCS
+
+Use `--force` to re-download even if the file exists locally.
+
+---
+
+### 4. hp.json
+
+**Source:** Human Phenotype Ontology (HPO)
+**BigQuery Table:** `clinvar_ingest.hpo_terms`
+
+#### Download hp.json
+
+1. Go to: <https://hpo.jax.org/data/ontology>
+2. Click "DOWNLOAD" under "LATEST HP.JSON"
+3. Save as `hp.json`
+
+#### Upload hp.json to GCS
+
+```bash
+gsutil cp hp.json gs://external-dataset-ingest/
+```
+
+---
+
+### 5. mondo.json
+
+**Source:** MONDO Disease Ontology
+**BigQuery Table:** `clinvar_ingest.mondo_terms`
+
+#### Download mondo.json
+
+1. Go to: <https://mondo.monarchinitiative.org/pages/download/>
+2. Download `mondo.json` from the JSON edition section
+3. Save as `mondo.json`
+
+#### Upload mondo.json to GCS
+
+```bash
+gsutil cp mondo.json gs://external-dataset-ingest/
+```
+
+---
+
+## Verifying Updates
+
+After uploading a file to GCS, the Cloud Function is triggered automatically. To verify the update:
+
+1. Open BigQuery in the GCP Console
+2. Navigate to `clingen-dev.clinvar_ingest`
+3. Check the table's "Last modified" timestamp in the Details tab
+
+| File                       | BigQuery Table                          |
+| -------------------------- | --------------------------------------- |
+| `organization_summary.txt` | `clinvar_ingest.submitter_organization` |
+| `ncbi_gene.txt`            | `clinvar_ingest.ncbi_gene`              |
+| `hgnc_gene.json`           | `clinvar_ingest.hgnc_gene`              |
+| `hp.json`                  | `clinvar_ingest.hpo_terms`              |
+| `mondo.json`               | `clinvar_ingest.mondo_terms`            |
