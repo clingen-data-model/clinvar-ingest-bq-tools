@@ -12,3 +12,9 @@ hgnc_gene.json
 
 # ClinVar organization summary (fetched from FTP)
 organization_summary.txt
+
+# HPO terms (fetched from HPO website)
+hp.json
+
+# MONDO terms (fetched from MONDO website)
+mondo.json
