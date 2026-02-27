@@ -1,0 +1,14 @@
+# Generated/downloaded data files - do not commit
+# These are fetched from external sources and uploaded to GCS
+
+# NCBI gene data (large compressed file ~1.5GB)
+gene_info.gz
+
+# Processed NCBI gene extract
+ncbi_gene.txt
+
+# HGNC gene data (merged from multiple JSON files)
+hgnc_gene.json
+
+# ClinVar organization summary (fetched from FTP)
+organization_summary.txt
