@@ -1,7 +1,7 @@
 {
   "googleSheetsOptions": {
     "skipLeadingRows": 1,
-    "range": "'Report Gene List'!A:D"
+    "range": "'Report Gene List'!A:E"
   },
   "schema": {
     "fields": [
@@ -20,6 +20,10 @@
       {
         "name": "active",
         "type": "BOOLEAN"
+      },
+      {
+        "name": "vcep_gene_spec_status",
+        "type": "STRING"
       }
     ]
   },

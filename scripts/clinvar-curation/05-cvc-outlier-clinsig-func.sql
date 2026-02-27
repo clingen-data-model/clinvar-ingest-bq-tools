@@ -39,11 +39,26 @@ scvs AS
       AND
       crg.statement_type = vtop.statement_type
       AND
-      crg.gks_proposition_type = crg.gks_proposition_type
+      crg.gks_proposition_type = vtop.gks_proposition_type
       AND
       rel.release_date between crg.start_release_date and crg.end_release_date
       AND
       crg.agg_sig_type > 4
+  ),
+  gene_vcep_status AS (
+    SELECT
+      gene_symbol,
+      ARRAY_AGG(vcep_gene_spec_status ORDER BY
+        CASE vcep_gene_spec_status
+          WHEN 'approved' THEN 1
+          WHEN 'in progress' THEN 2
+          WHEN 'not started' THEN 3
+          WHEN 'not applicable' THEN 4
+          ELSE 5
+        END
+      LIMIT 1)[OFFSET(0)] as vcep_gene_spec_status
+    FROM `variation_tracker.report_gene`
+    GROUP BY gene_symbol
   ),
   vars AS (
     SELECT
@@ -57,6 +72,7 @@ scvs AS
       var.name,
       var.gene_id,
       var.symbol as gene_symbol,
+      gvs.vcep_gene_spec_status,
       scvs.release_date
     FROM scvs
     JOIN `clingen-dev.clinvar_ingest.clinvar_variations` var
@@ -69,6 +85,9 @@ scvs AS
       vcv.variation_id = scvs.variation_id
       AND
       scvs.release_date between vcv.start_release_date and vcv.end_release_date
+    LEFT JOIN gene_vcep_status gvs
+    ON
+      gvs.gene_symbol = var.symbol
     GROUP BY
       scvs.variation_id,
       scvs.statement_type,
@@ -80,6 +99,7 @@ scvs AS
       var.name,
       var.gene_id,
       var.symbol,
+      gvs.vcep_gene_spec_status,
       scvs.release_date
   ),
   last_reviewed_scv_anno AS (
@@ -133,6 +153,7 @@ scvs AS
     vars.full_vcv_id,  --
     vars.name,         --
     vars.gene_symbol,   --
+    vars.vcep_gene_spec_status,
     vars.top_rank,
     vars.statement_type,
     vars.gks_proposition_type,
