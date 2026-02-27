@@ -5,14 +5,15 @@
 -- with dosage sensitivity curations. It calculates thresholds based on:
 -- - Total variants
 -- - 1-star or higher variants (based on VCV germline classification review status)
--- - P/LP variants (agg_sig_type >= 4)
+-- - P/LP variants (agg_sig_type = 4)
 -- - pLOF variants (nonsense, frameshift, splice)
 -- - P/LP 1-star pLOF variants
 --
 -- Uses clinvar_sum_vsp_rank_group for efficient pre-aggregated VCV data:
 -- - gks_proposition_type = 'path' for pathogenic VCVs
 -- - rank: 0=0★, 1=1★, 2=2★, 3=3★, 4=4★
--- - agg_sig_type >= 4 means P/LP (at least one P/LP submission)
+-- - agg_sig_type = 4 means P/LP with no conflicting classifications
+-- - Only the top-level (highest) rank is considered for each variation
 --
 -- Filters:
 -- - Single gene variants only
@@ -80,6 +81,7 @@ EXECUTE IMMEDIATE FORMAT("""
 
   -- Get VCV pathogenic proposition data from pre-aggregated table
   -- This is more efficient than joining variation_archive + variation_archive_classification
+  -- Only considers the top-level (highest) rank for each variation
   vcv_path AS (
     SELECT
       sgv.variation_id,
@@ -89,14 +91,22 @@ EXECUTE IMMEDIATE FORMAT("""
       sgv.ts_score,
       svrg.rank AS vcv_rank,
       svrg.agg_sig_type,
-      -- P/LP if agg_sig_type >= 4 (at least one P/LP submission)
-      (svrg.agg_sig_type >= 4) AS is_plp
+      -- P/LP if agg_sig_type = 4 (no conflicts)
+      (svrg.agg_sig_type = 4) AS is_plp
     FROM single_gene_variants sgv
     JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg
     ON
       svrg.variation_id = sgv.variation_id
       AND svrg.gks_proposition_type = 'path'
       AND DATE'%t' BETWEEN svrg.start_release_date AND IFNULL(svrg.end_release_date, CURRENT_DATE())
+    -- Only include the top-level rank for each variation
+    WHERE svrg.rank = (
+      SELECT MAX(svrg2.rank)
+      FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg2
+      WHERE svrg2.variation_id = sgv.variation_id
+        AND svrg2.gks_proposition_type = 'path'
+        AND DATE'%t' BETWEEN svrg2.start_release_date AND IFNULL(svrg2.end_release_date, CURRENT_DATE())
+    )
   ),
 
   -- Get variant lengths and molecular consequences from variation_hgvs
@@ -150,7 +160,7 @@ EXECUTE IMMEDIATE FORMAT("""
     COUNT(DISTINCT variation_id) AS total_variants,
     -- Total number of 1-star or higher variants (vcv_rank >= 1)
     COUNT(DISTINCT IF(vcv_rank >= 1, variation_id, NULL)) AS one_star_variants,
-    -- Total number of P/LP variants (agg_sig_type >= 4)
+    -- Total number of P/LP variants (agg_sig_type = 4)
     COUNT(DISTINCT IF(is_plp, variation_id, NULL)) AS plp_variants,
     -- Total number of P/LP 1-star variants
     COUNT(DISTINCT IF(is_plp AND vcv_rank >= 1, variation_id, NULL)) AS plp_one_star_variants,
@@ -175,6 +185,7 @@ EXECUTE IMMEDIATE FORMAT("""
 """,
 rec.schema_name,
 rec.schema_name,
+rec.release_date,
 rec.release_date,
 rec.schema_name,
 rec.schema_name

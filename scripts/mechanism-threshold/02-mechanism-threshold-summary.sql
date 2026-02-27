@@ -10,7 +10,8 @@
 -- Uses clinvar_sum_vsp_rank_group for efficient pre-aggregated VCV data:
 -- - gks_proposition_type = 'path' for pathogenic VCVs
 -- - rank: 0=0★, 1=1★, 2=2★, 3=3★, 4=4★
--- - agg_sig_type >= 4 means P/LP (at least one P/LP submission)
+-- - agg_sig_type = 4 means P/LP (at least one P/LP submission)
+-- - Only the top-level (highest) rank is considered for each variation
 --
 -- pLOF molecular consequences matched:
 -- - nonsense (stop gained)
@@ -72,6 +73,7 @@ EXECUTE IMMEDIATE FORMAT("""
   ),
 
   -- Get VCV pathogenic proposition data from pre-aggregated table
+  -- Only considers the top-level (highest) rank for each variation
   vcv_path AS (
     SELECT
       sgv.variation_id,
@@ -81,14 +83,22 @@ EXECUTE IMMEDIATE FORMAT("""
       sgv.ts_score,
       svrg.rank AS vcv_rank,
       svrg.agg_sig_type,
-      -- P/LP if agg_sig_type >= 4 (at least one P/LP submission)
-      (svrg.agg_sig_type >= 4) AS is_plp
+      -- P/LP if agg_sig_type = 4 (no conflicts)
+      (svrg.agg_sig_type = 4) AS is_plp
     FROM single_gene_variants sgv
     JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg
     ON
       svrg.variation_id = sgv.variation_id
       AND svrg.gks_proposition_type = 'path'
       AND DATE'%t' BETWEEN svrg.start_release_date AND IFNULL(svrg.end_release_date, CURRENT_DATE())
+    -- Only include the top-level rank for each variation
+    WHERE svrg.rank = (
+      SELECT MAX(svrg2.rank)
+      FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg2
+      WHERE svrg2.variation_id = sgv.variation_id
+        AND svrg2.gks_proposition_type = 'path'
+        AND DATE'%t' BETWEEN svrg2.start_release_date AND IFNULL(svrg2.end_release_date, CURRENT_DATE())
+    )
   ),
 
   -- Get variant lengths and molecular consequences from variation_hgvs
@@ -214,6 +224,7 @@ EXECUTE IMMEDIATE FORMAT("""
 """,
 rec.schema_name,
 rec.schema_name,
+rec.release_date,
 rec.release_date,
 rec.schema_name,
 rec.schema_name

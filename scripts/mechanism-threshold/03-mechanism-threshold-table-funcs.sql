@@ -130,6 +130,7 @@ BEGIN
       ON
         sgv.gene_id = dgi.gene_id
     ),
+    -- Only considers the top-level (highest) rank for each variation
     vcv_path AS (
       SELECT
         sgv.variation_id,
@@ -139,13 +140,21 @@ BEGIN
         sgv.ts_score,
         svrg.rank AS vcv_rank,
         svrg.agg_sig_type,
-        (svrg.agg_sig_type >= 4) AS is_plp
+        (svrg.agg_sig_type = 4) AS is_plp
       FROM single_gene_variants sgv
       JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg
       ON
         svrg.variation_id = sgv.variation_id
         AND svrg.gks_proposition_type = 'path'
         AND DATE'%t' BETWEEN svrg.start_release_date AND IFNULL(svrg.end_release_date, CURRENT_DATE())
+      -- Only include the top-level rank for each variation
+      WHERE svrg.rank = (
+        SELECT MAX(svrg2.rank)
+        FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg2
+        WHERE svrg2.variation_id = sgv.variation_id
+          AND svrg2.gks_proposition_type = 'path'
+          AND DATE'%t' BETWEEN svrg2.start_release_date AND IFNULL(svrg2.end_release_date, CURRENT_DATE())
+      )
     ),
     variant_details AS (
       SELECT
@@ -204,6 +213,7 @@ BEGIN
   """,
   rec.schema_name,
   rec.schema_name,
+  rec.release_date,
   rec.release_date,
   rec.schema_name,
   rec.schema_name,
