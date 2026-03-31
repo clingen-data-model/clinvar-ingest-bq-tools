@@ -21,6 +21,7 @@ BEGIN
   -- Phase 1: Build compact SCV ranges using equi-joins + range overlap.
   -- NO date expansion here — produces one row per (report × variation × SCV × date range).
   -- This avoids the massive intermediate that BETWEEN joins on expanded dates create.
+  -- Do NOT include any flagged SCVs (rank = -3)
   CREATE TEMP TABLE _scv_ranges AS
   SELECT
     rv.report_id,
@@ -73,6 +74,9 @@ BEGIN
     vsg.end_release_date >= vs.start_release_date
   WHERE
     rv.report_id IN UNNEST(reportIds)
+    -- exclude flagged submissions
+    AND
+    vs.rank <> -3
     -- only keep valid range intersections
     AND
     GREATEST(vsg.start_release_date, vs.start_release_date) <= LEAST(vsg.end_release_date, vs.end_release_date);

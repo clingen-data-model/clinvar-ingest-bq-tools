@@ -51,7 +51,7 @@ CREATE TABLE `clinvar_curator.cvc_clinvar_batches`
 --   - clinvar_curator.clinvar_annotations_native
 --   - clinvar_ingest.all_releases_materialized
 --   - clinvar_ingest.scv_clinsig_map
---   - clinvar_ingest.clinvar_status
+--   - clinvar_ingest.status_definitions
 --   - clinvar_curator.cvc_clinvar_submissions
 --   - clinvar_curator.cvc_clinvar_reviews
 --   - clinvar_curator.cvc_clinvar_batches
@@ -97,7 +97,7 @@ WITH anno AS (
     a.review_status AS clinvar_review_status,
     a.ignore,
     map.cv_clinsig_type as clinsig_type,
-    cs.rank
+    def.rank
   FROM `clinvar_curator.clinvar_annotations_native` AS a
   JOIN `clinvar_ingest.all_releases_materialized` AS rel
     ON a.annotation_date >= TIMESTAMP(rel.release_date + INTERVAL 1 DAY)
@@ -108,8 +108,10 @@ WITH anno AS (
     )
   LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
     ON map.scv_term = LOWER(a.interpretation)
-  LEFT JOIN `clinvar_ingest.clinvar_status` cs
-    ON cs.label = LOWER(a.review_status)
+  LEFT JOIN `clinvar_ingest.status_definitions` def
+    ON LOWER(a.review_status) = def.review_status
+    -- Temporal logic: Ensure the rank matches the name valid at time of annotation
+    AND DATE(a.annotation_date) BETWEEN def.start_release_date AND def.end_release_date
 ),
 anno_review AS (
   SELECT

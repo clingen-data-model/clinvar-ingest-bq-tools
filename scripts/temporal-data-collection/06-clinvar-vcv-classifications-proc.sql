@@ -32,11 +32,16 @@ BEGIN
         JOIN `%s.variation_archive` vcv
         ON
           vcvc.vcv_id = vcv.id
-        LEFT JOIN `clinvar_ingest.clinvar_status` cvs1
+        LEFT JOIN `clinvar_ingest.status_rules` rules
         ON
-          cvs1.label = vcvc.review_status
+          rules.review_status = LOWER(vcvc.review_status)
           AND
-          vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
+          rules.is_scv = FALSE  -- Strictly Agg-level for this vcvc curator query
+        LEFT JOIN `clinvar_ingest.status_definitions` def
+        ON
+          rules.review_status = def.review_status
+          AND
+          vcv.release_date BETWEEN def.start_release_date AND def.end_release_date
         WHERE
           vcv.variation_id = cvcvc.variation_id
           AND
@@ -44,7 +49,7 @@ BEGIN
           AND
           vcvc.statement_type IS NOT DISTINCT FROM cvcvc.statement_type
           AND
-          cvs1.rank IS NOT DISTINCT FROM cvcvc.rank
+          def.rank IS NOT DISTINCT FROM cvcvc.rank
           AND
           vcvc.date_last_evaluated IS NOT DISTINCT FROM cvcvc.last_evaluated
           AND
@@ -68,11 +73,16 @@ BEGIN
     JOIN `%s.variation_archive` vcv
     ON
       vcvc.vcv_id = vcv.id
-    LEFT JOIN `clinvar_ingest.clinvar_status` cvs1
+    LEFT JOIN `clinvar_ingest.status_rules` rules
     ON
-      cvs1.label = vcvc.review_status
+      rules.review_status = LOWER(vcvc.review_status)
       AND
-      vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
+      rules.is_scv = FALSE  -- Strictly Agg-level for this vcvc curator query
+    LEFT JOIN `clinvar_ingest.status_definitions` def
+    ON
+      rules.review_status = def.review_status
+      AND
+      vcv.release_date BETWEEN def.start_release_date AND def.end_release_date
     WHERE
       vcv.variation_id = cvcvc.variation_id
       AND
@@ -80,7 +90,7 @@ BEGIN
       AND
       vcvc.statement_type IS NOT DISTINCT FROM cvcvc.statement_type
       AND
-      cvs1.rank IS NOT DISTINCT FROM cvcvc.rank
+      def.rank IS NOT DISTINCT FROM cvcvc.rank
       AND
       vcvc.date_last_evaluated IS NOT DISTINCT FROM cvcvc.last_evaluated
       AND
@@ -115,7 +125,7 @@ BEGIN
       vcv.variation_id,
       vcvc.vcv_id,
       vcvc.statement_type,
-      cvs1.rank,
+      def.rank,
       vcvc.review_status,
       vcvc.date_last_evaluated as last_evaluated,
       vcvc.interp_description as agg_classification_description,
@@ -131,11 +141,16 @@ BEGIN
     -- dataset term check in dataset-preparation scripts should assure all statuses are present
     -- just in case we should keep outer join to allow null 'rank' to be produced to assure no
     -- records are skipped in the final result set.
-    LEFT JOIN `clinvar_ingest.clinvar_status` cvs1
+    LEFT JOIN `clinvar_ingest.status_rules` rules
     ON
-      cvs1.label = vcvc.review_status
+      rules.review_status = LOWER(vcvc.review_status)
       AND
-      vcv.release_date between cvs1.start_release_date and cvs1.end_release_date
+      rules.is_scv = FALSE  -- Strictly Agg-level for this vcvc curator query
+    LEFT JOIN `clinvar_ingest.status_definitions` def
+    ON
+      rules.review_status = def.review_status
+      AND
+      vcv.release_date BETWEEN def.start_release_date AND def.end_release_date
     WHERE
       NOT EXISTS (
       SELECT cvcvc.vcv_id
@@ -147,7 +162,7 @@ BEGIN
         AND
         vcvc.statement_type IS NOT DISTINCT FROM cvcvc.statement_type
         AND
-        cvs1.rank IS NOT DISTINCT FROM cvcvc.rank
+        def.rank IS NOT DISTINCT FROM cvcvc.rank
         AND
         vcvc.date_last_evaluated IS NOT DISTINCT FROM cvcvc.last_evaluated
         AND

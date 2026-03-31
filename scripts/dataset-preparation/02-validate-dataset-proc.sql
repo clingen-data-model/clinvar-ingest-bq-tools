@@ -77,15 +77,15 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     SELECT ARRAY_AGG(DISTINCT IFNULL(ca.review_status,'null'))
     FROM `%s.clinical_assertion` ca
-    LEFT JOIN `clinvar_ingest.clinvar_status` cs
-    ON
-      cs.label = LOWER(ca.review_status)
-      AND
-      ca.release_date BETWEEN cs.start_release_date AND cs.end_release_date
-      AND
-      cs.scv = TRUE
+    LEFT JOIN `clinvar_ingest.status_rules` rules
+      ON rules.review_status = LOWER(ca.review_status)
+      AND rules.is_scv = TRUE  -- Strictly SCV-level for this curator query
+    LEFT JOIN `clinvar_ingest.status_definitions` def
+      ON rules.review_status = def.review_status
+      -- Temporal logic: Ensure the rank matches the name valid at time of annotation
+      AND ca.release_date BETWEEN def.start_release_date AND def.end_release_date
     WHERE
-      cs.label IS NULL
+      def.review_status IS NULL
       AND
       -- exclude null statement_type records which were introduced in the 2025-08-08 release due to
       -- the segregation of functional data statements from GermlineClassification scvs.
@@ -99,7 +99,7 @@ BEGIN
       [CONCAT(
         "New SCV review status terms found: [",
         ARRAY_TO_STRING(scv_review_status_terms, ', '),
-        "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
+        "].\nNOTE: Add status_definitions/rules records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
     );
   END IF;
@@ -108,13 +108,15 @@ BEGIN
   EXECUTE IMMEDIATE FORMAT("""
     SELECT ARRAY_AGG(DISTINCT IFNULL(rcvc.review_status,'null'))
     FROM `%s.rcv_accession_classification` rcvc
-    LEFT JOIN `clinvar_ingest.clinvar_status` cs
-    ON
-      cs.label = LOWER(rcvc.review_status)
-      AND
-      rcvc.release_date BETWEEN cs.start_release_date AND cs.end_release_date
+    LEFT JOIN `clinvar_ingest.status_rules` rules
+      ON rules.review_status = LOWER(rcvc.review_status)
+      AND rules.is_scv = FALSE -- Strictly Agg-level for this curator query
+    LEFT JOIN `clinvar_ingest.status_definitions` def
+      ON rules.review_status = def.review_status
+      -- Temporal logic: Ensure the rank matches the name valid at time of annotation
+      AND rcvc.release_date BETWEEN def.start_release_date AND def.end_release_date
     WHERE
-      cs.label IS NULL
+      def.review_status IS NULL
   """,
   schema_name) INTO rcv_classification_review_status_terms;
 
@@ -124,7 +126,7 @@ BEGIN
       [CONCAT(
         "New RCV classification review status terms found: [",
         ARRAY_TO_STRING(rcv_classification_review_status_terms, ', '),
-        "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
+        "].\nNOTE: Add status_definitions/rules records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
     );
   END IF;
@@ -136,13 +138,15 @@ BEGIN
     JOIN `%s.variation_archive` va
     ON
       va.id = vcvc.vcv_id
-    LEFT JOIN `clinvar_ingest.clinvar_status` cs
-    ON
-      cs.label = LOWER(vcvc.review_status)
-      AND
-      va.release_date between cs.start_release_date and cs.end_release_date
+    LEFT JOIN `clinvar_ingest.status_rules` rules
+      ON rules.review_status = LOWER(vcvc.review_status)
+      AND rules.is_scv = FALSE -- Strictly Agg-level for this curator query
+    LEFT JOIN `clinvar_ingest.status_definitions` def
+      ON rules.review_status = def.review_status
+      -- Temporal logic: Ensure the rank matches the name valid at time of annotation
+      AND va.release_date BETWEEN def.start_release_date AND def.end_release_date
     WHERE
-      cs.label IS NULL
+      def.review_status IS NULL
   """, schema_name, schema_name) INTO vcv_classification_review_status_terms;
 
   IF vcv_classification_review_status_terms IS NOT NULL AND ARRAY_LENGTH(vcv_classification_review_status_terms) > 0 THEN
@@ -151,7 +155,7 @@ BEGIN
       [CONCAT(
         "New VCV classification review status terms found: [",
         ARRAY_TO_STRING(vcv_classification_review_status_terms, ', '),
-        "].\nNOTE: Add clinvar_status records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
+        "].\nNOTE: Add status_definitions/rules records to the '00-setup-translation-tables.sql' script and update, then rerun this script."
       )]
     );
   END IF;

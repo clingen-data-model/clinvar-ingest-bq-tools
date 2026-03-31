@@ -315,13 +315,16 @@ END;
 --   curated.scv_id = scv.id
 --   AND
 --   scv.end_release_date < DATE'2023-01-07'
--- LEFT JOIN `clinvar_ingest.clinvar_status` cs
+-- LEFT JOIN `clinvar_ingest.status_rules` rules
 -- ON
---   cs.rank = scv.rank
---   and
---   cs.scv
---   and
---   scv.end_release_date between cs.start_release_date and cs.end_release_date
+--   rules.review_status = LOWER(scv.review_status)
+--   AND
+--   rules.is_scv = TRUE  -- Strictly SCV-level for this  query
+-- LEFT JOIN `clinvar_ingest.status_definitions` def
+-- ON
+--   rules.review_status = def.review_status
+--   AND
+--   scv.release_date BETWEEN def.start_release_date AND def.end_release_date
 -- ;
 
 -- -- after the clinvar_scvs table is populated with the post Jan.07.2023 records, run the following to update
