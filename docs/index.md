@@ -47,9 +47,9 @@ flowchart LR
 | Section | Description |
 |---------|-------------|
 | [Getting Started](getting-started.md) | Prerequisites, installation, build, and test instructions |
-| [Architecture](architecture.md) | Repository layout, data flow, and design decisions |
-| [TypeScript Utilities](typescript-utils.md) | `bq-utils` and `parse-utils` API reference |
-| [SQL Scripts](sql-scripts.md) | Procedure and function catalog organized by pipeline stage |
-| [GCP Services](gcp-services.md) | Cloud Function deployment and configuration |
+| [Architecture](architecture/index.md) | Repository layout, data flow, and design decisions |
+| [TypeScript Utilities](typescript/index.md) | `bq-utils` and `parse-utils` API reference |
+| [SQL Scripts](sql-scripts/index.md) | Procedure and function catalog organized by pipeline stage |
+| [GCP Services](gcp-services/index.md) | Cloud Function deployment and configuration |
 | [CI/CD](ci-cd.md) | GitHub Actions workflows and release process |
 | [Contributing](contributing.md) | Development workflow, coding standards, and PR guidelines |

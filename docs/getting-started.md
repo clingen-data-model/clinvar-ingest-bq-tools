@@ -100,9 +100,9 @@ To preview it locally:
 
 ## What's Next?
 
-- Read the [Architecture](architecture.md) overview to understand the repository
+- Read the [Architecture](architecture/index.md) overview to understand the repository
   layout and data flow.
-- Browse the [SQL Scripts](sql-scripts.md) catalog if you need to work with
+- Browse the [SQL Scripts](sql-scripts/index.md) catalog if you need to work with
   BigQuery procedures.
 - See [Contributing](contributing.md) for the development workflow and PR
   guidelines.
