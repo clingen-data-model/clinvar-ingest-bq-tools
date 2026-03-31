@@ -2,6 +2,7 @@
 
 [![Node.js CI](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/actions/workflows/node.js.yml/badge.svg)](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/actions/workflows/node.js.yml)
 
+**[Full Documentation](https://clingen-data-model.github.io/clinvar-ingest-bq-tools/)**
 
 ## Table of Contents
 
