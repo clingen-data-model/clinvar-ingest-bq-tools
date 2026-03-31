@@ -94,6 +94,11 @@ vcv_at_submission AS (
   LEFT JOIN `clinvar_ingest.clinvar_vcvs` vcv
     ON uc.variation_id = vcv.variation_id
     AND a.annotation_release_date BETWEEN vcv.start_release_date AND vcv.end_release_date
+  -- Ensure one VCV per annotation_id (take latest version if multiple match)
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY uc.annotation_id
+    ORDER BY vcv.version DESC NULLS LAST
+  ) = 1
 ),
 
 -- Get current VCV version
@@ -109,6 +114,11 @@ vcv_current AS (
   LEFT JOIN `clinvar_ingest.clinvar_vcvs` vcv
     ON uc.variation_id = vcv.variation_id
     AND latest.release_date BETWEEN vcv.start_release_date AND vcv.end_release_date
+  -- Ensure one VCV per annotation_id (take latest version if multiple match)
+  QUALIFY ROW_NUMBER() OVER (
+    PARTITION BY uc.annotation_id
+    ORDER BY vcv.version DESC NULLS LAST
+  ) = 1
 ),
 
 -- Aggregate version bump info for each flagging candidate
