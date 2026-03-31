@@ -256,6 +256,8 @@ test('normalizeValueKey should normalize keys correctly', () => {
   expect(normalizeValueKey('value_test', 'test')).toEqual({ key: 'value', value: 'test' });
   expect(normalizeValueKey('objectCondition_complex', 'condition')).toEqual({ key: 'objectCondition', value: 'condition' });
   expect(normalizeValueKey('copies_int', 'context')).toEqual({ key: 'copies', value: 'context' });
+  expect(normalizeValueKey('classification_simple', 'Pathogenic')).toEqual({ key: 'classification', value: 'Pathogenic' });
+  expect(normalizeValueKey('objectClassification_complex', 'Benign')).toEqual({ key: 'objectClassification', value: 'Benign' });
 
   // Test invalid keys
   expect(normalizeValueKey('invalid_key', 'test')).toBeUndefined();
