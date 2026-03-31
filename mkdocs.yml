@@ -1,0 +1,76 @@
+site_name: ClinVar Ingest BQ Tools
+site_description: Documentation for the ClinVar Ingest BigQuery Tools repository
+site_url: https://clingen-data-model.github.io/clinvar-ingest-bq-tools/
+repo_url: https://github.com/clingen-data-model/clinvar-ingest-bq-tools
+repo_name: clingen-data-model/clinvar-ingest-bq-tools
+
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Architecture:
+    - Overview: architecture/index.md
+    - Data Pipeline: architecture/data-pipeline.md
+    - BigQuery Schema: architecture/bigquery-schema.md
+  - TypeScript Utilities:
+    - Overview: typescript/index.md
+    - BQ Utils: typescript/bq-utils.md
+    - Parse Utils: typescript/parse-utils.md
+  - SQL Scripts:
+    - Overview: sql-scripts/index.md
+    - Dataset Preparation: sql-scripts/dataset-preparation.md
+    - Temporal Collection: sql-scripts/temporal-data-collection.md
+    - Temporal Summation: sql-scripts/temporal-data-summation.md
+    - Tracker Reports: sql-scripts/tracker-report-update.md
+    - Parsing Functions: sql-scripts/parsing-funcs.md
+    - ClinVar Curation: sql-scripts/clinvar-curation.md
+    - External Tables: sql-scripts/external-table-setup.md
+    - General Utilities: sql-scripts/general.md
+  - GCP Services:
+    - Overview: gcp-services/index.md
+    - GCS File Ingest: gcp-services/gcs-file-ingest.md
+  - CI/CD: ci-cd.md
+  - Contributing: contributing.md
