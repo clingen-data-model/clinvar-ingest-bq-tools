@@ -92,6 +92,8 @@ BEGIN
         sgrp.variation_id = v.variation_id
         AND
         %T between sgrp.start_release_date and sgrp.end_release_date
+        AND
+        sgrp.rank <> -3
     ),
     sgrp_var_class_type AS (
       SELECT
