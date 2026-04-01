@@ -72,5 +72,9 @@ nav:
   - GCP Services:
     - Overview: gcp-services/index.md
     - GCS File Ingest: gcp-services/gcs-file-ingest.md
+  - Reference:
+    - Variation Identity Issues: reference/variation-identity-issues.md
+    - ACMG v4 Variant Pathogenicity: reference/acmgv4-variant-pathogenicity-under-construction.md
+    - ClinGen Knowledge Dissemination: reference/clingen-knowledge-dissemination-draft.md
   - CI/CD: ci-cd.md
   - Contributing: contributing.md
