@@ -46,7 +46,6 @@ markdown_extensions:
   - md_in_html
 
 extra_javascript:
-  - https://unpkg.com/mermaid@11/dist/mermaid.min.js
   - javascripts/mermaid-init.js
 
 plugins:
