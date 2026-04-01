@@ -12,4 +12,5 @@ __pycache__/
 # MkDocs build output
 site/
 .claude/settings.local.json
+.gitignore
 .vscode/settings.json
