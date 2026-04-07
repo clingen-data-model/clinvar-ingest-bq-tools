@@ -14,3 +14,4 @@ site/
 .claude/settings.local.json
 .gitignore
 .vscode/settings.json
+.claude/settings.json

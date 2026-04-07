@@ -373,62 +373,101 @@ BEGIN
     AND
     vcep.classif_type NOT IN ('p','lb','b');
 
-  -- Batch _all_var_priorities: one scan of clinvar_sum_vsp_rank_group for ALL reports
+  -- Pre-compute flagging candidate SCVs so they can be excluded from priority calculations.
+  -- Only SCVs whose most recent annotation (by annotated_date) is 'flagging candidate'
+  -- are included. If a newer version was later annotated differently (e.g. 'no change'),
+  -- the SCV is no longer considered a flagging candidate.
+  CREATE TEMP TABLE _flagging_candidates AS
+  SELECT scv_id
+  FROM (
+    SELECT
+      scv_id,
+      ROW_NUMBER() OVER (
+        PARTITION BY scv_id
+        ORDER BY annotated_date DESC
+      ) as rn,
+      action
+    FROM `clinvar_curator.cvc_annotations`("LATEST")
+  )
+  WHERE rn = 1 AND action = 'flagging candidate';
+
+  -- Batch _all_var_priorities: computed from individual SCVs in _scv_ranges for ALL reports.
+  -- Flagging candidate SCVs are excluded from the sig_type counts.
+  -- Priorities are computed per rank tier, then only the 1-star (rank=1) tier is used.
+  -- If no 1-star SCVs exist for a variation/date, fall back to the 0-star (rank=0) tier.
   CREATE TEMP TABLE _all_var_priorities AS
-  WITH x AS
+  WITH per_rank AS
   (
-    SELECT DISTINCT
+    SELECT
       v.report_id,
       v.variation_id,
       v.statement_type,
       v.gks_proposition_type,
       v.report_release_date,
-      sum(vg.sig_type[OFFSET(0)].count) as no_sig_cnt,
-      sum(vg.sig_type[OFFSET(1)].count) as unc_sig_cnt,
-      sum(vg.sig_type[OFFSET(2)].count) as sig_cnt,
+      v.rank,
+      COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL)) as no_sig_cnt,
+      COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL)) as unc_sig_cnt,
+      COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL)) as sig_cnt,
       CASE
-        WHEN (sum(vg.sig_type[OFFSET(0)].count)>0 AND sum(vg.sig_type[OFFSET(1)].count)>0 AND sum(vg.sig_type[OFFSET(2)].count)>0) THEN
+        WHEN (COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL))>0) THEN
           7
-        WHEN (sum(vg.sig_type[OFFSET(0)].count)=0 AND sum(vg.sig_type[OFFSET(1)].count)>0 AND sum(vg.sig_type[OFFSET(2)].count)>0) THEN
+        WHEN (COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL))=0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL))>0) THEN
           6
-        WHEN (sum(vg.sig_type[OFFSET(0)].count)>0 AND sum(vg.sig_type[OFFSET(1)].count)=0 AND sum(vg.sig_type[OFFSET(2)].count)>0) THEN
+        WHEN (COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL))=0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL))>0) THEN
           5
-        WHEN (sum(vg.sig_type[OFFSET(0)].count)=0 AND sum(vg.sig_type[OFFSET(1)].count)=0 AND sum(vg.sig_type[OFFSET(2)].count)>0) THEN
+        WHEN (COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL))=0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL))=0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL))>0) THEN
           4
-        WHEN (sum(vg.sig_type[OFFSET(0)].count)>0 AND sum(vg.sig_type[OFFSET(1)].count)>0 AND sum(vg.sig_type[OFFSET(2)].count)=0) THEN
+        WHEN (COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL))=0) THEN
           3
-        WHEN (sum(vg.sig_type[OFFSET(0)].count)=0 AND sum(vg.sig_type[OFFSET(1)].count)>0 AND sum(vg.sig_type[OFFSET(2)].count)=0) THEN
+        WHEN (COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL))=0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL))=0) THEN
           2
-        WHEN (sum(vg.sig_type[OFFSET(0)].count)>0 AND sum(vg.sig_type[OFFSET(1)].count)=0 AND sum(vg.sig_type[OFFSET(2)].count)=0) THEN
+        WHEN (COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL))>0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 1, rsr.submitter_id, NULL))=0 AND COUNT(DISTINCT IF(rsr.clinsig_type = 2, rsr.submitter_id, NULL))=0) THEN
           1
         ELSE
           0
-        END as agg_sig_type,
-      MAX(vg.rank) as max_rank
+        END as agg_sig_type
     FROM _all_variation v
-    JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
+    JOIN _scv_ranges rsr
     ON
-      v.variation_id = vg.variation_id
+      rsr.report_id = v.report_id
       AND
-      v.statement_type = vg.statement_type
+      rsr.variation_id = v.variation_id
       AND
-      v.gks_proposition_type = vg.gks_proposition_type
+      rsr.statement_type = v.statement_type
       AND
-      v.rank = vg.rank
+      rsr.gks_proposition_type = v.gks_proposition_type
       AND
-      v.report_release_date BETWEEN vg.start_release_date AND vg.end_release_date
+      rsr.rank = v.rank
+      AND
+      v.report_release_date BETWEEN rsr.eff_start_release_date AND rsr.eff_end_release_date
+    LEFT JOIN _flagging_candidates fc
+    ON
+      fc.scv_id = rsr.id
     WHERE
       NOT v.report_submitter_variation
       AND
       v.statement_type = 'GermlineClassification'
       AND
       v.gks_proposition_type = 'path'
+      AND
+      fc.scv_id IS NULL
     GROUP BY
       v.report_id,
       v.variation_id,
       v.statement_type,
       v.gks_proposition_type,
-      v.report_release_date
+      v.report_release_date,
+      v.rank
+  ),
+  x AS
+  (
+    SELECT
+      per_rank.*,
+      ROW_NUMBER() OVER (
+        PARTITION BY report_id, variation_id, statement_type, gks_proposition_type, report_release_date
+        ORDER BY rank DESC
+      ) as rn
+    FROM per_rank
   )
   SELECT
     x.report_id,
@@ -438,24 +477,25 @@ BEGIN
     x.report_release_date,
     x.agg_sig_type,
     x.no_sig_cnt, x.unc_sig_cnt, x.sig_cnt,
-    x.max_rank,
+    x.rank as priority_rank,
     SPLIT(ARRAY_TO_STRING(ARRAY(
       select IF(x.agg_sig_type = 2 AND x.unc_sig_cnt > 2,'VUS priority',NULL) UNION ALL
       select IF(x.agg_sig_type IN ( 3, 7 ), 'VUS vs LBB', NULL) UNION ALL
-      select IF(x.agg_sig_type > 4, 'PLP vs VUSLBB', NULL) UNION ALL
-      select IF(x.max_rank = 0 and x.agg_sig_type >= 4 and x.sig_cnt > 1, 'No criteria PLP', NULL)),','),',') as priority_type
+      select IF(x.agg_sig_type > 4, 'PLP vs VUSLBB', NULL)),','),',') as priority_type
   FROM x
-  WHERE (
+  WHERE x.rn = 1
+    AND (
     (x.agg_sig_type = 2 AND x.unc_sig_cnt > 2)
     OR
     (x.agg_sig_type IN ( 3, 7 ))
     OR
-    (x.agg_sig_type > 4)
-    OR
-    (x.max_rank = 0 and x.agg_sig_type >= 4 and x.sig_cnt > 1));
+    (x.agg_sig_type > 4));
 
   -- Batch _all_scv_priorities: uses _scv_ranges with point-in-time range check
   -- instead of joining the fully-expanded _all_scv table.
+  -- outlier_pct is recalculated from _all_var_priorities counts (which exclude flagging candidates).
+  -- Flagging candidate SCVs are included in the detail but marked with is_flagging_candidate=TRUE
+  -- and their scv_label shows (f/c) instead of a percentage.
   CREATE TEMP TABLE _all_scv_priorities AS
   SELECT DISTINCT
     vp.report_id,
@@ -463,14 +503,30 @@ BEGIN
     vp.variation_id,
     vp.statement_type,
     vp.gks_proposition_type,
-    vp.max_rank,
+    vp.priority_rank,
     p_type,
     rsr.rank as scv_rank,
     rsr.id as scv_id,
     rsr.version as scv_ver,
-    rsr.outlier_pct,
+    (fc.scv_id IS NOT NULL) as is_flagging_candidate,
+    IF(fc.scv_id IS NOT NULL, NULL,
+      CASE rsr.clinsig_type
+        WHEN 0 THEN SAFE_DIVIDE(vp.no_sig_cnt, vp.no_sig_cnt + vp.unc_sig_cnt + vp.sig_cnt)
+        WHEN 1 THEN SAFE_DIVIDE(vp.unc_sig_cnt, vp.no_sig_cnt + vp.unc_sig_cnt + vp.sig_cnt)
+        WHEN 2 THEN SAFE_DIVIDE(vp.sig_cnt, vp.no_sig_cnt + vp.unc_sig_cnt + vp.sig_cnt)
+      END) as outlier_pct,
     rsr.scv_group_type,
-    rsr.scv_label,
+    FORMAT("%s (%s) %s %s",
+      IFNULL(rsr.submitter_abbrev, LEFT(rsr.submitter_name, 15)),
+      rsr.classification_abbrev,
+      IF(fc.scv_id IS NOT NULL, '(f/c)',
+        FORMAT("%3.0f%%",
+          CASE rsr.clinsig_type
+            WHEN 0 THEN SAFE_DIVIDE(vp.no_sig_cnt, vp.no_sig_cnt + vp.unc_sig_cnt + vp.sig_cnt)
+            WHEN 1 THEN SAFE_DIVIDE(vp.unc_sig_cnt, vp.no_sig_cnt + vp.unc_sig_cnt + vp.sig_cnt)
+            WHEN 2 THEN SAFE_DIVIDE(vp.sig_cnt, vp.no_sig_cnt + vp.unc_sig_cnt + vp.sig_cnt)
+          END * 100)),
+      rsr.full_scv_id) as scv_label,
     v.name,
     v.symbol as gene_symbol,
     v.mane_select,
@@ -487,7 +543,12 @@ BEGIN
     AND
     vp.variation_id = rsr.variation_id
     AND
+    rsr.rank = vp.priority_rank
+    AND
     vp.report_release_date BETWEEN rsr.eff_start_release_date AND rsr.eff_end_release_date
+  LEFT JOIN _flagging_candidates fc
+  ON
+    fc.scv_id = rsr.id
   JOIN `clinvar_ingest.clinvar_variations` v
   ON
     vp.variation_id = v.id
@@ -634,6 +695,7 @@ BEGIN
   DROP TABLE IF EXISTS _all_variation;
   DROP TABLE IF EXISTS _all_alerts_base;
   DROP TABLE IF EXISTS _all_alerts;
+  DROP TABLE IF EXISTS _flagging_candidates;
   DROP TABLE IF EXISTS _all_var_priorities;
   DROP TABLE IF EXISTS _all_scv_priorities;
 
