@@ -273,7 +273,8 @@ type NormalizedKey =
   | "objectTherapy"
   | "conditionQualifier"
   | "classification"
-  | "objectClassification";
+  | "objectClassification"
+  | "objectConditionClassification";
 
 const PREFIX_MAP: Record<string, NormalizedKey> = {
   start: "start",
@@ -285,6 +286,7 @@ const PREFIX_MAP: Record<string, NormalizedKey> = {
   conditionQualifier: "conditionQualifier",
   classification: "classification",
   objectClassification: "objectClassification",
+  objectConditionClassification: "objectConditionClassification",
 };
 
 function normalizeValueKey(
