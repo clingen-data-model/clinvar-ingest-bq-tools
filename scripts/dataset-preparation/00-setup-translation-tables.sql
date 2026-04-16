@@ -47,9 +47,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types` (
     strength_label STRING,
     classification_code STRING,
     penetrance_level STRING,
-    code_system STRING,
-    final_proposition_type STRING,
-    final_predicate STRING
+    code_system STRING
 );
 INSERT INTO `clinvar_ingest.clinvar_clinsig_types` (
     statement_type,
@@ -67,50 +65,48 @@ INSERT INTO `clinvar_ingest.clinvar_clinsig_types` (
     strength_label,
     classification_code,
     penetrance_level,
-    code_system,
-    final_proposition_type,
-    final_predicate
+    code_system
 )
 VALUES
     -- Pathogenic statements
-    ('GermlineClassification',    'b',         'Benign',                            0, 'path',    30,  30, 'path',  30,  30,  'disputes',  'definitive', 'Definitive', 'benign',                            null,          'ACMG Guidelines, 2015',                                        'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'lb',        'Likely benign',                     0, 'path',    31,  31, 'path',  31,  31,  'disputes',  'likely',     'Likely',     'likely benign',                     null,          'ACMG Guidelines, 2015',                                        'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'b/lb',      'Benign/Likely benign',              0, 'path',    32,  32, 'path',  32,  32,  'disputes',  null,         null,         'benign/likely benign',              null,          'ClinVar',                                                      'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'vus',       'Uncertain significance',            1, 'path',    20,  20, 'path',  20,  20,  'neutral',   null,         null,         'uncertain significance',            null,          'ACMG Guidelines, 2015',                                        'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'vus-h',     'VUS-high',                          1, 'path',    21,  21, 'path',  21,  21,  'neutral',   null,         null,         'vus-high',                          null,          'SVC v4',                                                       'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'vus-m',     'VUS-mid',                           1, 'path',    22,  22, 'path',  22,  22,  'neutral',   null,         null,         'vus-mid',                           null,          'SVC v4',                                                       'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'vus-l',     'VUS-low',                           1, 'path',    23,  23, 'path',  23,  23,  'neutral',   null,         null,         'vus-low',                           null,          'SVC v4',                                                       'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'ura',       'Uncertain risk allele',             1, 'path',    25,  25, 'path',  25,  25,  'neutral',   null,         null,         'uncertain risk allele',             'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'p',         'Pathogenic',                        2, 'path',    10,  10, 'path',  10,  10,  'supports',  'definitive', 'Definitive', 'pathogenic',                        null,          'ACMG Guidelines, 2015',                                        'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'lp',        'Likely pathogenic',                 2, 'path',    11,  11, 'path',  11,  11,  'supports',  'likely',     'Likely',     'likely pathogenic',                 null,          'ACMG Guidelines, 2015',                                        'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'p/lp',      'Pathogenic/Likely pathogenic',      2, 'path',    12,  12, 'path',  12,  12,  'supports',  null,         null,         'pathogenic/Likely pathogenic',      null,          'ClinVar',                                                      'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'p-lp',      'Pathogenic, low penetrance',        2, 'path',    13,  13, 'path',  13,  13,  'supports',  'definitive', 'Definitive', 'pathogenic, low penetrance',        'low',         'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'lp-lp',     'Likely pathogenic, low penetrance', 2, 'path',    14,  14, 'path',  14,  14,  'supports',  'likely',     'Likely',     'likely pathogenic, low penetrance', 'low',         'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'era',       'Established risk allele',           2, 'path',    15,  15, 'path',  15,  15,  'supports',  'definitive', 'Definitive', 'established risk allele',           'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'VariantPathogenicityProposition', 'isCausalFor'),
-    ('GermlineClassification',    'lra',       'Likely risk allele',                2, 'path',    16,  16, 'path',  16,  16,  'supports',  'likely',     'Likely',     'likely risk allele',                'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'VariantPathogenicityProposition', 'isCausalFor'),
+    ('GermlineClassification',    'b',         'Benign',                            0, 'path',    30,  30, 'path',  30,  30,  'disputes',  'definitive', 'Definitive', 'benign',                            null,          'ACMG Guidelines, 2015'),
+    ('GermlineClassification',    'lb',        'Likely benign',                     0, 'path',    31,  31, 'path',  31,  31,  'disputes',  'likely',     'Likely',     'likely benign',                     null,          'ACMG Guidelines, 2015'),
+    ('GermlineClassification',    'b/lb',      'Benign/Likely benign',              0, 'path',    32,  32, 'path',  32,  32,  'disputes',  null,         null,         'benign/likely benign',              null,          'ClinVar'),
+    ('GermlineClassification',    'vus',       'Uncertain significance',            1, 'path',    20,  20, 'path',  20,  20,  'neutral',   null,         null,         'uncertain significance',            null,          'ACMG Guidelines, 2015'),
+    ('GermlineClassification',    'vus-h',     'VUS-high',                          1, 'path',    21,  21, 'path',  21,  21,  'neutral',   null,         null,         'vus-high',                          null,          'SVC v4'),
+    ('GermlineClassification',    'vus-m',     'VUS-mid',                           1, 'path',    22,  22, 'path',  22,  22,  'neutral',   null,         null,         'vus-mid',                           null,          'SVC v4'),
+    ('GermlineClassification',    'vus-l',     'VUS-low',                           1, 'path',    23,  23, 'path',  23,  23,  'neutral',   null,         null,         'vus-low',                           null,          'SVC v4'),
+    ('GermlineClassification',    'ura',       'Uncertain risk allele',             1, 'path',    25,  25, 'path',  25,  25,  'neutral',   null,         null,         'uncertain risk allele',             'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024'),
+    ('GermlineClassification',    'p',         'Pathogenic',                        2, 'path',    10,  10, 'path',  10,  10,  'supports',  'definitive', 'Definitive', 'pathogenic',                        null,          'ACMG Guidelines, 2015'),
+    ('GermlineClassification',    'lp',        'Likely pathogenic',                 2, 'path',    11,  11, 'path',  11,  11,  'supports',  'likely',     'Likely',     'likely pathogenic',                 null,          'ACMG Guidelines, 2015'),
+    ('GermlineClassification',    'p/lp',      'Pathogenic/Likely pathogenic',      2, 'path',    12,  12, 'path',  12,  12,  'supports',  null,         null,         'pathogenic/Likely pathogenic',      null,          'ClinVar'),
+    ('GermlineClassification',    'p-lp',      'Pathogenic, low penetrance',        2, 'path',    13,  13, 'path',  13,  13,  'supports',  'definitive', 'Definitive', 'pathogenic, low penetrance',        'low',         'ClinGen Low Penetrance and Risk Allele Recommendations, 2024'),
+    ('GermlineClassification',    'lp-lp',     'Likely pathogenic, low penetrance', 2, 'path',    14,  14, 'path',  14,  14,  'supports',  'likely',     'Likely',     'likely pathogenic, low penetrance', 'low',         'ClinGen Low Penetrance and Risk Allele Recommendations, 2024'),
+    ('GermlineClassification',    'era',       'Established risk allele',           2, 'path',    15,  15, 'path',  15,  15,  'supports',  'definitive', 'Definitive', 'established risk allele',           'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024'),
+    ('GermlineClassification',    'lra',       'Likely risk allele',                2, 'path',    16,  16, 'path',  16,  16,  'supports',  'likely',     'Likely',     'likely risk allele',                'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024'),
     -- Oncogenic
-    ('OncogenicityClassification',  'b',       'Benign',                            0, 'onco',    30,  30, 'onco',  30,  30,  'disputes',  'definitive', 'Definitive', 'benign',                            null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022',           'VariantOncogenicityProposition', 'isOncogenicFor'),
-    ('OncogenicityClassification',  'lb',      'Likely benign',                     0, 'onco',    31,  31, 'onco',  31,  31,  'disputes',  'likely',     'Likely',     'likely benign',                     null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022',           'VariantOncogenicityProposition', 'isOncogenicFor'),
-    ('OncogenicityClassification',  'b/lb',    'Benign/Likely benign',              0, 'onco',    32,  32, 'onco',  32,  32,  'disputes',  null,         null,         'benign/likely benign',              null,          'ClinVar',                                                      'VariantOncogenicityProposition', 'isOncogenicFor'),
-    ('OncogenicityClassification',  'vus',     'Uncertain significance',            1, 'onco',    20,  20, 'onco',  20,  20,  'neutral',   null,         null,         'uncertain significance',            null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022',           'VariantOncogenicityProposition', 'isOncogenicFor'),
-    ('OncogenicityClassification',  'o',       'Oncogenic',                         2, 'onco',    10,  10, 'onco',   10, 10,  'supports',  'definitive', 'Definitive', 'oncogenic',                         null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022',           'VariantOncogenicityProposition', 'isOncogenicFor'),
-    ('OncogenicityClassification',  'lo',      'Likely oncogenic',                  2, 'onco',    11,  11, 'onco',   11, 11,  'supports',  'likely',     'Likely',     'likely oncogenic',                  null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022',           'VariantOncogenicityProposition', 'isOncogenicFor'),
+    ('OncogenicityClassification',  'b',       'Benign',                            0, 'onco',    30,  30, 'onco',  30,  30,  'disputes',  'definitive', 'Definitive', 'benign',                            null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022'),
+    ('OncogenicityClassification',  'lb',      'Likely benign',                     0, 'onco',    31,  31, 'onco',  31,  31,  'disputes',  'likely',     'Likely',     'likely benign',                     null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022'),
+    ('OncogenicityClassification',  'b/lb',    'Benign/Likely benign',              0, 'onco',    32,  32, 'onco',  32,  32,  'disputes',  null,         null,         'benign/likely benign',              null,          'ClinVar'),
+    ('OncogenicityClassification',  'vus',     'Uncertain significance',            1, 'onco',    20,  20, 'onco',  20,  20,  'neutral',   null,         null,         'uncertain significance',            null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022'),
+    ('OncogenicityClassification',  'o',       'Oncogenic',                         2, 'onco',    10,  10, 'onco',   10, 10,  'supports',  'definitive', 'Definitive', 'oncogenic',                         null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022'),
+    ('OncogenicityClassification',  'lo',      'Likely oncogenic',                  2, 'onco',    11,  11, 'onco',   11, 11,  'supports',  'likely',     'Likely',     'likely oncogenic',                  null,          'ClinGen/CGC/VICC Guidelines for Oncogenicity, 2022'),
     -- ClinVar Other propositions
-    ('GermlineClassification',      'aff',     'Affects',                           2, 'aff',     100, 100, 'oth',  100, 100, 'supports',   null,        null,         'affects',                           null,          'ClinVar',                                                      'ClinvarAffectsProposition',            'hasAffectFor'),
-    ('GermlineClassification',      'assoc',   'association',                       2, 'assoc',   110, 110, 'oth',  110, 110, 'supports',   null,        null,         'association',                       null,          'ClinVar',                                                      'ClinvarAssociationProposition',        'isAssociatedWith'),
-    ('GermlineClassification',      'assocnf', 'association not found',             0, 'assoc',   111, 111, 'oth',  111, 111, 'disputes',   null,        null,         'association not found',             null,          'ClinVar',                                                      'ClinvarAssociationProposition',        'isAssociatedWith'),
-    ('GermlineClassification',      'cdfs',    'conflicting data from submitters',  1, 'cdfs',    115, 115, 'cdfs', 115, 115, 'neutral',    null,        null,         'conflicting data from submitters',  null,          'ClinVar',                                                      'ClinvarConflictingDataFromSubmitterProposition', 'isConflictingDataFromSubmittersFor'),
-    ('GermlineClassification',      'cs',      'confers sensitivity',               2, 'cs',      120, 120, 'oth',  120, 120, 'supports',   null,        null,         'confers sensitivity',               null,          'ClinVar',                                                      'ClinvarConfersSensitivityProposition', 'confersSensitivityFor'),
-    ('GermlineClassification',      'dr',      'rug response',                     2, 'dr',      130, 130, 'dr',   130, 130, 'supports',   null,        null,         'drug response',                     null,          'ClinVar',                                                      'ClinvarDrugResponseProposition',       'hasDrugResponseFor'),
-    ('GermlineClassification',      'np',      'not provided',                      0, 'np',      140, 140, 'oth',  140, 140, 'supports',   null,        null,         'not provided',                      null,          'ClinVar',                                                      'ClinvarNotProvidedProposition',        'hasNoProvidedClassificationFor'),
-    ('GermlineClassification',      'oth',     'other',                             0, 'oth',     150, 150, 'oth',  150, 150, 'supports',   null,        null,         'other',                             null,          'ClinVar',                                                      'ClinvarOtherProposition',              'isClinvarOtherAssociationFor'),
-    ('GermlineClassification',      'protect', 'protective',                        0, 'protect', 160, 160, 'oth',  160, 160, 'supports',   null,        null,         'protective',                        null,          'ClinVar',                                                      'ClinvarProtectiveProposition',         'isProtectiveFor'),
-    ('GermlineClassification',      'rf',      'risk factor',                       2, 'rf',      170, 170, 'oth',  170, 170, 'supports',   null,        null,         'risk factor',                       null,          'ClinVar',                                                      'ClinvarRiskFactorProposition',         'isRiskFactorFor'),
+    ('GermlineClassification',      'aff',     'Affects',                           2, 'aff',     100, 100, 'oth',  100, 100, 'supports',   null,        null,         'affects',                           null,          'ClinVar'),
+    ('GermlineClassification',      'assoc',   'association',                       2, 'assoc',   110, 110, 'oth',  110, 110, 'supports',   null,        null,         'association',                       null,          'ClinVar'),
+    ('GermlineClassification',      'assocnf', 'association not found',             0, 'assoc',   111, 111, 'oth',  111, 111, 'disputes',   null,        null,         'association not found',             null,          'ClinVar'),
+    ('GermlineClassification',      'cdfs',    'conflicting data from submitters',  1, 'cdfs',    115, 115, 'cdfs', 115, 115, 'neutral',    null,        null,         'conflicting data from submitters',  null,          'ClinVar'),
+    ('GermlineClassification',      'cs',      'confers sensitivity',               2, 'cs',      120, 120, 'oth',  120, 120, 'supports',   null,        null,         'confers sensitivity',               null,          'ClinVar'),
+    ('GermlineClassification',      'dr',      'drug response',                     2, 'dr',      130, 130, 'dr',   130, 130, 'supports',   null,        null,         'drug response',                     null,          'ClinVar'),
+    ('GermlineClassification',      'np',      'not provided',                      0, 'np',      140, 140, 'oth',  140, 140, 'supports',   null,        null,         'not provided',                      null,          'ClinVar'),
+    ('GermlineClassification',      'oth',     'other',                             0, 'oth',     150, 150, 'oth',  150, 150, 'supports',   null,        null,         'other',                             null,          'ClinVar'),
+    ('GermlineClassification',      'protect', 'protective',                        0, 'protect', 160, 160, 'oth',  160, 160, 'supports',   null,        null,         'protective',                        null,          'ClinVar'),
+    ('GermlineClassification',      'rf',      'risk factor',                       2, 'rf',      170, 170, 'oth',  170, 170, 'supports',   null,        null,         'risk factor',                       null,          'ClinVar'),
     -- SomaticImpact
-    ('SomaticClinicalImpact',       't1',      'Tier I (Strong)',                   2, 'sci', 10, 10, 'sci', 10, 10,  'supports',  'strong',     'Strong',     'tier 1',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'VariantClinicalSignificanceProposition', 'isClinicallySignificantFor'),
-    ('SomaticClinicalImpact',       't2',      'Tier II (Potential)',               2, 'sci', 11, 11, 'sci', 11, 11,  'supports',  'potential',  'Potential',  'tier 2',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'VariantClinicalSignificanceProposition', 'isClinicallySignificantFor'),
-    ('SomaticClinicalImpact',       't3',      'Tier III Unknown',                  1, 'sci', 20, 20, 'sci', 20, 20,  'neutral',   null,         null,         'tier 3',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'VariantClinicalSignificanceProposition', 'isClinicallySignificantFor'),
-    ('SomaticClinicalImpact',       't4',      'Tier IV (Benign)/Likely benign',    0, 'sci', 32, 32, 'sci', 32, 32,  'disputes',  null,         null,         'tier 4',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'VariantClinicalSignificanceProposition', 'isClinicallySignificantFor');
+    ('SomaticClinicalImpact',       't1',      'Tier I (Strong)',                   2, 'sci', 10, 10, 'sci', 10, 10,  'supports',  'strong',     'Strong',     'tier 1',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017'),
+    ('SomaticClinicalImpact',       't2',      'Tier II (Potential)',               2, 'sci', 11, 11, 'sci', 11, 11,  'supports',  'potential',  'Potential',  'tier 2',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017'),
+    ('SomaticClinicalImpact',       't3',      'Tier III Unknown',                  1, 'sci', 20, 20, 'sci', 20, 20,  'neutral',   null,         null,         'tier 3',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017'),
+    ('SomaticClinicalImpact',       't4',      'Tier IV (Benign)/Likely benign',    0, 'sci', 32, 32, 'sci', 32, 32,  'disputes',  null,         null,         'tier 4',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017');
 
 -- drop the non-GERMLINE rows from the clinsig_types table (on stage only)
 BEGIN
@@ -150,30 +146,33 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_proposition_types` (
     code STRING,
     label STRING,
     display_order INT64,
-    conflict_detectable BOOL
+    conflict_detectable BOOL,
+    gks_type STRING,
+    gks_predicate STRING
 );
 
 INSERT INTO `clinvar_ingest.clinvar_proposition_types` (
     code,
     label,
     display_order,
-    conflict_detectable
+    conflict_detectable,
+    gks_type,
+    gks_predicate
 )
 VALUES
-    ('path',    'Pathogenicity', 10, TRUE),
-    ('sci',     'Somatic Clinical Impact', 11, FALSE),
-    ('onco',    'Oncogenicity', 12, TRUE),
+    ('path',    'Pathogenicity',                    10, TRUE,  'VariantPathogenicityProposition',                    'isCausalFor'),
+    ('sci',     'Somatic Clinical Impact',          11, FALSE, 'VariantClinicalSignificanceProposition',             'isClinicallySignificantFor'),
+    ('onco',    'Oncogenicity',                     12, TRUE,  'VariantOncogenicityProposition',                     'isOncogenicFor'),
 -- other germline proposition types
-    ('aff',     'Affects', 20, FALSE),
-    ('assoc',   'Association', 30, FALSE),
-    ('cdfs',    'Conflicting Data From Submitters', 35, FALSE),
-    ('cs',      'Confers Sensitivity', 40, FALSE),
-    ('dr',      'Drug Response', 50, FALSE),
-    ('np',      'Not Provided', 60, FALSE),
-    ('oth',     'Other', 70, FALSE),
-    ('protect', 'Protective', 80, FALSE),
-    ('rf',      'Risk Factor', 90, FALSE);
-
+    ('aff',     'Affects',                          20, FALSE, 'ClinvarAffectsProposition',                          'hasAffectFor'),
+    ('assoc',   'Association',                      30, FALSE, 'ClinvarAssociationProposition',                      'isAssociatedWith'),
+    ('cdfs',    'Conflicting Data From Submitters', 35, FALSE, 'ClinvarConflictingDataFromSubmitterProposition',     'isConflictingDataFromSubmittersFor'),
+    ('cs',      'Confers Sensitivity',              40, FALSE, 'ClinvarConfersSensitivityProposition',               'confersSensitivityFor'),
+    ('dr',      'Drug Response',                    50, FALSE, 'ClinvarDrugResponseProposition',                     'hasDrugResponseFor'),
+    ('np',      'Not Provided',                     60, FALSE, 'ClinvarNotProvidedProposition',                      'hasNoProvidedClassificationFor'),
+    ('oth',     'Other',                            70, FALSE, 'ClinvarOtherProposition',                            'isClinvarOtherAssociationFor'),
+    ('protect', 'Protective',                       80, FALSE, 'ClinvarProtectiveProposition',                       'isProtectiveFor'),
+    ('rf',      'Risk Factor',                      90, FALSE, 'ClinvarRiskFactorProposition',                       'isRiskFactorFor');
 
 CREATE OR REPLACE TABLE `clinvar_ingest.scv_clinsig_map` (
     scv_term STRING,
