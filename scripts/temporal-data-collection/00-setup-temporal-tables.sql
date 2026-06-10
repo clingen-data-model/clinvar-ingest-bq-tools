@@ -135,6 +135,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
   classification_abbrev STRING,
   submitted_classification STRING,
   classification_comment STRING,
+  pmids STRING,
   submitter_id STRING,
   submitter_name STRING,
   submitter_abbrev STRING,

@@ -421,7 +421,7 @@ AS
 SELECT
   -- Identifiers with ClinVar links
   scv_id AS `SCV ID`,
-  CONCAT('https://www.ncbi.nlm.nih.gov/clinvar/', vcv_id) AS `ClinVar VCV Link`,
+  CONCAT('https://www.ncbi.nlm.nih.gov/clinvar/variation/', variation_id) AS `ClinVar VCV Link`,
   variation_id AS `Variation ID`,
 
   -- Submitter info
@@ -515,7 +515,7 @@ AS
 SELECT
   -- Identifiers
   scv_id AS `SCV ID`,
-  CONCAT('https://www.ncbi.nlm.nih.gov/clinvar/', vcv_id) AS `ClinVar VCV Link`,
+  CONCAT('https://www.ncbi.nlm.nih.gov/clinvar/variation/', variation_id) AS `ClinVar VCV Link`,
 
   -- Submitter info
   submitter_name AS `Submitter Name`,
