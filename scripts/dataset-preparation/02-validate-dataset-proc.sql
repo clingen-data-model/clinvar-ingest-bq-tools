@@ -48,11 +48,14 @@ BEGIN
     LEFT JOIN `clinvar_ingest.scv_clinsig_map` map
     ON
       map.scv_term = lower(IFNULL(ca.interpretation_description,'not provided'))
-    LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cst
+    LEFT JOIN (
+      `clinvar_ingest.clinvar_clinsig_types` cst
+      JOIN `clinvar_ingest.clinvar_proposition_types` cpt
+      ON cpt.code = cst.proposition_type
+    )
     ON
       cst.code = map.cv_clinsig_type
-      AND
-      cst.statement_type = ca.statement_type
+      AND cpt.statement_type_code = ca.statement_type
     WHERE
       cst.code IS NULL
       AND
