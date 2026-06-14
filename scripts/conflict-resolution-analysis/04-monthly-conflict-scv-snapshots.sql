@@ -36,7 +36,7 @@
 --   - -3: Flagged submission (excluded from aggregation)
 --
 --   Filtering:
---   - Only SCVs with gks_proposition_type = 'path' (pathogenicity assertions)
+--   - Only SCVs with proposition_type = 'path' (pathogenicity assertions)
 --   - Only VCVs that are in conflict state OR tracked for potential conflict
 --
 -- Key Fields Returned:
@@ -162,7 +162,7 @@ vcv_snapshots AS (
   FROM all_tracked_conflicts atc
   INNER JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
     ON vrg.variation_id = atc.variation_id
-    AND vrg.gks_proposition_type = 'path'
+    AND vrg.proposition_type = 'path'
     AND atc.snapshot_release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
     -- For currently conflicting: must have conflicting SCVs
     -- For resolved: accept any state (we need to see what the SCVs look like now)
@@ -195,7 +195,7 @@ scv_details AS (
   FROM `clinvar_ingest.clinvar_scvs` scv
   CROSS JOIN monthly_releases r
   WHERE
-    scv.gks_proposition_type = 'path'
+    scv.proposition_type = 'path'
     AND r.release_date BETWEEN scv.start_release_date AND scv.end_release_date
 )
 

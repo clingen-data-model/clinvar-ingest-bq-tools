@@ -67,7 +67,7 @@ BEGIN
       ON
         g.id = sgv.gene_id
       WHERE
-        svrg.gks_proposition_type = 'path'
+        svrg.proposition_type = 'path'
         AND
         DATE'%t' BETWEEN svrg.start_release_date AND IFNULL(svrg.end_release_date, CURRENT_DATE())
         AND

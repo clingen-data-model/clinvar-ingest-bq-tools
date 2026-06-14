@@ -68,7 +68,7 @@ These tables accumulate data across releases, tracking how records change over t
 |-------|-------------|-------------|
 | `clinvar_vcv_classifications` | VCV-level aggregate classification history | `variation_id`, `vcv_id`, `statement_type`, `rank`, `agg_classification_description`, `start_release_date`, `end_release_date`, `deleted_release_date` |
 | `clinvar_rcv_classifications` | RCV-level classification history (condition-specific) | `variation_id`, `rcv_id`, `statement_type`, `rank`, `start_release_date`, `end_release_date`, `deleted_release_date` |
-| `clinvar_scvs` | Individual SCV submission history | `variation_id`, `id` (SCV ID), `version`, `statement_type`, `gks_proposition_type`, `rank`, `submitter_id`, `start_release_date`, `end_release_date`, `deleted_release_date` |
+| `clinvar_scvs` | Individual SCV submission history | `variation_id`, `id` (SCV ID), `version`, `statement_type`, `proposition_type`, `rank`, `submitter_id`, `start_release_date`, `end_release_date`, `deleted_release_date` |
 
 !!! note "Temporal Record Lifecycle"
     - **Active record:** `deleted_release_date IS NULL`

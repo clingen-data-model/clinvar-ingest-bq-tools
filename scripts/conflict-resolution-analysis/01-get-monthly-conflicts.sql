@@ -21,7 +21,7 @@
 --     Variants are only included if agg_classification_description LIKE 'Conflicting%'
 --   - clinvar_ingest.clinvar_sum_vsp_rank_group
 --     Pre-computed aggregations of SCVs grouped by variation_id, statement_type,
---     gks_proposition_type, and rank (star rating). Used for conflict details.
+--     proposition_type, and rank (star rating). Used for conflict details.
 --   - clinvar_ingest.all_schemas() table function
 --     Returns all available release dates with schema_name, release_date,
 --     prev_release_date, and next_release_date.
@@ -64,7 +64,7 @@
 --   - submitter_count: Number of distinct submitters contributing to conflict
 --   - submission_count: Number of SCVs contributing to conflict
 --   - snapshot_release_date: The monthly release date for this snapshot
---   - total_path_variants: Total distinct variants with gks_proposition_type='path'
+--   - total_path_variants: Total distinct variants with proposition_type='path'
 --                          (pathogenicity assertions) for this release
 --   - variants_with_conflict_potential: Count of variants with 2+ SCVs at their
 --                          contributing tier. For 1-star or 2-star VCVs, counts variants
@@ -75,7 +75,7 @@
 --
 -- Deduplication Logic:
 --   When a variant has multiple conflicting groups (by statement_type,
---   gks_proposition_type, or rank), we keep only the highest-priority record
+--   proposition_type, or rank), we keep only the highest-priority record
 --   using: ORDER BY rank DESC, agg_sig_type DESC
 --   This prioritizes higher star rankings and clinsig conflicts over non-clinsig.
 --
@@ -99,7 +99,7 @@ WITH monthly_releases AS (
 ),
 
 -- Count total pathogenicity variants per monthly release (baseline denominator)
--- Using gks_proposition_type = 'path' for consistency with SCV-level tracking
+-- Using proposition_type = 'path' for consistency with SCV-level tracking
 monthly_path_totals AS (
   SELECT
     r.release_date AS snapshot_release_date,
@@ -107,7 +107,7 @@ monthly_path_totals AS (
   FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
   CROSS JOIN monthly_releases r
   WHERE
-    vrg.gks_proposition_type = 'path'
+    vrg.proposition_type = 'path'
     AND r.release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
   GROUP BY r.release_date
 ),
@@ -131,7 +131,7 @@ variants_with_potential AS (
   FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
   CROSS JOIN monthly_releases r
   WHERE
-    vrg.gks_proposition_type = 'path'
+    vrg.proposition_type = 'path'
     AND vrg.rank IN (0, 1, 2)  -- Only consider ranks that can have conflicts (not 3-4 star expert panels)
     AND r.release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
   GROUP BY r.release_date, vrg.variation_id
@@ -197,7 +197,7 @@ monthly_conflicts AS (
   FROM authoritative_conflicts ac
   INNER JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
     ON vrg.variation_id = ac.variation_id
-    AND vrg.gks_proposition_type = 'path'
+    AND vrg.proposition_type = 'path'
     AND vrg.agg_sig_type IN (3, 5, 6, 7)  -- Must actually have conflicting SCVs
     AND ac.snapshot_release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
   -- Keep only the highest-priority conflicting record per variant per month

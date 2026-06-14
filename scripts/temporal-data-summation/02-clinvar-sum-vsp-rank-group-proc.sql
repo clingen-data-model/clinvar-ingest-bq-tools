@@ -9,14 +9,14 @@ BEGIN
   WITH x AS
   (
     -- this gets us the count of scvs for a given rank and clinical significance
-    -- within a statement_type and gks_proposition_type. It does this for
+    -- within a statement_type and proposition_type. It does this for
     -- each variation_id change for a given scv
     SELECT
       vs.variation_id,
       vsc.start_release_date,
       vsc.end_release_date,
       vs.statement_type,
-      vs.gks_proposition_type,
+      vs.proposition_type,
       vs.rank,
       vs.clinsig_type,
       vs.classif_type,
@@ -34,7 +34,7 @@ BEGIN
       vsc.start_release_date,
       vsc.end_release_date,
       vs.statement_type,
-      vs.gks_proposition_type,
+      vs.proposition_type,
       vs.rank,
       vs.classif_type,
       vs.clinsig_type
@@ -44,7 +44,7 @@ BEGIN
     x.end_release_date,
     x.variation_id,
     x.statement_type,
-    x.gks_proposition_type,
+    x.proposition_type,
     x.rank,
     COUNT(DISTINCT vs.clinsig_type) as unique_clinsig_type_count,
     SUM(DISTINCT IF(vs.clinsig_type=2,4,IF(vs.clinsig_type=1,2,1))) as agg_sig_type,
@@ -66,7 +66,7 @@ BEGIN
     AND
     vs.statement_type IS NOT DISTINCT FROM x.statement_type
     AND
-    vs.gks_proposition_type IS NOT DISTINCT FROM x.gks_proposition_type
+    vs.proposition_type IS NOT DISTINCT FROM x.proposition_type
     AND
     vs.rank IS NOT DISTINCT FROM x.rank
     AND
@@ -78,7 +78,7 @@ BEGIN
     x.start_release_date,
     x.end_release_date,
     x.statement_type,
-    x.gks_proposition_type,
+    x.proposition_type,
     x.rank
   ;
 

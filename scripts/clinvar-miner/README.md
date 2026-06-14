@@ -4,7 +4,7 @@ SQL scripts that produce BigQuery views replicating the datasets behind [ClinVar
 
 ## Scope
 
-All views are scoped to **GermlineClassification** variants from the latest ClinVar release. Variant selection uses the `clinvar_sum_vsp_top_rank_group_change` table to identify each variant's determining rank, prioritizing `path` over `oth` `gks_proposition_type` when both exist for a given `variation_id`.
+All views are scoped to **GermlineClassification** variants from the latest ClinVar release. Variant selection uses the `clinvar_sum_vsp_top_rank_group_change` table to identify each variant's determining rank, prioritizing `path` over `oth` `proposition_type` when both exist for a given `variation_id`.
 
 ## Scripts
 

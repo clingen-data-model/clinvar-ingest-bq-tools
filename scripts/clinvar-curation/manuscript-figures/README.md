@@ -18,7 +18,7 @@ Each script in this folder generates a dataset that underpins a specific figure 
 
 ## Data Scope
 
-All scripts operate on the **Germline Variant Pathogenicity Classification Submission Data** subset of ClinVar (`gks_proposition_type = 'path'`). This excludes Somatic SCVs and other Germline SCVs that are not pathogenicity classifications (e.g., drug response, clinical impact).
+All scripts operate on the **Germline Variant Pathogenicity Classification Submission Data** subset of ClinVar (`proposition_type = 'path'`). This excludes Somatic SCVs and other Germline SCVs that are not pathogenicity classifications (e.g., drug response, clinical impact).
 
 ## Dependencies
 

@@ -102,7 +102,7 @@ actual_scvs as (
     fv.submission_month_year,
     vs.variation_id,
     vs.statement_type,
-    vs.gks_proposition_type,
+    vs.proposition_type,
     vs.rank,
     vs.clinsig_type,
     vs.classif_type,
@@ -127,7 +127,7 @@ derived_scvs as (
     fv.submission_month_year,
     vs.variation_id,
     vs.statement_type,
-    vs.gks_proposition_type,
+    vs.proposition_type,
     vs.rank,
     vs.clinsig_type,
     vs.classif_type,
@@ -159,7 +159,7 @@ actual_groups AS (
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type,
+    proposition_type,
     rank,
     clinsig_type,
     classif_type,
@@ -172,7 +172,7 @@ actual_groups AS (
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type,
+    proposition_type,
     rank,
     classif_type,
     clinsig_type
@@ -186,7 +186,7 @@ derived_groups AS (
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type,
+    proposition_type,
     rank,
     clinsig_type,
     classif_type,
@@ -199,7 +199,7 @@ derived_groups AS (
     submission_yy_mm,
     submission_month_year,
     statement_type,
-    gks_proposition_type,
+    proposition_type,
     rank,
     classif_type,
     clinsig_type
@@ -213,7 +213,7 @@ calculated_results AS (
     agrps.submission_month_year,
     agrps.variation_id,
     agrps.statement_type,
-    agrps.gks_proposition_type,
+    agrps.proposition_type,
     agrps.rank,
     -- actual scvs
     COUNT(DISTINCT agrps.clinsig_type) as actual_unique_clinsig_type_count,
@@ -262,7 +262,7 @@ calculated_results AS (
     AND
     agrps.statement_type = ascvs.statement_type
     AND
-    agrps.gks_proposition_type = ascvs.gks_proposition_type
+    agrps.proposition_type = ascvs.proposition_type
     AND
     agrps.rank = ascvs.rank
     AND
@@ -280,7 +280,7 @@ calculated_results AS (
     AND
     dgrps.statement_type = dscvs.statement_type
     AND
-    dgrps.gks_proposition_type = dscvs.gks_proposition_type
+    dgrps.proposition_type = dscvs.proposition_type
     AND
     dgrps.rank = dscvs.rank
     AND
@@ -292,7 +292,7 @@ calculated_results AS (
     agrps.submission_month_year,
     agrps.variation_id,
     agrps.statement_type,
-    agrps.gks_proposition_type,
+    agrps.proposition_type,
     agrps.rank
 ),
 group_results AS (
@@ -308,7 +308,7 @@ group_results AS (
     cr.submission_month_year,
     cr.variation_id,
     cr.statement_type,
-    cr.gks_proposition_type,
+    cr.proposition_type,
     cr.rank,
     cr.actual_agg_sig_type,
     cr.actual_agg_classif_w_count,
@@ -350,7 +350,7 @@ final_results AS (
     submission_month_year,
     variation_id,
     statement_type,
-    gks_proposition_type,
+    proposition_type,
 
     MAX(rank) as top_rank,
     MAX_BY(is_removed, rank) as top_is_removed,
@@ -370,7 +370,7 @@ final_results AS (
     submission_month_year,
     variation_id,
     statement_type,
-    gks_proposition_type
+    proposition_type
 )
 SELECT
   batch_id,
@@ -378,7 +378,7 @@ SELECT
   submission_month_year,
   variation_id,
   statement_type,
-  gks_proposition_type,
+  proposition_type,
   top_rank,
   top_actual_agg_classif_w_count,
   CASE

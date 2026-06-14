@@ -11,7 +11,7 @@ BEGIN
     vs.id,
     vs.version,
     vs.statement_type,
-    vs.gks_proposition_type,
+    vs.proposition_type,
     vg.rank,
     vg.sig_type[OFFSET(vs.clinsig_type)].percent as outlier_pct,
     FORMAT("%s (%s) %3.0f%% %s",
@@ -19,7 +19,7 @@ BEGIN
       vs.classification_abbrev,
       vg.sig_type[OFFSET(vs.clinsig_type)].percent*100,
       vs.full_scv_id) as scv_label,
-    CASE vs.gks_proposition_type
+    CASE vs.proposition_type
     WHEN 'path' THEN
       CASE vs.clinsig_type
           WHEN 2 THEN '1-PLP'
@@ -35,7 +35,7 @@ BEGIN
     AND
     vg.statement_type IS NOT DISTINCT FROM vs.statement_type
     AND
-    vg.gks_proposition_type IS NOT DISTINCT FROM vs.gks_proposition_type
+    vg.proposition_type IS NOT DISTINCT FROM vs.proposition_type
     AND
     vg.rank IS NOT DISTINCT FROM vs.rank
     AND

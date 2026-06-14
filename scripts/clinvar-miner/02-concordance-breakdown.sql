@@ -10,7 +10,7 @@
 -- Scope:
 --   All GermlineClassification variants from the latest ClinVar release.
 --   Uses max top_rank per variation_id, prioritizing 'path' over 'oth'
---   gks_proposition_type when both exist.
+--   proposition_type when both exist.
 --
 -- Source Tables:
 --   - clinvar_ingest.clinvar_sum_vsp_top_rank_group_change
@@ -32,10 +32,10 @@
 --        LP-related terms: 'lp', 'lp-lp', 'lra'
 --        B-related term: 'b'
 --        LB-related term: 'lb'
---   4. Expert Panel: top_rank >= 3 for 'path' gks_proposition_type
+--   4. Expert Panel: top_rank >= 3 for 'path' proposition_type
 --   5. >= 2 Concordant: agg_sig_type IN (1, 2, 4) AND submission_count >= 2
---      for 'path' gks_proposition_type
---   6. 1 Submission: top_rank IN (0, 1) for 'path' gks_proposition_type
+--      for 'path' proposition_type
+--   6. 1 Submission: top_rank IN (0, 1) for 'path' proposition_type
 --   7. not provided/other: all remaining
 --
 -- Output Columns:
@@ -56,12 +56,12 @@ WITH latest_release AS (
 ),
 
 -- All GermlineClassification top_rank records for the latest release.
--- For each variation_id, take the max top_rank. If multiple gks_proposition_types
+-- For each variation_id, take the max top_rank. If multiple proposition_types
 -- exist at that max top_rank, prioritize 'path' over 'oth'.
 top_rank AS (
   SELECT
     trg.variation_id,
-    trg.gks_proposition_type,
+    trg.proposition_type,
     trg.top_rank,
     lr.release_date
   FROM latest_release lr
@@ -71,7 +71,7 @@ top_rank AS (
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY trg.variation_id
     ORDER BY trg.top_rank DESC,
-      CASE trg.gks_proposition_type WHEN 'path' THEN 0 ELSE 1 END
+      CASE trg.proposition_type WHEN 'path' THEN 0 ELSE 1 END
   ) = 1
 ),
 
@@ -79,7 +79,7 @@ top_rank AS (
 rank_group AS (
   SELECT
     tr.variation_id,
-    tr.gks_proposition_type,
+    tr.proposition_type,
     tr.top_rank,
     tr.release_date,
     vrg.agg_sig_type,
@@ -89,7 +89,7 @@ rank_group AS (
   JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
     ON vrg.variation_id = tr.variation_id
     AND vrg.rank = tr.top_rank
-    AND vrg.gks_proposition_type = tr.gks_proposition_type
+    AND vrg.proposition_type = tr.proposition_type
     AND tr.release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
 ),
 
@@ -115,14 +115,14 @@ categorized AS (
         AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(rg.agg_classif, '/')) t WHERE t = 'b')
         THEN 'Confidence Difference (P vs LP or B vs LB)'
       -- 4. Expert Panel: high-star path variants
-      WHEN rg.gks_proposition_type = 'path' AND rg.top_rank >= 3
+      WHEN rg.proposition_type = 'path' AND rg.top_rank >= 3
         THEN 'Expert Panel'
       -- 5. Concordant with 2+ submissions
-      WHEN rg.gks_proposition_type = 'path' AND rg.agg_sig_type IN (1, 2, 4)
+      WHEN rg.proposition_type = 'path' AND rg.agg_sig_type IN (1, 2, 4)
         AND rg.submission_count >= 2
         THEN '>= 2 Concordant'
       -- 6. Single submission
-      WHEN rg.gks_proposition_type = 'path' AND rg.top_rank IN (0, 1)
+      WHEN rg.proposition_type = 'path' AND rg.top_rank IN (0, 1)
         THEN '1 Submission'
       ELSE 'not provided/other'
     END AS concordance_status,
@@ -137,10 +137,10 @@ categorized AS (
         AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(rg.agg_classif, '/')) t WHERE t = 'lb')
         AND EXISTS (SELECT 1 FROM UNNEST(SPLIT(rg.agg_classif, '/')) t WHERE t = 'b')
         THEN 3
-      WHEN rg.gks_proposition_type = 'path' AND rg.top_rank >= 3 THEN 4
-      WHEN rg.gks_proposition_type = 'path' AND rg.agg_sig_type IN (1, 2, 4)
+      WHEN rg.proposition_type = 'path' AND rg.top_rank >= 3 THEN 4
+      WHEN rg.proposition_type = 'path' AND rg.agg_sig_type IN (1, 2, 4)
         AND rg.submission_count >= 2 THEN 5
-      WHEN rg.gks_proposition_type = 'path' AND rg.top_rank IN (0, 1) THEN 6
+      WHEN rg.proposition_type = 'path' AND rg.top_rank IN (0, 1) THEN 6
       ELSE 7
     END AS sort_order
   FROM rank_group rg

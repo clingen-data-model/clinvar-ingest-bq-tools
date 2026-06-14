@@ -8,7 +8,7 @@ BEGIN
     SELECT
       variation_id,
       statement_type,
-      gks_proposition_type,
+      proposition_type,
       start_release_date,
       end_release_date,
       MAX(rank) AS top_rank
@@ -19,14 +19,14 @@ BEGIN
       start_release_date,
       end_release_date,
       statement_type,
-      gks_proposition_type
+      proposition_type
   )
   SELECT
     x.start_release_date,
     x.end_release_date,
     x.variation_id,
     x.statement_type,
-    x.gks_proposition_type,
+    x.proposition_type,
     x.top_rank
   FROM x;
 
@@ -37,13 +37,13 @@ BEGIN
     st.start_release_date,
     st.variation_id,
     st.statement_type,
-    st.gks_proposition_type,
+    st.proposition_type,
     st.top_rank,
     row_number () OVER (
       ORDER BY
         st.variation_id,
         st.statement_type,
-        st.gks_proposition_type,
+        st.proposition_type,
         st.start_release_date asc nulls first
     ) as rownum
   FROM (
@@ -51,7 +51,7 @@ BEGIN
       vtg.start_release_date,
       vtg.variation_id,
       vtg.statement_type,
-      vtg.gks_proposition_type,
+      vtg.proposition_type,
       vtg.top_rank
     FROM _SESSION.vsp_top_rank_group vtg
     UNION DISTINCT
@@ -59,7 +59,7 @@ BEGIN
       r.next_release_date as start_release_date,
       vtg.variation_id,
       vtg.statement_type,
-      vtg.gks_proposition_type,
+      vtg.proposition_type,
       vtg.top_rank
     FROM _SESSION.vsp_top_rank_group vtg
     JOIN `clinvar_ingest.all_releases`() r
@@ -72,13 +72,13 @@ BEGIN
     en.end_release_date,
     en.variation_id,
     en.statement_type,
-    en.gks_proposition_type,
+    en.proposition_type,
     en.top_rank,
     row_number () over (
       ORDER BY
         en.variation_id,
         en.statement_type,
-        en.gks_proposition_type,
+        en.proposition_type,
         en.end_release_date asc nulls last
     ) as rownum
   FROM (
@@ -86,7 +86,7 @@ BEGIN
       vtg.end_release_date,
       vtg.variation_id,
       vtg.statement_type,
-      vtg.gks_proposition_type,
+      vtg.proposition_type,
       vtg.top_rank
     FROM _SESSION.vsp_top_rank_group vtg
     UNION DISTINCT
@@ -94,7 +94,7 @@ BEGIN
       r.prev_release_date as end_release_date,
       vtg.variation_id,
       vtg.statement_type,
-      vtg.gks_proposition_type,
+      vtg.proposition_type,
       vtg.top_rank
     FROM _SESSION.vsp_top_rank_group vtg
     JOIN `clinvar_ingest.all_releases`() r
@@ -108,7 +108,7 @@ BEGIN
   SELECT
     e.variation_id,
     e.statement_type,
-    e.gks_proposition_type,
+    e.proposition_type,
     e.top_rank,
     s.start_release_date,
     e.end_release_date
@@ -121,7 +121,7 @@ BEGIN
     and
     e.statement_type = s.statement_type
     and
-    e.gks_proposition_type = s.gks_proposition_type
+    e.proposition_type = s.proposition_type
     and
     e.top_rank = s.top_rank
   ;

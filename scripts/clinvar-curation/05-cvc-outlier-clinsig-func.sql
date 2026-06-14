@@ -6,7 +6,7 @@ scvs AS
     SELECT
       css.variation_id,
       css.statement_type,
-      css.gks_proposition_type,
+      css.proposition_type,
       vtop.top_rank,
       css.id as scv_id,
       css.version as scv_ver,
@@ -26,7 +26,7 @@ scvs AS
       AND
       vtop.statement_type = css.statement_type
       AND
-      vtop.gks_proposition_type = css.gks_proposition_type
+      vtop.proposition_type = css.proposition_type
       AND
       vtop.top_rank = css.rank
       AND
@@ -39,7 +39,7 @@ scvs AS
       AND
       crg.statement_type = vtop.statement_type
       AND
-      crg.gks_proposition_type = vtop.gks_proposition_type
+      crg.proposition_type = vtop.proposition_type
       AND
       rel.release_date between crg.start_release_date and crg.end_release_date
       AND
@@ -64,7 +64,7 @@ scvs AS
     SELECT
       scvs.variation_id,
       scvs.statement_type,
-      scvs.gks_proposition_type,
+      scvs.proposition_type,
       scvs.top_rank,
       vcv.full_vcv_id,
       vcv.id as vcv_id,
@@ -91,7 +91,7 @@ scvs AS
     GROUP BY
       scvs.variation_id,
       scvs.statement_type,
-      scvs.gks_proposition_type,
+      scvs.proposition_type,
       scvs.top_rank,
       vcv.full_vcv_id,
       vcv.id,
@@ -108,7 +108,7 @@ scvs AS
         STRUCT(
           a.variation_id,
           a.statement_type,
-          a.gks_proposition_type,
+          a.proposition_type,
           a.scv_id,
           a.scv_ver,
           a.rank,
@@ -137,7 +137,7 @@ scvs AS
     select
       lrsa.last.variation_id,
       lrsa.last.statement_type,
-      lrsa.last.gks_proposition_type,
+      lrsa.last.proposition_type,
       lrsa.last.rank,
       COUNTIF(lrsa.last.action='flagging candidate') as flagging_candidate_cnt,
       COUNTIF(lrsa.last.action = "no change") as no_change_cnt
@@ -145,7 +145,7 @@ scvs AS
     group by
       lrsa.last.variation_id,
       lrsa.last.statement_type,
-      lrsa.last.gks_proposition_type,
+      lrsa.last.proposition_type,
       lrsa.last.rank
   )
   SELECT
@@ -156,7 +156,7 @@ scvs AS
     vars.vcep_gene_spec_status,
     vars.top_rank,
     vars.statement_type,
-    vars.gks_proposition_type,
+    vars.proposition_type,
     vars.vcv_id,
     vars.vcv_ver,
     cs.full_scv_id,    --
@@ -198,7 +198,7 @@ scvs AS
     AND
     vars.statement_type = scvs.statement_type
     AND
-    vars.gks_proposition_type = scvs.gks_proposition_type
+    vars.proposition_type = scvs.proposition_type
   LEFT JOIN last_reviewed_scv_anno anno
   ON
     anno.last.scv_id = scvs.scv_id
@@ -210,7 +210,7 @@ scvs AS
     AND
     var_anno.statement_type= vars.statement_type
     AND
-    var_anno.gks_proposition_type = vars.gks_proposition_type
+    var_anno.proposition_type = vars.proposition_type
     AND
     var_anno.rank = vars.top_rank
   LEFT JOIN `clinvar_curator.cvc_annotations_impact`() ci
@@ -219,6 +219,6 @@ scvs AS
     AND
     ci.statement_type = vars.statement_type
     AND
-    ci.gks_proposition_type = vars.gks_proposition_type
+    ci.proposition_type = vars.proposition_type
     AND
     ci.rank = vars.top_rank

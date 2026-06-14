@@ -18,8 +18,8 @@
 --
 -- Fields compared (all fields except version, submission_date, and temporal tracking):
 --   - statement_type
---   - original_proposition_type
---   - gks_proposition_type
+--   - proposition_type
+--   - proposition_type
 --   - clinical_impact_assertion_type
 --   - clinical_impact_clinical_significance
 --   - rank
@@ -72,8 +72,8 @@ scv_versions AS (
     MIN(start_release_date) AS start_release_date,
     -- Fields to compare (use ANY_VALUE since they should be consistent within a version)
     ANY_VALUE(statement_type) AS statement_type,
-    ANY_VALUE(original_proposition_type) AS original_proposition_type,
-    ANY_VALUE(gks_proposition_type) AS gks_proposition_type,
+    ANY_VALUE(proposition_type) AS proposition_type,
+    ANY_VALUE(proposition_type) AS proposition_type,
     ANY_VALUE(clinical_impact_assertion_type) AS clinical_impact_assertion_type,
     ANY_VALUE(clinical_impact_clinical_significance) AS clinical_impact_clinical_significance,
     ANY_VALUE(rank) AS rank,
@@ -114,8 +114,8 @@ version_comparisons AS (
     -- Compare each field using NULL-safe IS NOT DISTINCT FROM
     -- TRUE means the field is the same, FALSE means it changed
     (curr.statement_type IS NOT DISTINCT FROM prev.statement_type) AS statement_type_same,
-    (curr.original_proposition_type IS NOT DISTINCT FROM prev.original_proposition_type) AS original_proposition_type_same,
-    (curr.gks_proposition_type IS NOT DISTINCT FROM prev.gks_proposition_type) AS gks_proposition_type_same,
+    (curr.proposition_type IS NOT DISTINCT FROM prev.proposition_type) AS proposition_type_same,
+    (curr.proposition_type IS NOT DISTINCT FROM prev.proposition_type) AS proposition_type_same,
     (curr.clinical_impact_assertion_type IS NOT DISTINCT FROM prev.clinical_impact_assertion_type) AS clinical_impact_assertion_type_same,
     (curr.clinical_impact_clinical_significance IS NOT DISTINCT FROM prev.clinical_impact_clinical_significance) AS clinical_impact_clinical_significance_same,
     (curr.rank IS NOT DISTINCT FROM prev.rank) AS rank_same,
@@ -154,8 +154,8 @@ SELECT
   -- A duplicate bump means the submission is identical to the prior version
   -- and should not have had a version increment at all.
   (statement_type_same
-   AND original_proposition_type_same
-   AND gks_proposition_type_same
+   AND proposition_type_same
+   AND proposition_type_same
    AND clinical_impact_assertion_type_same
    AND clinical_impact_clinical_significance_same
    AND rank_same
@@ -175,8 +175,8 @@ SELECT
 
   -- Count how many fields changed
   (CASE WHEN NOT statement_type_same THEN 1 ELSE 0 END
-   + CASE WHEN NOT original_proposition_type_same THEN 1 ELSE 0 END
-   + CASE WHEN NOT gks_proposition_type_same THEN 1 ELSE 0 END
+   + CASE WHEN NOT proposition_type_same THEN 1 ELSE 0 END
+   + CASE WHEN NOT proposition_type_same THEN 1 ELSE 0 END
    + CASE WHEN NOT clinical_impact_assertion_type_same THEN 1 ELSE 0 END
    + CASE WHEN NOT clinical_impact_clinical_significance_same THEN 1 ELSE 0 END
    + CASE WHEN NOT rank_same THEN 1 ELSE 0 END
@@ -197,8 +197,8 @@ SELECT
   -- List which fields changed
   ARRAY_TO_STRING(ARRAY_CONCAT(
     IF(NOT statement_type_same, ['statement_type'], []),
-    IF(NOT original_proposition_type_same, ['original_proposition_type'], []),
-    IF(NOT gks_proposition_type_same, ['gks_proposition_type'], []),
+    IF(NOT proposition_type_same, ['proposition_type'], []),
+    IF(NOT proposition_type_same, ['proposition_type'], []),
     IF(NOT clinical_impact_assertion_type_same, ['clinical_impact_assertion_type'], []),
     IF(NOT clinical_impact_clinical_significance_same, ['clinical_impact_clinical_significance'], []),
     IF(NOT rank_same, ['rank'], []),

@@ -46,7 +46,7 @@ The `createSigType` function produces an array of three elements representing th
 - Index 2: Significant (PLP -- Pathogenic/Likely Pathogenic)
 
 ### Rank Groups
-SCVs are grouped by `variation_id`, `statement_type`, `gks_proposition_type`, and `rank`. The `rank` value comes from the classification's review status and determines the weight of that classification in aggregate assessments.
+SCVs are grouped by `variation_id`, `statement_type`, `proposition_type`, and `rank`. The `rank` value comes from the classification's review status and determines the weight of that classification in aggregate assessments.
 
 ### Change Detection
 The change detection pattern used in steps 01, 04, 05, and 06 works by:

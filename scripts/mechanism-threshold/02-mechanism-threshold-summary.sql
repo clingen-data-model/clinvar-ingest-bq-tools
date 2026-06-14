@@ -8,7 +8,7 @@
 -- variants across genes with different dosage curation levels.
 --
 -- Uses clinvar_sum_vsp_rank_group for efficient pre-aggregated VCV data:
--- - gks_proposition_type = 'path' for pathogenic VCVs
+-- - proposition_type = 'path' for pathogenic VCVs
 -- - rank: 0=0★, 1=1★, 2=2★, 3=3★, 4=4★
 -- - agg_sig_type = 4 means P/LP (at least one P/LP submission)
 -- - Only the top-level (highest) rank is considered for each variation
@@ -89,14 +89,14 @@ EXECUTE IMMEDIATE FORMAT("""
     JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg
     ON
       svrg.variation_id = sgv.variation_id
-      AND svrg.gks_proposition_type = 'path'
+      AND svrg.proposition_type = 'path'
       AND DATE'%t' BETWEEN svrg.start_release_date AND IFNULL(svrg.end_release_date, CURRENT_DATE())
     -- Only include the top-level rank for each variation
     WHERE svrg.rank = (
       SELECT MAX(svrg2.rank)
       FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` svrg2
       WHERE svrg2.variation_id = sgv.variation_id
-        AND svrg2.gks_proposition_type = 'path'
+        AND svrg2.proposition_type = 'path'
         AND DATE'%t' BETWEEN svrg2.start_release_date AND IFNULL(svrg2.end_release_date, CURRENT_DATE())
     )
   ),
