@@ -122,6 +122,7 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_scvs`
   full_scv_id STRING,
   statement_type STRING NOT NULL,
   proposition_type STRING,
+  _bak_gks_proposition_type STRING,
   clinical_impact_assertion_type STRING,
   clinical_impact_clinical_significance STRING,
   rank INT NOT NULL,
