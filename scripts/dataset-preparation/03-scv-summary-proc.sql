@@ -142,8 +142,7 @@ BEGIN
     CLUSTER BY id AS
     SELECT
       ca.id,
-      cst.original_proposition_type,
-      cst.gks_proposition_type,
+      cst.proposition_type,
       def.rank,
       IFNULL(map.cv_clinsig_type, '-') as classif_type,
       cst.significance,
@@ -189,8 +188,7 @@ BEGIN
       ca.local_key,
       ca.interpretation_date_last_evaluated as last_evaluated,
       ca.statement_type,
-      cst.original_proposition_type,
-      cst.gks_proposition_type,
+      cst.proposition_type,
       ca.clinical_impact_assertion_type,
       ca.clinical_impact_clinical_significance,
       cst.rank,
