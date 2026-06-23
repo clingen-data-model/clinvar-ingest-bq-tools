@@ -6,12 +6,13 @@
 --   Compares the ENTIRE SCV record between consecutive versions to categorize
 --   version changes into three types:
 --
---   1. DUPLICATE BUMP: ALL 19 fields identical - the submission is a duplicate
+--   1. DUPLICATE BUMP: ALL 20 fields identical - the submission is a duplicate
 --      of the prior version and should not have had a version bump at all.
 --
---   2. NON-SUBSTANTIVE CHANGE BUMP: The 4 key classification fields are the same
---      (classification, last_evaluated, trait, rank) but other fields changed.
---      Detected by the standard 4-field check in cvc_version_bumps.
+--   2. NON-SUBSTANTIVE CHANGE BUMP: The 6 key classification fields are the same
+--      (classif_type, submitted_classification, last_evaluated, trait_set_id,
+--       pmids, classification_comment) but other fields changed.
+--      Detected by the standard 6-field check in cvc_version_bumps.
 --
 --   3. SUBSTANTIVE CHANGE BUMP: Real changes were made to classification-relevant
 --      fields - this is a legitimate version update.
@@ -32,6 +33,7 @@
 --   - classification_abbrev
 --   - submitted_classification
 --   - classification_comment
+--   - pmids
 --   - origin
 --   - affected_status
 --   - method_type
@@ -86,6 +88,7 @@ scv_versions AS (
     ANY_VALUE(classification_abbrev) AS classification_abbrev,
     ANY_VALUE(submitted_classification) AS submitted_classification,
     ANY_VALUE(classification_comment) AS classification_comment,
+    ANY_VALUE(pmids) AS pmids,
     ANY_VALUE(origin) AS origin,
     ANY_VALUE(affected_status) AS affected_status,
     ANY_VALUE(method_type) AS method_type,
@@ -128,6 +131,7 @@ version_comparisons AS (
     (curr.classification_abbrev IS NOT DISTINCT FROM prev.classification_abbrev) AS classification_abbrev_same,
     (curr.submitted_classification IS NOT DISTINCT FROM prev.submitted_classification) AS submitted_classification_same,
     (curr.classification_comment IS NOT DISTINCT FROM prev.classification_comment) AS classification_comment_same,
+    (curr.pmids IS NOT DISTINCT FROM prev.pmids) AS pmids_same,
     (curr.origin IS NOT DISTINCT FROM prev.origin) AS origin_same,
     (curr.affected_status IS NOT DISTINCT FROM prev.affected_status) AS affected_status_same,
     (curr.method_type IS NOT DISTINCT FROM prev.method_type) AS method_type_same,
@@ -168,6 +172,7 @@ SELECT
    AND classification_abbrev_same
    AND submitted_classification_same
    AND classification_comment_same
+   AND pmids_same
    AND origin_same
    AND affected_status_same
    AND method_type_same
@@ -189,6 +194,7 @@ SELECT
    + CASE WHEN NOT classification_abbrev_same THEN 1 ELSE 0 END
    + CASE WHEN NOT submitted_classification_same THEN 1 ELSE 0 END
    + CASE WHEN NOT classification_comment_same THEN 1 ELSE 0 END
+   + CASE WHEN NOT pmids_same THEN 1 ELSE 0 END
    + CASE WHEN NOT origin_same THEN 1 ELSE 0 END
    + CASE WHEN NOT affected_status_same THEN 1 ELSE 0 END
    + CASE WHEN NOT method_type_same THEN 1 ELSE 0 END
@@ -211,6 +217,7 @@ SELECT
     IF(NOT classification_abbrev_same, ['classification_abbrev'], []),
     IF(NOT submitted_classification_same, ['submitted_classification'], []),
     IF(NOT classification_comment_same, ['classification_comment'], []),
+    IF(NOT pmids_same, ['pmids'], []),
     IF(NOT origin_same, ['origin'], []),
     IF(NOT affected_status_same, ['affected_status'], []),
     IF(NOT method_type_same, ['method_type'], []),
@@ -335,18 +342,18 @@ ORDER BY duplicate_bumps DESC;
 -- Aggregates by the first day of each month for consistency with other charts
 --
 -- Categories:
---   - Duplicate Bump: ALL 19 fields identical (submission is a duplicate)
---   - Non-substantive Change Bump: 4 key fields same, but minor fields changed
+--   - Duplicate Bump: ALL 20 fields identical (submission is a duplicate)
+--   - Non-substantive Change Bump: 6 key fields same, but minor fields changed
 --   - Substantive Change Bump: Real changes to classification-relevant fields
 --
 -- Columns:
 --   release_month             - First day of the month (for sorting/joining)
 --   month_label               - Human-readable month label (e.g., "Jan 2024")
 --   total_version_changes     - Total version changes in this month
---   duplicate_bumps           - Identical resubmissions (19-field match)
---   nonsubstantive_bumps      - 4 key fields same, minor fields changed
+--   duplicate_bumps           - Identical resubmissions (20-field match)
+--   nonsubstantive_bumps      - 6 key fields same, minor fields changed
 --   duplicate_also_nonsubstantive - Duplicate bumps detected by both methods
---   duplicate_only            - Duplicate bumps NOT detected by 4-field check (should be 0)
+--   duplicate_only            - Duplicate bumps NOT detected by 6-field check (should be 0)
 --   nonsubstantive_only       - Non-substantive bumps that aren't duplicates
 --   substantive_changes       - Real changes to classification-relevant fields
 --   duplicate_bump_pct        - Percentage that were duplicate bumps
@@ -358,7 +365,7 @@ ORDER BY duplicate_bumps DESC;
 CREATE OR REPLACE VIEW `clinvar_curator.cvc_duplicate_bumps_by_release`
 AS
 WITH
--- Join duplicate (19-field) and non-substantive (4-field) version bump data
+-- Join duplicate (20-field) and non-substantive (6-field) version bump data
 -- Include current_version to create unique version transition key
 combined_data AS (
   SELECT
@@ -380,9 +387,9 @@ SELECT
   FORMAT_DATE('%b %Y', release_month) AS month_label,
   -- Count unique version transitions (scv_id + version), not rows
   COUNT(DISTINCT version_transition_key) AS total_version_changes,
-  -- Duplicate bumps (strictest - 19 fields identical)
+  -- Duplicate bumps (strictest - 20 fields identical)
   COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN version_transition_key END) AS duplicate_bumps,
-  -- Non-substantive bumps (4 key fields same)
+  -- Non-substantive bumps (6 key fields same)
   COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END) AS nonsubstantive_bumps,
   -- Overlap analysis
   COUNT(DISTINCT CASE WHEN is_duplicate_bump AND is_nonsubstantive_bump THEN version_transition_key END) AS duplicate_also_nonsubstantive,
@@ -415,7 +422,7 @@ ORDER BY release_month DESC;
 -- Optimized for Google Sheets charting with consistent column naming
 -- Shows the three categories of version changes:
 --   - Duplicate Bumps: Identical resubmissions (most concerning)
---   - Non-substantive Change Bumps: 4 key fields same, minor changes only
+--   - Non-substantive Change Bumps: 6 key fields same, minor changes only
 --   - Substantive Changes: Real updates (legitimate)
 --
 -- =============================================================================
@@ -451,8 +458,8 @@ ORDER BY release_month;
 -- =============================================================================
 --
 -- High-level summary comparing:
---   - Duplicate Bumps: Identical resubmissions (19 fields same)
---   - Non-substantive Change Bumps: 4 key fields same
+--   - Duplicate Bumps: Identical resubmissions (20 fields same)
+--   - Non-substantive Change Bumps: 6 key fields same
 --   - Substantive Changes: Real updates
 --
 -- =============================================================================
@@ -477,9 +484,9 @@ WITH combined AS (
 SELECT
   -- Count unique version transitions (scv_id + version), not rows
   COUNT(DISTINCT version_transition_key) AS total_version_changes,
-  -- Duplicate bumps (19-field identical)
+  -- Duplicate bumps (20-field identical)
   COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN version_transition_key END) AS total_duplicate_bumps,
-  -- Non-substantive bumps (4-field same)
+  -- Non-substantive bumps (6-field same)
   COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END) AS total_nonsubstantive_bumps,
   -- Overlap
   COUNT(DISTINCT CASE WHEN is_duplicate_bump AND is_nonsubstantive_bump THEN version_transition_key END) AS duplicate_also_nonsubstantive,
@@ -509,3 +516,57 @@ SELECT
   MIN(current_start_date) AS earliest_version_change,
   MAX(current_start_date) AS latest_version_change
 FROM combined;
+
+
+-- =============================================================================
+-- Google Sheets View: Version Bump Summary as Data Table
+-- =============================================================================
+--
+-- Purpose: Unpivots the single-row summary into a two-column (metric, value)
+--          table for display as a data table in Google Sheets.
+--
+-- =============================================================================
+
+CREATE OR REPLACE VIEW `clinvar_curator.sheets_duplicate_bumps_summary`
+AS
+SELECT *
+FROM (
+  SELECT
+    CAST(total_version_changes AS STRING) AS total_version_changes,
+    CAST(total_duplicate_bumps AS STRING) AS total_duplicate_bumps,
+    CAST(total_nonsubstantive_bumps AS STRING) AS total_nonsubstantive_bumps,
+    CAST(duplicate_also_nonsubstantive AS STRING) AS duplicate_also_nonsubstantive,
+    CAST(duplicate_only AS STRING) AS duplicate_only,
+    CAST(nonsubstantive_only AS STRING) AS nonsubstantive_only,
+    CAST(total_substantive_changes AS STRING) AS total_substantive_changes,
+    CAST(overall_duplicate_bump_pct AS STRING) AS overall_duplicate_bump_pct,
+    CAST(overall_nonsubstantive_bump_pct AS STRING) AS overall_nonsubstantive_bump_pct,
+    CAST(pct_nonsubstantive_that_are_duplicate AS STRING) AS pct_nonsubstantive_that_are_duplicate,
+    CAST(unique_scvs_with_version_changes AS STRING) AS unique_scvs_with_version_changes,
+    CAST(unique_scvs_with_duplicate_bumps AS STRING) AS unique_scvs_with_duplicate_bumps,
+    CAST(unique_scvs_with_nonsubstantive_bumps AS STRING) AS unique_scvs_with_nonsubstantive_bumps,
+    CAST(unique_submitters_with_version_changes AS STRING) AS unique_submitters_with_version_changes,
+    CAST(unique_submitters_with_duplicate_bumps AS STRING) AS unique_submitters_with_duplicate_bumps,
+    CAST(earliest_version_change AS STRING) AS earliest_version_change,
+    CAST(latest_version_change AS STRING) AS latest_version_change
+  FROM `clinvar_curator.cvc_duplicate_bumps_summary`
+)
+UNPIVOT (value FOR metric IN (
+  total_version_changes,
+  total_duplicate_bumps,
+  total_nonsubstantive_bumps,
+  duplicate_also_nonsubstantive,
+  duplicate_only,
+  nonsubstantive_only,
+  total_substantive_changes,
+  overall_duplicate_bump_pct,
+  overall_nonsubstantive_bump_pct,
+  pct_nonsubstantive_that_are_duplicate,
+  unique_scvs_with_version_changes,
+  unique_scvs_with_duplicate_bumps,
+  unique_scvs_with_nonsubstantive_bumps,
+  unique_submitters_with_version_changes,
+  unique_submitters_with_duplicate_bumps,
+  earliest_version_change,
+  latest_version_change
+));

@@ -10,6 +10,8 @@
 --   - submitted_classification text
 --   - last_evaluated date
 --   - trait_set_id
+--   - pmids (ordered list of PubMed citation IDs)
+--   - classification_comment (evidence summary / interpretation text)
 --
 --   This is important because version bumps may be used to:
 --   1. Reset the 60-day grace period on pending flagging candidates
@@ -42,7 +44,9 @@ scv_versions AS (
     ANY_VALUE(last_evaluated) AS last_evaluated,
     ANY_VALUE(submitter_id) AS submitter_id,
     ANY_VALUE(variation_id) AS variation_id,
-    ANY_VALUE(trait_set_id) AS trait_set_id
+    ANY_VALUE(trait_set_id) AS trait_set_id,
+    ANY_VALUE(pmids) AS pmids,
+    ANY_VALUE(classification_comment) AS classification_comment
   FROM `clinvar_ingest.clinvar_scvs`
   GROUP BY id, version
 ),
@@ -68,13 +72,18 @@ version_comparisons AS (
     prev.submitted_classification AS previous_submitted_classification,
     prev.last_evaluated AS previous_last_evaluated,
     prev.trait_set_id AS previous_trait_set_id,
+    prev.pmids AS previous_pmids,
     -- Determine what changed (NULL-safe comparisons: NULL=NULL is TRUE, NULL vs non-NULL is FALSE)
     (curr.classif_type != prev.classif_type) AS classif_type_changed,
     (COALESCE(curr.submitted_classification, '') != COALESCE(prev.submitted_classification, '')) AS submitted_classification_changed,
     -- NULL-safe comparison for last_evaluated: both NULL = no change, one NULL = change
     NOT (curr.last_evaluated IS NOT DISTINCT FROM prev.last_evaluated) AS last_evaluated_changed,
     -- NULL-safe comparison for trait_set_id: both NULL = no change, one NULL = change
-    NOT (curr.trait_set_id IS NOT DISTINCT FROM prev.trait_set_id) AS trait_set_id_changed
+    NOT (curr.trait_set_id IS NOT DISTINCT FROM prev.trait_set_id) AS trait_set_id_changed,
+    -- NULL-safe comparison for pmids: both NULL = no change, one NULL = change
+    NOT (curr.pmids IS NOT DISTINCT FROM prev.pmids) AS pmids_changed,
+    -- NULL-safe comparison for classification_comment
+    NOT (curr.classification_comment IS NOT DISTINCT FROM prev.classification_comment) AS classification_comment_changed
   FROM scv_versions curr
   JOIN scv_versions prev
     ON curr.scv_id = prev.scv_id
@@ -97,22 +106,30 @@ SELECT
   submitted_classification_changed,
   last_evaluated_changed,
   trait_set_id_changed,
+  pmids_changed,
+  classification_comment_changed,
   -- Is this a version bump? (no substantive changes)
   (NOT classif_type_changed
    AND NOT submitted_classification_changed
    AND NOT last_evaluated_changed
-   AND NOT trait_set_id_changed) AS is_version_bump,
+   AND NOT trait_set_id_changed
+   AND NOT pmids_changed
+   AND NOT classification_comment_changed) AS is_version_bump,
   -- What changed (if anything)
   CASE
     WHEN NOT classif_type_changed
      AND NOT submitted_classification_changed
      AND NOT last_evaluated_changed
-     AND NOT trait_set_id_changed THEN 'no_change_version_bump'
+     AND NOT trait_set_id_changed
+     AND NOT pmids_changed
+     AND NOT classification_comment_changed THEN 'no_change_version_bump'
     ELSE ARRAY_TO_STRING(ARRAY_CONCAT(
       IF(classif_type_changed, ['classification'], []),
       IF(submitted_classification_changed, ['submitted_classification'], []),
       IF(last_evaluated_changed, ['last_evaluated'], []),
-      IF(trait_set_id_changed, ['trait_set_id'], [])
+      IF(trait_set_id_changed, ['trait_set_id'], []),
+      IF(pmids_changed, ['pmids'], []),
+      IF(classification_comment_changed, ['classification_comment'], [])
     ), ', ')
   END AS changes_made
 FROM version_comparisons
@@ -133,6 +150,8 @@ ORDER BY current_start_date DESC, scv_id, current_version;
 --   submitted_classification_changes  - Count of changes where submitted_classification text changed
 --   last_evaluated_changes            - Count of changes where last_evaluated date changed
 --   trait_set_id_changes              - Count of changes where trait_set_id changed
+--   pmids_changes                     - Count of changes where pmids changed
+--   classification_comment_changes    - Count of changes where classification_comment changed
 --
 -- =============================================================================
 
@@ -148,6 +167,8 @@ WITH versioned_data AS (
     submitted_classification_changed,
     last_evaluated_changed,
     trait_set_id_changed,
+    pmids_changed,
+    classification_comment_changed,
     -- Create unique key for each version transition to prevent double-counting
     CONCAT(scv_id, '-', CAST(current_version AS STRING)) AS version_transition_key
   FROM `clinvar_curator.cvc_version_bumps`
@@ -166,7 +187,9 @@ SELECT
   COUNT(DISTINCT CASE WHEN classif_type_changed THEN version_transition_key END) AS classification_changes,
   COUNT(DISTINCT CASE WHEN submitted_classification_changed THEN version_transition_key END) AS submitted_classification_changes,
   COUNT(DISTINCT CASE WHEN last_evaluated_changed THEN version_transition_key END) AS last_evaluated_changes,
-  COUNT(DISTINCT CASE WHEN trait_set_id_changed THEN version_transition_key END) AS trait_set_id_changes
+  COUNT(DISTINCT CASE WHEN trait_set_id_changed THEN version_transition_key END) AS trait_set_id_changes,
+  COUNT(DISTINCT CASE WHEN pmids_changed THEN version_transition_key END) AS pmids_changes,
+  COUNT(DISTINCT CASE WHEN classification_comment_changed THEN version_transition_key END) AS classification_comment_changes
 FROM versioned_data
 GROUP BY current_start_date
 ORDER BY current_start_date DESC;
