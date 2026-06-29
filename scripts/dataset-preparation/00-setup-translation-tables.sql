@@ -1,4 +1,3 @@
-DROP TABLE `clinvar_ingest.clinvar_statement_category`;
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_statement_categories` (
     code STRING,
     label STRING
@@ -12,7 +11,6 @@ VALUES
     ('S',    'Somatic')
 ;
 
-DROP TABLE `clinvar_ingest.clinvar_statement_type`;
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_statement_types` (
     code STRING,
     category_code STRING,
