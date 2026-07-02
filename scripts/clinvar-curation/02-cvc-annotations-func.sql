@@ -9,7 +9,7 @@ AS
       a.*,
       -- originally annotated scv id+ver assertion data
       cs.statement_type,
-      cs.gks_proposition_type,
+      cs.proposition_type,
       cs.rank,
       cs.classif_type,
       cs.clinsig_type,
@@ -91,7 +91,7 @@ AS
     a.notes,
     -- originally annotated scv id+ver assertion data
     a.statement_type,
-    a.gks_proposition_type,
+    a.proposition_type,
     a.rank,
     a.classif_type,
     a.clinsig_type,

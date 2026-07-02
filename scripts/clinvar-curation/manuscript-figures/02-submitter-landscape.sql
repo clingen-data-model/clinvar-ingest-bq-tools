@@ -9,7 +9,7 @@
 --
 -- Scope:
 --   Germline Variant Pathogenicity Classification Submission Data subset
---   (gks_proposition_type = 'path' only). This excludes Somatic SCVs and
+--   (proposition_type = 'path' only). This excludes Somatic SCVs and
 --   other Germline SCVs that are not pathogenicity classifications.
 --
 -- Data Sources:
@@ -41,7 +41,7 @@ JOIN clinvar_ingest.schema_on(CURRENT_DATE()) rel
   ON TRUE
 JOIN `clinvar_ingest.clinvar_scvs` cs
   ON cs.submitter_id = so.id
-  AND cs.gks_proposition_type = 'path'
+  AND cs.proposition_type = 'path'
   AND rel.release_date BETWEEN cs.start_release_date AND IFNULL(cs.end_release_date, DATE'9999-01-01')
 GROUP BY rel.release_date, so.institution_type
 ORDER BY scv_count DESC

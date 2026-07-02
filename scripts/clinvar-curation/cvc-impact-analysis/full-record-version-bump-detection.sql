@@ -6,7 +6,7 @@
 --   Compares the ENTIRE SCV record between consecutive versions to categorize
 --   version changes into three types:
 --
---   1. DUPLICATE BUMP: ALL 20 fields identical - the submission is a duplicate
+--   1. DUPLICATE BUMP: ALL 19 fields identical - the submission is a duplicate
 --      of the prior version and should not have had a version bump at all.
 --
 --   2. NON-SUBSTANTIVE CHANGE BUMP: The 6 key classification fields are the same
@@ -19,8 +19,7 @@
 --
 -- Fields compared (all fields except version, submission_date, and temporal tracking):
 --   - statement_type
---   - original_proposition_type
---   - gks_proposition_type
+--   - proposition_type
 --   - clinical_impact_assertion_type
 --   - clinical_impact_clinical_significance
 --   - rank
@@ -74,8 +73,7 @@ scv_versions AS (
     MIN(start_release_date) AS start_release_date,
     -- Fields to compare (use ANY_VALUE since they should be consistent within a version)
     ANY_VALUE(statement_type) AS statement_type,
-    ANY_VALUE(original_proposition_type) AS original_proposition_type,
-    ANY_VALUE(gks_proposition_type) AS gks_proposition_type,
+    ANY_VALUE(proposition_type) AS proposition_type,
     ANY_VALUE(clinical_impact_assertion_type) AS clinical_impact_assertion_type,
     ANY_VALUE(clinical_impact_clinical_significance) AS clinical_impact_clinical_significance,
     ANY_VALUE(rank) AS rank,
@@ -117,8 +115,7 @@ version_comparisons AS (
     -- Compare each field using NULL-safe IS NOT DISTINCT FROM
     -- TRUE means the field is the same, FALSE means it changed
     (curr.statement_type IS NOT DISTINCT FROM prev.statement_type) AS statement_type_same,
-    (curr.original_proposition_type IS NOT DISTINCT FROM prev.original_proposition_type) AS original_proposition_type_same,
-    (curr.gks_proposition_type IS NOT DISTINCT FROM prev.gks_proposition_type) AS gks_proposition_type_same,
+    (curr.proposition_type IS NOT DISTINCT FROM prev.proposition_type) AS proposition_type_same,
     (curr.clinical_impact_assertion_type IS NOT DISTINCT FROM prev.clinical_impact_assertion_type) AS clinical_impact_assertion_type_same,
     (curr.clinical_impact_clinical_significance IS NOT DISTINCT FROM prev.clinical_impact_clinical_significance) AS clinical_impact_clinical_significance_same,
     (curr.rank IS NOT DISTINCT FROM prev.rank) AS rank_same,
@@ -158,8 +155,7 @@ SELECT
   -- A duplicate bump means the submission is identical to the prior version
   -- and should not have had a version increment at all.
   (statement_type_same
-   AND original_proposition_type_same
-   AND gks_proposition_type_same
+   AND proposition_type_same
    AND clinical_impact_assertion_type_same
    AND clinical_impact_clinical_significance_same
    AND rank_same
@@ -180,8 +176,7 @@ SELECT
 
   -- Count how many fields changed
   (CASE WHEN NOT statement_type_same THEN 1 ELSE 0 END
-   + CASE WHEN NOT original_proposition_type_same THEN 1 ELSE 0 END
-   + CASE WHEN NOT gks_proposition_type_same THEN 1 ELSE 0 END
+   + CASE WHEN NOT proposition_type_same THEN 1 ELSE 0 END
    + CASE WHEN NOT clinical_impact_assertion_type_same THEN 1 ELSE 0 END
    + CASE WHEN NOT clinical_impact_clinical_significance_same THEN 1 ELSE 0 END
    + CASE WHEN NOT rank_same THEN 1 ELSE 0 END
@@ -203,8 +198,7 @@ SELECT
   -- List which fields changed
   ARRAY_TO_STRING(ARRAY_CONCAT(
     IF(NOT statement_type_same, ['statement_type'], []),
-    IF(NOT original_proposition_type_same, ['original_proposition_type'], []),
-    IF(NOT gks_proposition_type_same, ['gks_proposition_type'], []),
+    IF(NOT proposition_type_same, ['proposition_type'], []),
     IF(NOT clinical_impact_assertion_type_same, ['clinical_impact_assertion_type'], []),
     IF(NOT clinical_impact_clinical_significance_same, ['clinical_impact_clinical_significance'], []),
     IF(NOT rank_same, ['rank'], []),
@@ -342,7 +336,7 @@ ORDER BY duplicate_bumps DESC;
 -- Aggregates by the first day of each month for consistency with other charts
 --
 -- Categories:
---   - Duplicate Bump: ALL 20 fields identical (submission is a duplicate)
+--   - Duplicate Bump: ALL 19 fields identical (submission is a duplicate)
 --   - Non-substantive Change Bump: 6 key fields same, but minor fields changed
 --   - Substantive Change Bump: Real changes to classification-relevant fields
 --
@@ -350,7 +344,7 @@ ORDER BY duplicate_bumps DESC;
 --   release_month             - First day of the month (for sorting/joining)
 --   month_label               - Human-readable month label (e.g., "Jan 2024")
 --   total_version_changes     - Total version changes in this month
---   duplicate_bumps           - Identical resubmissions (20-field match)
+--   duplicate_bumps           - Identical resubmissions (19-field match)
 --   nonsubstantive_bumps      - 6 key fields same, minor fields changed
 --   duplicate_also_nonsubstantive - Duplicate bumps detected by both methods
 --   duplicate_only            - Duplicate bumps NOT detected by 6-field check (should be 0)
@@ -365,7 +359,7 @@ ORDER BY duplicate_bumps DESC;
 CREATE OR REPLACE VIEW `clinvar_curator.cvc_duplicate_bumps_by_release`
 AS
 WITH
--- Join duplicate (20-field) and non-substantive (6-field) version bump data
+-- Join duplicate (19-field) and non-substantive (6-field) version bump data
 -- Include current_version to create unique version transition key
 combined_data AS (
   SELECT
@@ -458,7 +452,7 @@ ORDER BY release_month;
 -- =============================================================================
 --
 -- High-level summary comparing:
---   - Duplicate Bumps: Identical resubmissions (20 fields same)
+--   - Duplicate Bumps: Identical resubmissions (19 fields same)
 --   - Non-substantive Change Bumps: 6 key fields same
 --   - Substantive Changes: Real updates
 --
@@ -484,7 +478,7 @@ WITH combined AS (
 SELECT
   -- Count unique version transitions (scv_id + version), not rows
   COUNT(DISTINCT version_transition_key) AS total_version_changes,
-  -- Duplicate bumps (20-field identical)
+  -- Duplicate bumps (19-field identical)
   COUNT(DISTINCT CASE WHEN is_duplicate_bump THEN version_transition_key END) AS total_duplicate_bumps,
   -- Non-substantive bumps (6-field same)
   COUNT(DISTINCT CASE WHEN is_nonsubstantive_bump THEN version_transition_key END) AS total_nonsubstantive_bumps,

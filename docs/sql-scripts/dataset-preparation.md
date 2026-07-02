@@ -22,7 +22,7 @@ The entire preparation pipeline is coordinated by a single orchestrator procedur
 
 | # | File | Procedure/Object Created | Description |
 |---|------|--------------------------|-------------|
-| 00 | `00-setup-translation-tables.sql` | Multiple tables | Creates and populates lookup/translation tables: `clinvar_statement_categories`, `clinvar_statement_types`, `clinvar_clinsig_types`, `scv_clinsig_map`, `status_rules`, `status_definitions` |
+| 00 | `00-setup-translation-tables.sql` | Multiple tables | Creates and populates lookup/translation tables: `clinvar_statement_categories`, `clinvar_statement_types`, `clinvar_clinsig_types`, `clinvar_proposition_types`, `scv_clinsig_map`, `status_rules`, `status_definitions` |
 | 01 | `01-normalize-dataset-proc.sql` | `clinvar_ingest.normalize_dataset()` | Normalizes the raw dataset to a consistent v2 schema -- adds `statement_type` column to `clinical_assertion`, reconciles `rcv_accession_classification`, and handles `variation_archive_classification` |
 | 02 | `02-validate-dataset-proc.sql` | `clinvar_ingest.validate_dataset()` | Validates the normalized dataset by checking for unknown classification terms, missing mappings in `scv_clinsig_map` and `clinvar_clinsig_types`, unknown review statuses, required field nulls, and release date consistency |
 | 03 | `03-scv-summary-proc.sql` | `clinvar_ingest.scv_summary()` | Builds the `scv_summary` table -- the central denormalized view of all SCVs in a release, parsing content JSON fields using UDF parsing functions, joining submitter and classification metadata |
@@ -63,6 +63,7 @@ The numeric prefixes define the required execution order. Each step depends on t
 - `{schema}.variation_archive`, `{schema}.variation_archive_classification` -- VCV-level data
 - `{schema}.rcv_accession`, `{schema}.rcv_accession_classification` -- RCV-level data
 - `clinvar_ingest.clinvar_clinsig_types` -- Clinical significance type mappings
+- `clinvar_ingest.clinvar_proposition_types` -- Proposition metadata (GKS type, statement_type_code)
 - `clinvar_ingest.scv_clinsig_map` -- SCV classification term mappings
 - `clinvar_ingest.status_rules`, `clinvar_ingest.status_definitions` -- Review status mappings
 - `clinvar_ingest.entrez_gene`, `clinvar_ingest.mane_select` -- Gene and MANE transcript data

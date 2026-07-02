@@ -43,7 +43,7 @@ BEGIN
           AND
           scv.rank IS NOT DISTINCT FROM cs.rank
           AND
-          scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type
+          scv.proposition_type IS NOT DISTINCT FROM cs.proposition_type
           AND
           scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type
           AND
@@ -67,7 +67,7 @@ BEGIN
     UPDATE `clinvar_ingest.clinvar_scvs` cs
     SET
       cs.full_scv_id = scv.full_scv_id,
-      cs.original_proposition_type = scv.original_proposition_type,
+      cs.proposition_type = scv.proposition_type,
       cs.local_key = scv.local_key,
       cs.classif_type = scv.classif_type,
       cs.classification_label = scv.classification_label,
@@ -98,7 +98,7 @@ BEGIN
       AND
       scv.rank IS NOT DISTINCT FROM cs.rank
       AND
-      scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type
+      scv.proposition_type IS NOT DISTINCT FROM cs.proposition_type
       AND
       scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type
       AND
@@ -123,8 +123,7 @@ BEGIN
       version,
       full_scv_id,
       statement_type,
-      original_proposition_type,
-      gks_proposition_type,
+      proposition_type,
       clinical_impact_assertion_type,
       clinical_impact_clinical_significance,
       rank,
@@ -156,8 +155,7 @@ BEGIN
       scv.version,
       scv.full_scv_id,
       scv.statement_type,
-      scv.original_proposition_type,
-      scv.gks_proposition_type,
+      scv.proposition_type,
       scv.clinical_impact_assertion_type,
       scv.clinical_impact_clinical_significance,
       scv.rank,
@@ -199,7 +197,7 @@ BEGIN
           AND
           scv.rank IS NOT DISTINCT FROM cs.rank
           AND
-          scv.gks_proposition_type IS NOT DISTINCT FROM cs.gks_proposition_type
+          scv.proposition_type IS NOT DISTINCT FROM cs.proposition_type
           AND
           scv.clinical_impact_assertion_type IS NOT DISTINCT FROM cs.clinical_impact_assertion_type
           AND
@@ -366,8 +364,7 @@ END;
 --   version,
 --   full_scv_id,
 --   statement_type,
---   original_proposition_type,
---   gks_proposition_type,
+--   proposition_type,
 --   clinical_impact_assertion_type,
 --   clinical_impact_clinical_significance,
 --   rank,
@@ -399,8 +396,7 @@ END;
 --   scv.version,
 --   FORMAT('%s.%i', scv.id, scv.version) as full_scv_id,
 --   'GermlineClassification' as statement_type,
---   scv.rpt_stmt_type as original_proposition_type,
---   scv.rpt_stmt_type as gks_proposition_type,
+--   scv.rpt_stmt_type as proposition_type,
 --   CAST(null AS STRING) as clinical_impact_assertion_type,
 --   CAST(null AS STRING) as clinical_impact_clinical_significance,
 --   scv.rank,

@@ -15,7 +15,7 @@ contribute to VCV-level conflict status changes.
   - 2-star or 1-star VCV → 1-star SCVs contribute (these are "contributing tier")
   - 0-star VCV → 0-star SCVs contribute (these are "contributing tier")
 - SCVs can move between rank tiers month-to-month (but only one tier at a time)
-- Only track VCVs and SCVs with `gks_proposition_type = 'path'`
+- Only track VCVs and SCVs with `proposition_type = 'path'`
 
 ### 1a. Tier-Aware Reason Tracking
 
@@ -182,7 +182,7 @@ Fields:
 ### Step 1: Build SCV Snapshots (`04-monthly-conflict-scv-snapshots.sql`)
 
 For each monthly release date:
-1. Get all VCVs with `gks_proposition_type = 'path'` from `clinvar_sum_vsp_rank_group`
+1. Get all VCVs with `proposition_type = 'path'` from `clinvar_sum_vsp_rank_group`
 2. For each VCV, determine its rank and which SCVs contribute:
    - If VCV rank >= 1: 1-star SCVs contribute
    - If VCV rank = 0: 0-star SCVs contribute

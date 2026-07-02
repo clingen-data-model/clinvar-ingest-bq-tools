@@ -7,7 +7,7 @@ AS (
         STRUCT(
           a.variation_id,
           a.statement_type,
-          a.gks_proposition_type,
+          a.proposition_type,
           a.rank,
           a.scv_id,
           a.scv_ver,
@@ -30,14 +30,14 @@ AS (
     SELECT
       last.variation_id,
       last.statement_type,
-      last.gks_proposition_type,
+      last.proposition_type,
       last.rank,
       last.release_date
     FROM last_submitted_annos
     GROUP BY
       last.variation_id,
       last.statement_type,
-      last.gks_proposition_type,
+      last.proposition_type,
       last.rank,
       last.release_date
   ),
@@ -45,7 +45,7 @@ AS (
     SELECT
       av.variation_id,
       av.statement_type,
-      av.gks_proposition_type,
+      av.proposition_type,
       av.rank,
       vs.classif_type,
       vs.clinsig_type,
@@ -74,7 +74,7 @@ AS (
       AND
       av.statement_type = vs.statement_type
       AND
-      av.gks_proposition_type = vs.gks_proposition_type
+      av.proposition_type = vs.proposition_type
       AND
       av.rank = vs.rank
       AND
@@ -87,7 +87,7 @@ AS (
     GROUP BY
       av.variation_id,
       av.statement_type,
-      av.gks_proposition_type,
+      av.proposition_type,
       av.rank,
       vs.classif_type,
       vs.clinsig_type,
@@ -100,7 +100,7 @@ AS (
     vc.end_release_date,
     vc.variation_id,
     vc.statement_type,
-    vc.gks_proposition_type,
+    vc.proposition_type,
     vc.rank,
     vc.release_date,
     COUNT(DISTINCT IF(cvc.last.variation_id is null,vs.clinsig_type,null)) as cvc_unique_clinsig_type_count,
@@ -136,7 +136,7 @@ AS (
     vc.start_release_date,
     vc.end_release_date,
     vc.statement_type,
-    vc.gks_proposition_type,
+    vc.proposition_type,
     vc.rank,
     vc.release_date
 );

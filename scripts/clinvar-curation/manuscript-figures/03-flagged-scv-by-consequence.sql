@@ -8,7 +8,7 @@
 --
 -- Scope:
 --   Germline Variant Pathogenicity Classification Submission Data subset
---   (gks_proposition_type = 'path' only).
+--   (proposition_type = 'path' only).
 --
 -- Consequence Groups:
 --   - predicted LOF: nonsense, frameshift variant, splice donor variant, splice acceptor variant
@@ -127,7 +127,7 @@ BEGIN
         ON vh.variation_id = scv.variation_id
         AND vh.mane_select = TRUE
       WHERE
-        scv.gks_proposition_type = 'path'
+        scv.proposition_type = 'path'
         AND DATE'%t' BETWEEN scv.start_release_date AND IFNULL(scv.end_release_date, DATE'9999-01-01')
     ),
 

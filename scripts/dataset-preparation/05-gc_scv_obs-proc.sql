@@ -97,11 +97,14 @@ BEGIN
     FROM gc_scv_obs gso
     JOIN UNNEST (`clinvar_ingest.parseMethods`(obs_content)) as m
     JOIN UNNEST( m.obs_method_attribute ) as oma
-    LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cct
+    LEFT JOIN (
+      `clinvar_ingest.clinvar_clinsig_types` cct
+      JOIN `clinvar_ingest.clinvar_proposition_types` cpt
+      ON cpt.code = cct.proposition_type
+    )
     ON
       lower(cct.label) = lower(oma.comment.text)
-      AND
-      cct.statement_type = gso.statement_type
+      AND cpt.statement_type_code = gso.statement_type
     WHERE
       oma.attribute.type = 'TestingLaboratory'
       AND

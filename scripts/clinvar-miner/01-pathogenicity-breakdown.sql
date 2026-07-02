@@ -9,7 +9,7 @@
 --   using the agg_sig_type bitmask from clinvar_sum_vsp_rank_group.
 --
 -- Scope:
---   All Germline Classification variants with gks_proposition_type in
+--   All Germline Classification variants with proposition_type in
 --   ('path', 'oth') from the latest ClinVar release.
 --
 -- Source Tables:
@@ -52,12 +52,12 @@ WITH latest_release AS (
 ),
 
 -- All GermlineClassification top_rank records for the latest release.
--- For each variation_id, take the max top_rank. If multiple gks_proposition_types
+-- For each variation_id, take the max top_rank. If multiple proposition_types
 -- exist at that max top_rank, prioritize 'path' over 'oth'.
 top_rank AS (
   SELECT
     trg.variation_id,
-    trg.gks_proposition_type,
+    trg.proposition_type,
     trg.top_rank,
     lr.release_date
   FROM latest_release lr
@@ -67,7 +67,7 @@ top_rank AS (
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY trg.variation_id
     ORDER BY trg.top_rank DESC,
-      CASE trg.gks_proposition_type WHEN 'path' THEN 0 ELSE 1 END
+      CASE trg.proposition_type WHEN 'path' THEN 0 ELSE 1 END
   ) = 1
 ),
 
@@ -82,7 +82,7 @@ rank_group AS (
   JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
     ON vrg.variation_id = tr.variation_id
     AND vrg.rank = tr.top_rank
-    AND vrg.gks_proposition_type = tr.gks_proposition_type
+    AND vrg.proposition_type = tr.proposition_type
     AND tr.release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
 ),
 
@@ -145,7 +145,7 @@ ORDER BY sort_order;
 --   FROM `clinvar_ingest.all_schemas`()
 -- ),
 -- top_rank AS (
---   SELECT trg.variation_id, trg.gks_proposition_type, trg.top_rank, lr.release_date
+--   SELECT trg.variation_id, trg.proposition_type, trg.top_rank, lr.release_date
 --   FROM latest_release lr
 --   JOIN `clinvar_ingest.clinvar_sum_vsp_top_rank_group_change` trg
 --     ON trg.statement_type = 'GermlineClassification'
@@ -153,7 +153,7 @@ ORDER BY sort_order;
 --   QUALIFY ROW_NUMBER() OVER (
 --     PARTITION BY trg.variation_id
 --     ORDER BY trg.top_rank DESC,
---       CASE trg.gks_proposition_type WHEN 'path' THEN 0 ELSE 1 END
+--       CASE trg.proposition_type WHEN 'path' THEN 0 ELSE 1 END
 --   ) = 1
 -- )
 -- SELECT
@@ -163,7 +163,7 @@ ORDER BY sort_order;
 -- JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
 --   ON vrg.variation_id = tr.variation_id
 --   AND vrg.rank = tr.top_rank
---   AND vrg.gks_proposition_type = tr.gks_proposition_type
+--   AND vrg.proposition_type = tr.proposition_type
 --   AND tr.release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
 -- WHERE vrg.agg_sig_type NOT IN (3, 5, 6, 7)
 --   AND NOT EXISTS (SELECT 1 FROM UNNEST(SPLIT(vrg.agg_classif, '/')) t

@@ -27,7 +27,7 @@ BEGIN
     rv.report_id,
     rv.variation_id,
     vsg.statement_type,
-    vsg.gks_proposition_type,
+    vsg.proposition_type,
     vsg.rank,
     vsg.id,
     vsg.version,
@@ -64,7 +64,7 @@ BEGIN
     AND
     vs.statement_type IS NOT DISTINCT FROM vsg.statement_type
     AND
-    vs.gks_proposition_type IS NOT DISTINCT FROM vsg.gks_proposition_type
+    vs.proposition_type IS NOT DISTINCT FROM vsg.proposition_type
     AND
     vs.rank IS NOT DISTINCT FROM vsg.rank
     -- range overlap condition (not point-in-time BETWEEN)
@@ -108,7 +108,7 @@ BEGIN
     rel.release_date as report_release_date,
     rsr.variation_id,
     rsr.statement_type,
-    rsr.gks_proposition_type,
+    rsr.proposition_type,
     rsr.rank,
     LOGICAL_OR(svd.variation_id IS NOT NULL) as report_submitter_variation
   FROM _scv_ranges rsr
@@ -127,7 +127,7 @@ BEGIN
     rel.release_date,
     rsr.variation_id,
     rsr.statement_type,
-    rsr.gks_proposition_type,
+    rsr.proposition_type,
     rsr.rank;
 
   -- Pre-compute variation-level temporal lookups for submitter variation dates only.
@@ -184,7 +184,7 @@ BEGIN
     rsr.variation_id,
     vdl.full_vcv_id,
     rsr.statement_type,
-    rsr.gks_proposition_type,
+    rsr.proposition_type,
     rsr.rank,
     svd.release_date as report_release_date,
     rsr.id,
@@ -208,7 +208,7 @@ BEGIN
     -- COALESCE join keys to enable hash joins in the _all_alerts self-join
     -- (IS NOT DISTINCT FROM prevents hash joins; equi-join on sentinels is equivalent)
     COALESCE(rsr.statement_type, '___NULL___') as _jk_statement_type,
-    COALESCE(rsr.gks_proposition_type, '___NULL___') as _jk_gks_proposition_type
+    COALESCE(rsr.proposition_type, '___NULL___') as _jk_proposition_type
   FROM _scv_ranges rsr
   JOIN _submitter_var_dates svd
   ON
@@ -246,7 +246,7 @@ BEGIN
     vcep.full_vcv_id,
     vcep.report_release_date,
     vcep.statement_type,
-    vcep.gks_proposition_type,
+    vcep.proposition_type,
     vcep.id as submitted_scv_id,
     vcep.version as submitted_scv_version,
     vcep.full_scv_id as submitted_full_scv_id,
@@ -305,7 +305,7 @@ BEGIN
     AND
     other._jk_statement_type = vcep._jk_statement_type
     AND
-    other._jk_gks_proposition_type = vcep._jk_gks_proposition_type
+    other._jk_proposition_type = vcep._jk_proposition_type
     AND
     NOT other.report_submitter_submission
     AND
@@ -326,7 +326,7 @@ BEGIN
     vcep.full_vcv_id,
     vcep.report_release_date,
     vcep.statement_type,
-    vcep.gks_proposition_type,
+    vcep.proposition_type,
     vcep.id as submitted_scv_id,
     vcep.version as submitted_scv_version,
     vcep.full_scv_id as submitted_full_scv_id,
@@ -402,7 +402,7 @@ BEGIN
       v.report_id,
       v.variation_id,
       v.statement_type,
-      v.gks_proposition_type,
+      v.proposition_type,
       v.report_release_date,
       v.rank,
       COUNT(DISTINCT IF(rsr.clinsig_type = 0, rsr.submitter_id, NULL)) as no_sig_cnt,
@@ -435,7 +435,7 @@ BEGIN
       AND
       rsr.statement_type = v.statement_type
       AND
-      rsr.gks_proposition_type = v.gks_proposition_type
+      rsr.proposition_type = v.proposition_type
       AND
       rsr.rank = v.rank
       AND
@@ -448,14 +448,14 @@ BEGIN
       AND
       v.statement_type = 'GermlineClassification'
       AND
-      v.gks_proposition_type = 'path'
+      v.proposition_type = 'path'
       AND
       fc.scv_id IS NULL
     GROUP BY
       v.report_id,
       v.variation_id,
       v.statement_type,
-      v.gks_proposition_type,
+      v.proposition_type,
       v.report_release_date,
       v.rank
   ),
@@ -464,7 +464,7 @@ BEGIN
     SELECT
       per_rank.*,
       ROW_NUMBER() OVER (
-        PARTITION BY report_id, variation_id, statement_type, gks_proposition_type, report_release_date
+        PARTITION BY report_id, variation_id, statement_type, proposition_type, report_release_date
         ORDER BY rank DESC
       ) as rn
     FROM per_rank
@@ -473,7 +473,7 @@ BEGIN
     x.report_id,
     x.variation_id,
     x.statement_type,
-    x.gks_proposition_type,
+    x.proposition_type,
     x.report_release_date,
     x.agg_sig_type,
     x.no_sig_cnt, x.unc_sig_cnt, x.sig_cnt,
@@ -502,7 +502,7 @@ BEGIN
     vp.report_release_date,
     vp.variation_id,
     vp.statement_type,
-    vp.gks_proposition_type,
+    vp.proposition_type,
     vp.priority_rank,
     p_type,
     rsr.rank as scv_rank,
@@ -619,7 +619,7 @@ BEGIN
         report_release_date,
         variation_id,
         statement_type,
-        gks_proposition_type,
+        proposition_type,
         rank,
         report_submitter_variation
       FROM _all_variation
@@ -636,7 +636,7 @@ BEGIN
         rel.release_date as report_release_date,
         rsr.variation_id,
         rsr.statement_type,
-        rsr.gks_proposition_type,
+        rsr.proposition_type,
         rsr.rank,
         rsr.id,
         rsr.version,

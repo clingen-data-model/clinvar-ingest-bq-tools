@@ -100,7 +100,7 @@ BEGIN
         sgrp.variation_id,
         sgrp.scv_group_type,
         sgrp.class_type,
-        cct.gks_code_order,
+        cct.code_order,
         FORMAT("%%s (%%i)", sgrp.class_type, COUNT(DISTINCT sgrp.id)) as label
       FROM sgrp
       LEFT JOIN `clinvar_ingest.clinvar_clinsig_types` cct
@@ -110,7 +110,7 @@ BEGIN
         sgrp.variation_id,
         sgrp.scv_group_type,
         sgrp.class_type,
-        cct.gks_code_order
+        cct.code_order
     ),
     sgrp_var_class_type_count AS (
       SELECT
@@ -120,7 +120,7 @@ BEGIN
           "\\n"
           ORDER BY
             svct.scv_group_type,
-            svct.gks_code_order
+            svct.code_order
         ) as class_type_count_label
       FROM sgrp_var_class_type svct
       GROUP BY

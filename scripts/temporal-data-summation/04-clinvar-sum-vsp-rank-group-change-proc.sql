@@ -8,13 +8,13 @@ BEGIN
     st.start_release_date,
     st.variation_id,
     st.statement_type,
-    st.gks_proposition_type,
+    st.proposition_type,
     st.rank,
     row_number () OVER (
       ORDER BY
         st.variation_id,
         st.statement_type,
-        st.gks_proposition_type,
+        st.proposition_type,
         st.rank,
         st.start_release_date ASC NULLS FIRST
     ) as rownum
@@ -23,7 +23,7 @@ BEGIN
       vg.start_release_date,
       vg.variation_id,
       vg.statement_type,
-      vg.gks_proposition_type,
+      vg.proposition_type,
       vg.rank
     FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
     UNION DISTINCT
@@ -31,7 +31,7 @@ BEGIN
       r.next_release_date as start_release_date,
       vg.variation_id,
       vg.statement_type,
-      vg.gks_proposition_type,
+      vg.proposition_type,
       vg.rank
     FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
     LEFT JOIN `clinvar_ingest.all_releases`() r
@@ -45,13 +45,13 @@ BEGIN
     en.end_release_date,
     en.variation_id,
     en.statement_type,
-    en.gks_proposition_type,
+    en.proposition_type,
     en.rank,
     row_number () OVER (
       ORDER BY
         en.variation_id,
         en.statement_type,
-        en.gks_proposition_type,
+        en.proposition_type,
         en.rank,
         en.end_release_date ASC NULLS LAST
     ) as rownum
@@ -60,7 +60,7 @@ BEGIN
       vg.end_release_date,
       vg.variation_id,
       vg.statement_type,
-      vg.gks_proposition_type,
+      vg.proposition_type,
       vg.rank
     FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
     UNION DISTINCT
@@ -68,7 +68,7 @@ BEGIN
       r.prev_release_date as end_release_date,
       vg.variation_id,
       vg.statement_type,
-      vg.gks_proposition_type,
+      vg.proposition_type,
       vg.rank
     FROM `clinvar_ingest.clinvar_sum_vsp_rank_group` vg
     LEFT JOIN `clinvar_ingest.all_releases`() r
@@ -81,7 +81,7 @@ BEGIN
   SELECT
     e.variation_id,
     e.statement_type,
-    e.gks_proposition_type,
+    e.proposition_type,
     e.rank,
     s.start_release_date,
     e.end_release_date
@@ -94,7 +94,7 @@ BEGIN
     and
     e.statement_type = s.statement_type
     and
-    e.gks_proposition_type = s.gks_proposition_type
+    e.proposition_type = s.proposition_type
     and
     e.rank = s.rank
   ;

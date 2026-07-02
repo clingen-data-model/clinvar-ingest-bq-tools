@@ -11,7 +11,7 @@
 --
 -- Scope:
 --   Germline Variant Pathogenicity Classification Submission Data subset
---   (gks_proposition_type = 'path' only). This excludes Somatic SCVs and
+--   (proposition_type = 'path' only). This excludes Somatic SCVs and
 --   other Germline SCVs that are not pathogenicity classifications.
 --
 --   Only single-gene variants are included (via clinvar_single_gene_variations)
@@ -88,7 +88,7 @@ scv_counts AS (
   FROM dsm_variants dv
   JOIN `clinvar_ingest.clinvar_scvs` scv
     ON scv.variation_id = dv.variation_id
-    AND scv.gks_proposition_type = 'path'
+    AND scv.proposition_type = 'path'
     AND dv.release_date BETWEEN scv.start_release_date AND scv.end_release_date
   GROUP BY dv.gene_symbol, dv.gene_id, dv.release_date
 ),
@@ -103,7 +103,7 @@ variant_agg AS (
   FROM dsm_variants dv
   JOIN `clinvar_ingest.clinvar_sum_vsp_rank_group` vrg
     ON vrg.variation_id = dv.variation_id
-    AND vrg.gks_proposition_type = 'path'
+    AND vrg.proposition_type = 'path'
     AND dv.release_date BETWEEN vrg.start_release_date AND vrg.end_release_date
   QUALIFY ROW_NUMBER() OVER (
     PARTITION BY dv.variation_id
