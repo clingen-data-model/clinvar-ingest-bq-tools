@@ -46,9 +46,9 @@ These tables are populated by the setup scripts and Cloud Functions. They provid
 
 | Table | Description |
 |-------|-------------|
-| `clinvar_clinsig_types` | Classification type definitions mapping codes to labels, significance levels, proposition types, direction, strength, and GKS attributes. Partitioned by `statement_type` (GermlineClassification, OncogenicityClassification, SomaticClinicalImpact). |
+| `clinvar_clinsig_types` | Classification type definitions mapping codes to labels, significance levels, proposition types, direction, strength, and predicate. Keyed by `(proposition_type, code)`. |
 | `scv_clinsig_map` | Maps raw SCV `interpretation_description` strings to normalized `clinvar_clinsig_types` codes. Handles legacy terms like "vous", "mutation", "poly". |
-| `clinvar_proposition_types` | Proposition type lookup (path, onco, sci, dr, etc.) with display order and conflict detectability. |
+| `clinvar_proposition_types` | Single source of truth for proposition metadata -- maps proposition codes (path, onco, sci, prog, diag, tr, etc.) to GKS type names, owning `statement_type_code`, display order, and conflict detectability. |
 | `status_rules` | Maps review status strings to logical context: SCV vs. aggregate level, rule type (SINGLE, CONFLICT, MULTIPLE_AGREE), and conflict detectability. |
 | `status_definitions` | Maps review status strings to star-rating ranks with temporal validity windows (`start_release_date` / `end_release_date`). Handles terminology changes over time (e.g., "conflicting interpretations" vs. "conflicting classifications"). |
 | `submission_level` | Maps SCV integer ranks to readable labels and short codes (PG, EP, CP, NOCP, NOCL, FLAG). |
