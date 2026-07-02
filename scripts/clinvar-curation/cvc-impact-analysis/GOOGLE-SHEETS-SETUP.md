@@ -24,7 +24,9 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 | 7 | Cumulative Impact | Cumulative growth of CVC submissions, flags, and resolutions over time | `sheets_cvc_cumulative_impact` | [Link] |
 | 8a | Version Bump Categories by Month | Monthly timeline showing duplicate, non-substantive, and substantive version changes | `sheets_duplicate_bumps_by_month` | [Link] |
 | 8b | Duplicate Bumps by Submitter | Horizontal bar showing submitters with the most duplicate bumps (identical resubmissions) | `cvc_duplicate_bumps_by_submitter` | [Link] |
-| 8c | Version Bump Summary | Overall statistics comparing duplicate, non-substantive, and substantive changes | `cvc_duplicate_bumps_summary` | [Link] |
+| 8c | Version Bump Summary | Overall statistics comparing duplicate, non-substantive, and substantive changes | `sheets_duplicate_bumps_summary` | [Link] |
+| 9a | Auto-Reflag Actionable | Previously flagged SCVs from 7 target labs that lost their flag via version bump with no meaningful changes | `sheets_autoreflag_actionable` | [Link] |
+| 9b | Auto-Reflag by Submitter | Per-submitter breakdown of auto-reflag eligible SCVs across the 7 target labs | `sheets_autoreflag_by_submitter` | [Link] |
 
 ### Key Insights by Chart
 
@@ -38,12 +40,78 @@ Use the table below as a README sheet in your Google Sheets file. Replace `[Link
 | 6A/B/C | Which CVC batches have been most effective at driving conflict resolutions? |
 | 7 | How has CVC's cumulative impact grown since the program started? |
 | 8a/8b/8c | Which submitters and releases have duplicate bumps (identical resubmissions with zero field changes)? |
+| 9a/9b | Which previously-flagged SCVs from 7 target labs should be auto-reflagged (no changes to classification, evidence summary, or condition)? |
 
 ### Data Refresh
 
 - **Source**: BigQuery `clinvar_curator` dataset
 - **Refresh frequency**: After each ClinVar release (~monthly) or when new CVC batches are submitted
 - **Last pipeline run**: Check `cvc_impact_summary` table for latest `snapshot_release_date`
+
+---
+
+## Keeping Data Current
+
+**Important:** The tables behind these charts are materialized (not live views). They only reflect data from when the pipeline was last run. If your charts are missing recent months, the pipeline needs to be re-run.
+
+### Step 1: Verify which upstream data is available
+
+The pipeline can only show data for ClinVar releases that have been fully processed through the temporal data collection pipeline. Check what's available:
+
+```sql
+-- Latest monthly conflict snapshot (drives Charts 4, 5a, 5b, 6, 7)
+SELECT MAX(snapshot_release_date) FROM `clinvar_ingest.monthly_conflict_snapshots`;
+
+-- Latest ClinVar release with SCV data (drives Charts 1-3, 8, 9)
+SELECT MAX(end_release_date) FROM `clinvar_ingest.clinvar_scvs`;
+```
+
+If these dates are behind the current ClinVar release, the temporal data collection pipeline needs to run first (this is a separate upstream process — contact the data team).
+
+### Step 2: Re-run the CVC Impact Analysis pipeline
+
+Once upstream data is current, rebuild the materialized tables by running the full pipeline:
+
+```bash
+cd scripts/clinvar-curation/cvc-impact-analysis
+./00-run-cvc-impact-analysis.sh --force
+```
+
+Or run individual phases if you know which charts are affected:
+
+| Charts | Phase | Scripts to run | What they rebuild |
+|--------|-------|----------------|-------------------|
+| 4, 5a, 5b, 6, 7 | Phase 2: Impact Analysis | `01-cvc-submitted-variants.sql`, `02-cvc-conflict-attribution.sql`, `03-cvc-impact-analytics.sql` | Resolution attribution, monthly impact summary, batch effectiveness |
+| 1a, 1b, 2, 3a, 3b | Phase 3: Flagging Analysis | `04-flagging-candidate-outcomes.sql`, `06-version-bump-flagging-intersection.sql`, `07-resubmission-candidates.sql` | Flagging candidate outcomes, version bump intersection |
+| 8a, 8b, 8c | Phase 3: Version Bumps | `05-version-bump-detection.sql`, `full-record-version-bump-detection.sql` | Version bump tables |
+| 9a, 9b | Phase 3: Auto-Reflag | `08-autoreflag-candidates.sql` | Auto-reflag candidates (depends on step 04) |
+
+### Step 3: Refresh Google Sheets
+
+After the pipeline completes, refresh the data in Google Sheets:
+**Data** → **Data connectors** → **Refresh data**
+
+### Quick diagnostic queries
+
+```sql
+-- Check when each key table was last built
+SELECT 'cvc_impact_summary' AS table_name, MAX(snapshot_release_date) AS latest_date
+FROM `clinvar_curator.cvc_impact_summary`
+UNION ALL
+SELECT 'cvc_resolution_attribution', MAX(snapshot_release_date)
+FROM `clinvar_curator.cvc_resolution_attribution`
+UNION ALL
+SELECT 'cvc_flagging_candidate_outcomes', MAX(batch_accepted_date)
+FROM `clinvar_curator.cvc_flagging_candidate_outcomes`
+UNION ALL
+SELECT 'cvc_version_bumps', MAX(current_start_date)
+FROM `clinvar_curator.cvc_version_bumps`
+UNION ALL
+SELECT 'cvc_autoreflag_candidates', MAX(batch_accepted_date)
+FROM `clinvar_curator.cvc_autoreflag_candidates`;
+```
+
+If any of these dates are significantly behind the latest `monthly_conflict_snapshots` date, that phase of the pipeline needs re-running.
 
 ---
 
@@ -57,7 +125,7 @@ All flagging candidate submissions are categorized into exactly one of the follo
 | 01 | Flagged | `01_Flagged` | CVC flag was successfully applied to the SCV (primary success) |
 | 02 | Reclassified | `02_Reclassified` | Submitter changed their classification before/instead of being flagged (submitter success) |
 | 03 | Removed | `03_Removed` | Submitter deleted their SCV before/instead of being flagged (submitter success) |
-| 04 | Substantive Changes | `04_Substantive_Changes` | Submitter made real changes (rank, last_evaluated, trait) but kept the same classification |
+| 04 | Substantive Changes | `04_Substantive_Changes` | Submitter made real changes (rank, last_evaluated, trait, pmids) but kept the same classification |
 | 05 | Within Grace Pending | `05_Within_Grace_Pending` | Recent submissions still within the 60-day grace period; outcome not yet determined |
 | 06 | Version Bump During Grace | `06_Version_Bump_During_Grace` | Submitter resubmitted during grace period with no substantive changes (resets the clock) |
 | 07 | Version Bump After Grace | `07_Version_Bump_After_Grace` | Submitter resubmitted after grace period with no substantive changes (avoided flag) |
@@ -280,7 +348,7 @@ To reorder series in Google Sheets:
 ### Interpretation
 
 - Submitters with large orange/red segments are avoiding flags through version bumps
-- Yellow segments indicate submitters made real changes (last_evaluated, trait_set_id, etc.) but kept same classification
+- Yellow segments indicate submitters made real changes (last_evaluated, trait_set_id, pmids, etc.) but kept same classification
 - Compare the green (flagged) portion across submitters
 - Submitters with mostly green/blue segments are responding appropriately
 
@@ -409,11 +477,33 @@ Google Sheets does not support reference lines on stacked column charts. Alterna
 
 ---
 
+## Charts 5a/5b: CVC Resolution Attribution
+
+### Background
+
+When a ClinVar conflict resolves (one or more conflicting SCVs change so that the variant is no longer in conflict), the resolution may or may not be attributable to CVC's curation work. Attribution analysis answers: **"Did CVC's intervention cause this resolution, or would it have happened anyway?"**
+
+Each resolved conflict is classified into one of five mutually exclusive attribution categories:
+
+| Category | What it means | Why it matters |
+|----------|--------------|----------------|
+| **CVC Flagged** | CVC submitted a flagging candidate, the flag was applied (rank = -3), and the conflict subsequently resolved. The flag directly prompted the resolution. | Direct CVC impact — the strongest evidence that CVC intervention drove the outcome |
+| **Submitter Deleted - CVC Prompted** | CVC submitted a flagging candidate for this variant, and the submitter deleted their SCV (rather than being flagged). The deletion resolved the conflict. | CVC-prompted impact — the submitter responded to CVC's submission by removing their assertion |
+| **Submitter Reclassified - CVC Prompted** | CVC submitted a flagging candidate, and the submitter changed their classification. The reclassification resolved the conflict. | CVC-prompted impact — the submitter changed their assertion after CVC's intervention |
+| **Organic** | The conflict resolved without any CVC involvement — CVC never submitted a flagging candidate for this variant. | Baseline resolution rate — conflicts that resolve on their own through normal ClinVar activity |
+| **CVC Submitted, Organic Outcome** | CVC submitted a flagging candidate for this variant, but the resolution appears to have occurred independently (e.g., a different submitter not targeted by CVC changed their assertion). | Ambiguous — CVC was involved but likely didn't cause the resolution |
+
+The green categories (CVC Flagged, Submitter Deleted, Submitter Reclassified) represent CVC's measurable impact. The blue categories (Organic, CVC Submitted Organic) represent resolutions that occurred outside CVC's direct influence.
+
+> **Note:** Filtered views (`sheets_cvc_attribution_breakdown_filtered` and `sheets_cvc_attribution_breakdown_pie_filtered`) are available to exclude bulk downgrade events (e.g., Counsyl's mass reclassification in July 2025) which can distort the attribution picture.
+
+---
+
 ## Chart 5a: CVC Attribution Breakdown
 
 **View:** `sheets_cvc_attribution_breakdown`
 
-**Purpose:** Shows detailed breakdown of how resolutions are attributed.
+**Purpose:** Monthly timeline showing how conflict resolutions are attributed across the five categories. Use this to track whether CVC's impact is growing over time, how it compares to organic resolution rates, and whether specific months show unusual patterns (e.g., a spike in organic resolutions from a bulk submitter action).
 
 ### Setup Steps
 
@@ -448,7 +538,7 @@ Google Sheets does not support reference lines on stacked column charts. Alterna
 
 **View:** `sheets_cvc_attribution_breakdown_pie`
 
-**Purpose:** All-time summary pie chart showing the proportion of each attribution category across all resolutions.
+**Purpose:** All-time summary showing the overall proportion of each attribution category across all resolved conflicts. While Chart 5a shows trends over time, this chart answers the simple question: **"Of all conflicts that have ever resolved, what percentage were driven by CVC?"**
 
 ### Setup Steps
 
@@ -486,9 +576,11 @@ Google Sheets does not support reference lines on stacked column charts. Alterna
 
 ### Interpretation
 
-- Green slices represent CVC-attributed resolutions (direct CVC impact)
-- Blue slices represent organic resolutions (not attributed to CVC)
-- Shows all-time totals aggregated across all months
+- **Green slices** (CVC Flagged, Submitter Deleted, Submitter Reclassified) represent CVC-attributed resolutions — conflicts that resolved because of CVC's intervention
+- **Blue slices** (Organic, CVC Submitted Organic) represent resolutions not attributed to CVC
+- The total green percentage is CVC's overall attribution rate — the headline measure of program impact
+- Compare the relative sizes of the three green slices to understand HOW CVC drives resolutions: primarily through flags being applied, or through prompting submitters to self-correct before flags are needed
+- Consider using the filtered view (`sheets_cvc_attribution_breakdown_pie_filtered`) if bulk submitter events are skewing the proportions
 
 ---
 
@@ -652,21 +744,42 @@ If the Size field shows "None" or wrong column:
 
 ---
 
+## Charts 8a/8b/8c: Version Bump Analysis
+
+### Background
+
+When a submitter resubmits an SCV to ClinVar, the version number increments. But not all resubmissions represent meaningful changes. Some submitters resubmit with little or no modification to their assertion — a practice known as "version bumping." This is significant because version bumps can prevent or remove CVC flags without the submitter actually addressing the underlying clinical disagreement.
+
+The version bump analysis classifies every version change in ClinVar into three mutually exclusive categories based on what changed between consecutive versions:
+
+| Category | What it means | How it's detected | Concern Level |
+|----------|--------------|-------------------|---------------|
+| **Duplicate Bump** | The resubmission is identical to the prior version — nothing changed at all. The version increment should not have occurred. | All 20 comparable SCV fields are the same between versions | Most concerning |
+| **Non-substantive Change Bump** | The 6 key classification-relevant fields are unchanged, but some minor fields (like `rank`, `review_status`, `origin`, etc.) changed. The submitter's actual clinical assertion is the same. | All 6 key fields unchanged, but at least one of the other 14 fields changed | Moderate concern |
+| **Substantive Change** | At least one of the 6 key fields changed — the submitter made a real update to their clinical assertion. This is a legitimate resubmission. | At least one of the 6 key fields changed | Not concerning |
+
+**Important:** Duplicate bumps are always a **subset** of non-substantive bumps. Every duplicate bump is also non-substantive (6 key fields unchanged), but not every non-substantive bump is a duplicate (minor fields may have changed). The `Nonsubstantive_Change_Bumps` column in Chart 8a shows the difference — cases where the 6 key fields didn't change but other fields did.
+
+**The 6 key fields** (substantive change detection):
+
+| Field | What it represents |
+|-------|--------------------|
+| `classif_type` | Classification category (e.g., Pathogenic, VUS) |
+| `submitted_classification` | Free-text classification provided by the submitter |
+| `last_evaluated` | Date the submitter last evaluated the variant |
+| `trait_set_id` | The condition/disease associated with the assertion |
+| `pmids` | Ordered list of PubMed citation IDs cited as evidence |
+| `classification_comment` | Evidence summary / interpretation text |
+
+**The other 14 fields** compared only in the full-record (20-field) duplicate bump check include structural fields (`statement_type`, `gks_proposition_type`), display fields (`classification_label`, `classification_abbrev`), metadata (`origin`, `affected_status`, `method_type`, `review_status`), and derived fields (`rank`, `clinsig_type`, `local_key`).
+
+---
+
 ## Chart 8a: Version Bump Categories by Month
 
 **View:** `sheets_duplicate_bumps_by_month`
 
-**Purpose:** Shows monthly trends comparing three categories of version changes to identify concerning resubmission patterns.
-
-### Version Bump Categories
-
-| Category | Description | Fields Compared | Concern Level |
-|----------|-------------|-----------------|---------------|
-| **Duplicate Bump** | Identical resubmission - no fields changed at all | 19 fields | Most concerning |
-| **Non-substantive Change Bump** | 4 key classification fields unchanged, but minor fields changed | 4 fields | Moderate concern |
-| **Substantive Change Bump** | Real changes to classification-relevant fields | N/A | Legitimate update |
-
-**Key Insight:** Duplicate bumps are a **subset** of non-substantive bumps. The difference (`Nonsubstantive_Change_Bumps`) represents cases where the 4 key fields didn't change, but other fields (like `rank`, `review_status`, `classification_comment`, etc.) did change.
+**Purpose:** Shows monthly trends across the three version bump categories described above. Use this to identify whether version bumping is increasing over time, whether it's concentrated in certain months (which may correlate with CVC batch submissions), and whether the pattern is shifting between duplicate and non-substantive bumps.
 
 ### Setup Steps
 
@@ -683,7 +796,7 @@ If the Size field shows "None" or wrong column:
 | Chart type | Stacked Column |
 | X-axis | `month_label` |
 | Series 1 | `Duplicate_Bumps` (red - most concerning) |
-| Series 2 | `Nonsubstantive_Change_Bumps` (orange - 4 fields same, others changed) |
+| Series 2 | `Nonsubstantive_Change_Bumps` (orange - 5 fields same, others changed) |
 | Series 3 | `Substantive_Change_Bumps` (blue - real changes) |
 
 ### Data Columns
@@ -693,11 +806,11 @@ If the Size field shows "None" or wrong column:
 | `release_month` | First day of the month (for sorting) |
 | `month_label` | Human-readable label (e.g., "Jan 2024") |
 | `total_version_changes` | All version changes in this month |
-| `Duplicate_Bumps` | Identical resubmissions: ALL 19 fields same (most concerning) |
-| `Nonsubstantive_Change_Bumps` | 4 key fields same, but other minor fields changed |
+| `Duplicate_Bumps` | Identical resubmissions: ALL 20 fields same (most concerning) |
+| `Nonsubstantive_Change_Bumps` | 6 key fields same, but other minor fields changed |
 | `Substantive_Change_Bumps` | Real changes made to classification-relevant fields |
-| `duplicate_also_nonsubstantive` | Duplicate bumps also detected by 4-field check (should equal duplicates) |
-| `duplicate_only` | Duplicates NOT detected by 4-field check (should be 0 - sanity check) |
+| `duplicate_also_nonsubstantive` | Duplicate bumps also detected by 6-field check (should equal duplicates) |
+| `duplicate_only` | Duplicates NOT detected by 6-field check (should be 0 - sanity check) |
 | `duplicate_bump_pct` | % of changes that were duplicate bumps |
 | `nonsubstantive_bump_pct` | % of changes that were non-substantive bumps |
 | `pct_nonsubstantive_that_are_duplicate` | What % of non-substantive bumps are actually duplicates |
@@ -715,7 +828,7 @@ If the Size field shows "None" or wrong column:
 ### Interpretation
 
 - **Red (Duplicate Bumps)**: Most concerning - the submission is identical to the prior version and should not have had a version bump at all
-- **Orange (Non-substantive Change)**: Detected by 4-field check but not 19-field - some minor fields changed but no classification-relevant updates
+- **Orange (Non-substantive Change)**: Detected by 6-field check but not 20-field - some minor fields changed but no classification-relevant updates
 - **Blue (Substantive Change)**: Real changes made to classification-relevant fields - legitimate updates
 - `pct_nonsubstantive_that_are_duplicate` tells you what portion of non-substantive bumps are pure duplicates
 - If `duplicate_only > 0`, there's a data issue (duplicates should always be a subset of non-substantive)
@@ -726,7 +839,7 @@ If the Size field shows "None" or wrong column:
 
 **View:** `cvc_duplicate_bumps_by_submitter`
 
-**Purpose:** Identifies which submitters have the most duplicate bumps (identical resubmissions) across all their SCVs.
+**Purpose:** Identifies which submitters are most frequently resubmitting identical SCVs (duplicate bumps). This helps prioritize outreach or investigation — submitters with high duplicate bump counts and high `avg_bumps_per_scv` are systematically resubmitting the same records without changes, which may be an automated process or a deliberate strategy to avoid flags.
 
 ### Setup Steps
 
@@ -770,35 +883,47 @@ If the Size field shows "None" or wrong column:
 
 ### Interpretation
 
-- Submitters with high `duplicate_bumps` are frequently resubmitting identical records without any changes
-- High `avg_bumps_per_scv` indicates repeat behavior on the same SCVs
-- Compare `duplicate_bump_pct` across submitters to identify outliers
-- Look at date range (`first_duplicate_bump_date` to `last_duplicate_bump_date`) to see if behavior is ongoing
+- Submitters with high `duplicate_bumps` are frequently resubmitting identical records without any changes — all 20 comparable fields are the same between versions
+- High `avg_bumps_per_scv` indicates repeat behavior on the same SCVs, suggesting a systematic pattern rather than isolated incidents
+- Compare `duplicate_bump_pct` across submitters to identify outliers — a submitter whose version changes are 80%+ duplicate bumps is behaving very differently from one at 10%
+- Look at the date range (`first_duplicate_bump_date` to `last_duplicate_bump_date`) to determine if the behavior is ongoing or was a one-time event
+- Cross-reference with Charts 9a/9b (auto-reflag) to see whether these duplicate bumps are preventing CVC flags from being applied
 
 ---
 
 ## Chart 8c: Version Bump Summary
 
-**View:** `cvc_duplicate_bumps_summary`
+**View:** `sheets_duplicate_bumps_summary`
 
-**Purpose:** Provides high-level KPIs comparing the three categories of version changes across all data.
+**Purpose:** All-time summary statistics across all submitters and all version changes, providing the big-picture view of version bump behavior in ClinVar. Use this as a reference table alongside Charts 8a and 8b to contextualize individual submitter or monthly patterns against the overall totals.
 
-### Setup Steps (KPI Cards)
+### Setup Steps
 
-1. Connect to `clinvar_curator.cvc_duplicate_bumps_summary`
+1. Connect to `clinvar_curator.sheets_duplicate_bumps_summary`
 2. Click **Extract** to pull data into a regular sheet
-3. Create individual cells or a scorecard layout displaying key metrics
+3. The data is already in a two-column format (`metric`, `value`) — display as a table
 
-### Data Columns
+### Data Format
 
-| Column | Description |
+The view unpivots the single-row summary into a vertical data table:
+
+| metric | value |
+|--------|-------|
+| total_version_changes | 12345 |
+| total_duplicate_bumps | 678 |
+| total_nonsubstantive_bumps | 890 |
+| ... | ... |
+
+### Metrics Reference
+
+| Metric | Description |
 |--------|-------------|
 | `total_version_changes` | Total consecutive version changes in the dataset |
-| `total_duplicate_bumps` | Duplicate bumps: ALL 19 fields identical (most concerning) |
-| `total_nonsubstantive_bumps` | Non-substantive bumps: 4 key fields identical |
-| `duplicate_also_nonsubstantive` | Duplicate bumps also detected by 4-field check (should = duplicates) |
+| `total_duplicate_bumps` | Duplicate bumps: ALL 20 fields identical (most concerning) |
+| `total_nonsubstantive_bumps` | Non-substantive bumps: 6 key fields identical |
+| `duplicate_also_nonsubstantive` | Duplicate bumps also detected by 6-field check (should = duplicates) |
 | `duplicate_only` | Duplicates NOT in non-substantive (should be 0 - sanity check) |
-| `nonsubstantive_only` | Non-substantive bumps that aren't duplicates (4 fields same, others changed) |
+| `nonsubstantive_only` | Non-substantive bumps that aren't duplicates (5 fields same, others changed) |
 | `total_substantive_changes` | Changes where classification-relevant fields changed |
 | `overall_duplicate_bump_pct` | % of all changes that are duplicate bumps |
 | `overall_nonsubstantive_bump_pct` | % of all changes that are non-substantive bumps |
@@ -811,28 +936,163 @@ If the Size field shows "None" or wrong column:
 | `earliest_version_change` | First version change date in dataset |
 | `latest_version_change` | Most recent version change date |
 
-### Display Format
+### Key Metrics to Watch
 
-Since this is a single-row summary, display as KPI cards:
+- **`pct_nonsubstantive_that_are_duplicate`** — What portion of non-substantive bumps (6 key fields unchanged) are actually pure duplicates (all 20 fields unchanged). A high percentage means most non-substantive bumps are identical resubmissions that should not have had a version increment at all — the submitter changed nothing.
+- **`overall_duplicate_bump_pct`** — What percentage of ALL version changes across ClinVar are duplicate bumps. This is the headline number for how prevalent the practice is.
+- **`duplicate_only`** — A sanity check. This should always be 0 because every duplicate bump (20 fields same) should also be a non-substantive bump (6 fields same). A non-zero value indicates a data issue.
+- **`unique_scvs_with_duplicate_bumps` vs `unique_scvs_with_version_changes`** — Shows what fraction of SCVs that have had any version change have also had at least one duplicate bump.
 
-| KPI | Metric |
-|-----|--------|
-| **Duplicate Bumps** | `total_duplicate_bumps` |
-| **Non-substantive Bumps** | `total_nonsubstantive_bumps` |
-| **% Non-substantive That Are Duplicates** | `pct_nonsubstantive_that_are_duplicate`% |
-| **Duplicate Bump Rate** | `overall_duplicate_bump_pct`% |
-| **SCVs with Duplicate Bumps** | `unique_scvs_with_duplicate_bumps` |
-| **Submitters Involved** | `unique_submitters_with_duplicate_bumps` |
+---
 
-### Key Insight
+## Charts 9a/9b: Auto-Reflag Analysis
 
-The `pct_nonsubstantive_that_are_duplicate` metric tells you what portion of the non-substantive version bumps (detected by the 4-field check) are actually pure duplicates with zero changes. A high percentage means most non-substantive bumps are identical resubmissions that should not have had a version increment.
+### Background
 
-### Alternative: Scorecard Chart
+When CVC identifies an SCV as an outlier, it submits a "flagging candidate" to ClinVar. ClinVar then gives the submitter a 60-90 day grace period to respond before applying the flag (setting rank = -3). Some submitters respond by resubmitting their SCV — incrementing the version number — without making any meaningful changes to their classification, evidence summary, or condition. This "version bump" can either **prevent a flag from being applied** (if the bump occurs during the grace period, ClinVar treats it as a response and may not apply the flag) or **remove an existing flag** (if the flag was already applied, a new version resets the SCV and removes the flag).
 
-1. Select individual metric cells
-2. Insert → Chart → Scorecard
-3. Create one scorecard per key metric
+In either case, if the submitter did not actually change their classification, evidence summary (the interpretation comment), or condition name, the original reason for flagging still stands and the SCV should be re-flagged.
+
+**Auto-reflagging is limited to 7 target labs** where this pattern has been confirmed: LabCorp Genetics, CeGaT, Revvity (formerly PerkinElmer Genomics), OMIM, Baylor Genetics, Counsyl, and Eurofins. Other labs require manual review before re-flagging.
+
+**Important filtering rules:**
+- Only the **most recent** flagging candidate submission per SCV is considered, to avoid double-counting SCVs that were submitted across multiple batches.
+- If CVC subsequently submitted a **"remove flagged submission"** for an SCV (requesting that the flag be taken off), that SCV is excluded — unless a newer flagging candidate submission was made after the remove request.
+
+**The 6 substantive fields** compared between the submitted version and the current version are the same fields used by version bump detection (script 05):
+- **Classification** (`classif_type`) — the clinical significance category (e.g., Pathogenic, VUS)
+- **Submitted classification** (`submitted_classification`) — the free-text classification provided by the submitter
+- **Last evaluated** (`last_evaluated`) — the date the submitter last evaluated the variant
+- **Condition/trait** (`trait_set_id`) — the disease/condition associated with the variant-level assertion
+- **PubMed citations** (`pmids`) — the ordered list of PubMed IDs cited as evidence
+- **Evidence summary** (`classification_comment`) — the interpretation text or evidence description
+
+If all 6 are unchanged, the SCV qualifies for auto-reflagging (same as a "version bump" in script 05). If any changed, it requires manual review.
+
+**Related:** Prior work documented in [clingen-data-model/clinvar-curation-reporting#37](https://github.com/clingen-data-model/clinvar-curation-reporting/issues/37).
+
+### Target Labs
+
+| Lab | Description |
+|-----|-------------|
+| LabCorp Genetics | Laboratory Corporation of America |
+| CeGaT | CeGaT GmbH |
+| Revvity | Formerly PerkinElmer Genomics |
+| OMIM | Online Mendelian Inheritance in Man |
+| Baylor Genetics | Baylor College of Medicine |
+| Counsyl | Genetic testing laboratory |
+| Eurofins | Eurofins Clinical Genetics |
+
+---
+
+## Chart 9a: Auto-Reflag Actionable List
+
+**View:** `sheets_autoreflag_actionable`
+
+**Purpose:** The complete list of SCVs from the 7 target labs that were submitted as flagging candidates, are not currently flagged, and had a version change since submission. Each row shows whether the SCV qualifies for automatic re-flagging or needs manual review.
+
+### Setup Steps
+
+1. Connect to `clinvar_curator.sheets_autoreflag_actionable`
+2. Click **Extract** to pull the data into a regular sheet
+3. Sort by `Action` (Auto-Reflag first), then by `Submitter Name`
+4. Optionally filter to only `Action = "Auto-Reflag"` rows for the submission-ready list
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `SCV ID` | The submission accession (e.g., SCV000123456) |
+| `ClinVar VCV Link` | Click to view variant in ClinVar |
+| `Variation ID` | Internal variation identifier |
+| `Submitter Name` | Name of the submitting lab/organization |
+| `Target Lab` | Which of the 7 target labs this belongs to |
+| `Original Flagging Reason` | The reason CVC originally flagged this SCV |
+| `Original Batch ID` | CVC batch that submitted the flagging candidate |
+| `Original Submission Date` | When ClinVar accepted the flagging candidate submission |
+| `Current Outcome` | Current status from flagging candidate outcomes tracking |
+| `Was Ever Flagged` | "Yes" if ClinVar applied the flag at any point, or "No — Grace period bump" if the submitter prevented it |
+| `Date Flag Applied` | When the flag (rank = -3) first appeared (blank if never flagged) |
+| `Date Flag Removed` | When the flag was removed (blank if never flagged) |
+| `Submitted SCV Version` | The SCV version number when CVC submitted the flagging candidate |
+| `Current SCV Version` | The current version number of the SCV |
+| `Version Bumps Since Submitted` | Number of version increments since the flagging candidate was submitted |
+| `Current Classification` | Current classification abbreviation |
+| `Current Classification Type` | Current classification type |
+| `Changes Since Submission` | "None — Ready to Re-Flag" or a comma-separated list of which substantive fields changed (classification, submitted_classification, last_evaluated, trait_set_id, pmids, classification_comment) |
+| `Action` | "Auto-Reflag" (all 6 substantive fields unchanged — eligible) or "Review Needed" (at least one changed) |
+
+### Conditional Formatting Recommended
+
+| Condition | Format | Purpose |
+|-----------|--------|---------|
+| `Action` = "Auto-Reflag" | Light green background | Ready for immediate re-flagging |
+| `Action` = "Review Needed" | Light yellow background | Needs manual review before re-flagging |
+
+### Interpretation
+
+- **Auto-Reflag** rows: The submitter resubmitted with no changes to any of the 6 substantive fields (same as a "version bump" in the version bump detection). The original flagging reason still applies and the SCV should be re-flagged.
+- **Review Needed** rows: At least one of the 6 substantive fields changed — check the `Changes Since Submission` column to see which. The change may or may not address the original flagging reason; a curator should review before deciding to re-flag.
+- **Was Ever Flagged = "No"**: These SCVs were never flagged because the submitter bumped the version during the grace period. They are just as valid for re-flagging as SCVs that were flagged and then lost the flag.
+- **Version Bumps Since Submitted** > 1 indicates the submitter resubmitted multiple times since the flagging candidate was submitted — a pattern of repeated avoidance.
+
+---
+
+## Chart 9b: Auto-Reflag by Submitter
+
+**View:** `sheets_autoreflag_by_submitter`
+
+**Purpose:** Per-submitter summary showing which of the 7 target labs have the most SCVs eligible for auto-reflagging, broken down by whether the SCVs were previously flagged or never flagged.
+
+### Setup Steps
+
+1. Connect to `clinvar_curator.sheets_autoreflag_by_submitter`
+2. Click **Extract** to pull data into a regular sheet
+3. Select columns: `Submitter Name`, `Ready to Auto-Reflag`, `Excluded - Has Changes`
+4. Insert → Chart
+5. Choose **Horizontal Stacked Bar chart**
+
+### Chart Configuration
+
+| Setting | Value |
+|---------|-------|
+| Chart type | Horizontal Stacked Bar |
+| Y-axis | `Submitter Name` |
+| Series 1 | `Ready to Auto-Reflag` (green) |
+| Series 2 | `Excluded - Has Changes` (gray) |
+
+### Data Columns
+
+| Column | Description |
+|--------|-------------|
+| `Submitter Name` | Lab/organization name |
+| `Ready to Auto-Reflag` | SCVs eligible for automatic re-flagging (all 6 substantive fields unchanged) |
+| `Excluded - Has Changes` | SCVs where at least one of the 6 substantive fields changed |
+| `Total Candidates` | Total SCVs from this lab that were submitted as flagging candidates and had a version change |
+| `Previously Flagged` | Count of SCVs that were flagged (rank = -3) at some point then lost the flag |
+| `Never Flagged - Grace Period Bump` | Count of SCVs that were never flagged because the submitter bumped during the grace period |
+| `Classification Changed` | Count where classif_type changed |
+| `Submitted Classification Changed` | Count where submitted_classification text changed |
+| `Last Evaluated Changed` | Count where last_evaluated date changed |
+| `Condition Changed` | Count where trait_set_id changed |
+| `PMIDs Changed` | Count where pmids changed |
+| `Evidence Summary Changed` | Count where classification_comment changed |
+| `% Eligible for Auto-Reflag` | Percentage of total candidates eligible for auto-reflagging |
+| `Unique Variants` | Number of distinct variants affected |
+
+### Series Colors
+
+| Series | Color | Hex Code |
+|--------|-------|----------|
+| `Ready to Auto-Reflag` | Green | #1B7F37 |
+| `Excluded - Has Changes` | Gray | #B7B7B7 |
+
+### Interpretation
+
+- Labs with large green bars have many SCVs that should be auto-reflagged
+- The `% Eligible for Auto-Reflag` shows what proportion of candidates qualify — a high percentage means the lab is consistently version-bumping without making meaningful changes
+- The `Previously Flagged` vs `Never Flagged - Grace Period Bump` breakdown shows whether the lab is primarily avoiding flags during the grace period or removing them after the fact
+- Check the change breakdown columns (`Classification Changed`, `Submitted Classification Changed`, `Last Evaluated Changed`, `Condition Changed`, `PMIDs Changed`, `Evidence Summary Changed`) to understand why excluded SCVs don't qualify
 
 ---
 

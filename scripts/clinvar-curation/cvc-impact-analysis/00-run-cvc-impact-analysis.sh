@@ -24,13 +24,14 @@
 #     02: Create conflict attribution tables
 #     03: Create impact analytics and summary views
 #
-#   Phase 3 - Flagging Candidate Analysis (00, 04-07):
+#   Phase 3 - Flagging Candidate Analysis (00, 04-08):
 #     These scripts use cvc_batches_enriched and cvc_rejected_scvs
 #     00: Create cvc_batches_enriched view (adds grace period dates)
 #     04: Track flagging candidate outcomes
 #     05: Detect version bumps across all SCVs
 #     06: Analyze version bump and flagging intersection
 #     07: Identify resubmission candidates (unflagged SCVs needing action)
+#     08: Identify auto-reflag candidates (previously flagged, unflagged by version bump)
 #
 # =============================================================================
 
@@ -333,6 +334,11 @@ main() {
         "Step 7: Identifying resubmission candidates"
     echo ""
 
+    # Step 8: Identify auto-reflag candidates (7 target labs)
+    run_query "$SCRIPT_DIR/08-autoreflag-candidates.sql" \
+        "Step 8: Identifying auto-reflag candidates"
+    echo ""
+
     # =========================================================================
     # Summary
     # =========================================================================
@@ -366,6 +372,9 @@ main() {
             UNION ALL
             SELECT 'Resubmission Candidates',
                    (SELECT COUNT(*) FROM \`$PROJECT.clinvar_curator.cvc_resubmission_candidates\`)
+            UNION ALL
+            SELECT 'Auto-Reflag Candidates',
+                   (SELECT COUNTIF(is_autoreflag_candidate) FROM \`$PROJECT.clinvar_curator.cvc_autoreflag_candidates\`)
         "
     fi
 }
