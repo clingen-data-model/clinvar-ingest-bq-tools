@@ -13,7 +13,10 @@
 --   - clinvar_ingest.conflict_vcv_change_detail
 --
 -- Output:
+--   Tables (materialized):
 --   - clinvar_curator.cvc_impact_summary
+--   - clinvar_curator.cvc_bulk_downgrade_exclusions
+--   Views (live):
 --   - clinvar_curator.cvc_batch_effectiveness
 --   - clinvar_curator.cvc_reason_effectiveness
 --   - Various Google Sheets optimized views
@@ -182,7 +185,7 @@ ORDER BY mc.snapshot_release_date
 -- =============================================================================
 -- Track how effective each CVC batch has been at driving resolutions
 
-CREATE OR REPLACE TABLE `clinvar_curator.cvc_batch_effectiveness`
+CREATE OR REPLACE VIEW `clinvar_curator.cvc_batch_effectiveness`
 AS
 WITH
 batch_submissions AS (
@@ -247,7 +250,7 @@ ORDER BY bs.batch_id
 -- =============================================================================
 -- Analyze which curation reasons are most effective at driving resolutions
 
-CREATE OR REPLACE TABLE `clinvar_curator.cvc_reason_effectiveness`
+CREATE OR REPLACE VIEW `clinvar_curator.cvc_reason_effectiveness`
 AS
 WITH
 -- Count submissions by reason

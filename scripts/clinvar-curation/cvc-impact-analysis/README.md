@@ -188,6 +188,13 @@ ORDER BY batch_id;
 | `05-version-bump-detection.sql` | Detects version bumps (4-field comparison) |
 | `06-version-bump-flagging-intersection.sql` | Analyzes version bumps on CVC-submitted SCVs |
 | `full-record-version-bump-detection.sql` | Comprehensive 19-field version bump detection |
+| `09-refresh-cvc-impact-analysis.sql` | Stored procedure to rebuild all 11 materialized tables in dependency order |
+
+### Apps Script / Automation
+
+| File | Description |
+|------|-------------|
+| `appscript-refresh-impact.js` | Apps Script snippet to call refresh procedure after batch finalization |
 
 ### Data Loaders
 
@@ -232,7 +239,7 @@ When curators submit a batch of flagging candidates to ClinVar, they need to kno
 - When does the 60-day grace period end?
 - What's the first ClinVar release after the grace period?
 
-This query takes the batch acceptance dates (maintained in a separate file) and calculates these key dates. The grace period is important because submitters have 60 days to respond to a flagging candidate before the flag is applied.
+This query takes the batch end dates from `cvc_clinvar_batches` and calculates these key dates. The grace period is important because submitters have 60 days to respond to a flagging candidate before the flag is applied.
 
 ---
 
@@ -374,7 +381,7 @@ This helps distinguish between:
 ### Summary of Data Flow
 
 ```text
-External Files                      CVC Curation Tables
+CVC Curation Tables / External Files
     ↓                                      ↓
 cvc_clinvar_batches.batch_end_date ─→ 00 ─→ cvc_batches_enriched
                                           ↓

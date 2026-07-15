@@ -78,7 +78,7 @@ Once upstream data is current, rebuild the materialized tables by either:
 CALL `clinvar_curator.refresh_cvc_impact_analysis`();
 ```
 
-This rebuilds all 14 materialized tables in dependency order. Takes 2-5 minutes. Can also be triggered from the batch finalization Apps Script.
+This rebuilds all 11 materialized tables in dependency order. Takes 2-5 minutes. Can also be triggered from the batch finalization Apps Script.
 
 **Option B: Run the shell script**
 

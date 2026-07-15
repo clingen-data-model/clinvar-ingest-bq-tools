@@ -10,7 +10,7 @@
  * 2. Add this code to the existing script
  * 3. Call refreshCvcImpactAnalysis() after batch finalization
  *
- * The procedure takes 2-5 minutes to run. It rebuilds all 14 materialized
+ * The procedure takes 2-5 minutes to run. It rebuilds all 11 materialized
  * tables in the CVC Impact Analysis pipeline in dependency order.
  *
  * Uses Jobs.insert (async) instead of Jobs.query (sync) since the procedure

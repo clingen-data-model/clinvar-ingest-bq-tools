@@ -3,7 +3,7 @@
 -- =============================================================================
 --
 -- Purpose:
---   Rebuilds all 14 materialized tables in the CVC Impact Analysis pipeline
+--   Rebuilds all 11 materialized tables in the CVC Impact Analysis pipeline
 --   in dependency order.
 --
 --   Designed to be called from Google Apps Script after batch finalization,
@@ -30,8 +30,12 @@
 --     - 08: cvc_autoreflag_candidates
 --
 --   Phase 3 (depends on Phase 2):
---     - 03: cvc_impact_summary, cvc_batch_effectiveness,
---           cvc_reason_effectiveness, cvc_bulk_downgrade_exclusions
+--     - 03: cvc_impact_summary
+--
+--   Not included (managed separately in 03-cvc-impact-analytics.sql):
+--     - cvc_batch_effectiveness (VIEW - live aggregation)
+--     - cvc_reason_effectiveness (VIEW - live aggregation)
+--     - cvc_bulk_downgrade_exclusions (static table - only changes when new bulk events discovered)
 --
 -- =============================================================================
 
@@ -1523,150 +1527,13 @@ BEGIN
   ORDER BY mc.snapshot_release_date
   ;
 
-  -- Step 03b: cvc_batch_effectiveness
-  CREATE OR REPLACE TABLE `clinvar_curator.cvc_batch_effectiveness`
-  AS
-  WITH
-  batch_submissions AS (
-    SELECT
-      batch_id,
-      submission_date,
-      submission_month_year,
-      COUNT(*) AS scvs_submitted,
-      COUNT(DISTINCT variation_id) AS variants_targeted,
-      COUNTIF(outcome = 'flagged') AS scvs_flagged,
-      COUNTIF(outcome = 'deleted') AS scvs_deleted,
-      COUNTIF(outcome = 'resubmitted, reclassified') AS scvs_reclassified,
-      COUNTIF(is_resolution_candidate) AS resolution_candidates
-    FROM `clinvar_curator.cvc_submitted_variants`
-    WHERE valid_submission = TRUE
-    GROUP BY batch_id, submission_date, submission_month_year
-  ),
-
-  batch_resolutions AS (
-    SELECT
-      batch_id,
-      COUNT(DISTINCT variation_id) AS variants_resolved
-    FROM `clinvar_curator.cvc_resolution_attribution`,
-    UNNEST(cvc_batch_ids) AS batch_id
-    WHERE variant_attribution = 'cvc_attributed'
-    GROUP BY batch_id
-  )
-
-  SELECT
-    bs.batch_id,
-    bs.submission_date,
-    bs.submission_month_year,
-    bs.scvs_submitted,
-    bs.variants_targeted,
-    bs.scvs_flagged,
-    bs.scvs_deleted,
-    bs.scvs_reclassified,
-    bs.resolution_candidates,
-    COALESCE(br.variants_resolved, 0) AS variants_resolved,
-    -- Effectiveness metrics
-    CASE
-      WHEN bs.variants_targeted > 0
-      THEN ROUND(100.0 * COALESCE(br.variants_resolved, 0) / bs.variants_targeted, 1)
-      ELSE 0
-    END AS resolution_rate_pct,
-    CASE
-      WHEN bs.scvs_submitted > 0
-      THEN ROUND(100.0 * bs.scvs_flagged / bs.scvs_submitted, 1)
-      ELSE 0
-    END AS flag_rate_pct,
-    -- Days since submission (for maturity tracking)
-    DATE_DIFF(CURRENT_DATE(), bs.submission_date, DAY) AS days_since_submission
-  FROM batch_submissions bs
-  LEFT JOIN batch_resolutions br ON br.batch_id = bs.batch_id
-  ORDER BY bs.batch_id
-  ;
-
-  -- Step 03c: cvc_reason_effectiveness
-  CREATE OR REPLACE TABLE `clinvar_curator.cvc_reason_effectiveness`
-  AS
-  WITH
-  reason_submissions AS (
-    SELECT
-      reason AS curation_reason,
-      COUNT(*) AS times_used,
-      COUNT(DISTINCT variation_id) AS variants_targeted,
-      COUNTIF(outcome = 'flagged') AS scvs_flagged,
-      COUNTIF(outcome = 'deleted') AS scvs_deleted,
-      COUNTIF(outcome = 'resubmitted, reclassified') AS scvs_reclassified
-    FROM `clinvar_curator.cvc_submitted_variants`
-    WHERE valid_submission = TRUE
-      AND reason IS NOT NULL
-    GROUP BY reason
-  ),
-
-  reason_resolutions AS (
-    SELECT
-      curation_reason,
-      COUNT(DISTINCT variation_id) AS variants_resolved
-    FROM `clinvar_curator.cvc_resolution_attribution`,
-    UNNEST(cvc_curation_reasons) AS curation_reason
-    WHERE variant_attribution = 'cvc_attributed'
-    GROUP BY curation_reason
-  )
-
-  SELECT
-    rs.curation_reason,
-    rs.times_used,
-    rs.variants_targeted,
-    rs.scvs_flagged,
-    rs.scvs_deleted,
-    rs.scvs_reclassified,
-    COALESCE(rr.variants_resolved, 0) AS variants_resolved,
-    -- Effectiveness metrics
-    CASE
-      WHEN rs.variants_targeted > 0
-      THEN ROUND(100.0 * COALESCE(rr.variants_resolved, 0) / rs.variants_targeted, 1)
-      ELSE 0
-    END AS resolution_rate_pct,
-    CASE
-      WHEN rs.times_used > 0
-      THEN ROUND(100.0 * rs.scvs_flagged / rs.times_used, 1)
-      ELSE 0
-    END AS flag_rate_pct
-  FROM reason_submissions rs
-  LEFT JOIN reason_resolutions rr ON rr.curation_reason = rs.curation_reason
-  ORDER BY rs.times_used DESC
-  ;
-
-  -- Step 03d: cvc_bulk_downgrade_exclusions
-  CREATE OR REPLACE TABLE `clinvar_curator.cvc_bulk_downgrade_exclusions`
-  AS
-  WITH
-  bulk_events AS (
-    SELECT '2024-10-09' AS snapshot_date, 239772 AS submitter_id, 'PreventionGenetics' AS submitter_name UNION ALL
-    SELECT '2025-07-06', 320494, 'Counsyl'
-  ),
-
-  bulk_resolutions AS (
-    SELECT DISTINCT
-      cd.snapshot_release_date,
-      cd.variation_id,
-      be.submitter_name AS bulk_event_submitter
-    FROM `clinvar_ingest.conflict_vcv_change_detail` cd
-    JOIN bulk_events be
-      ON CAST(cd.snapshot_release_date AS STRING) = be.snapshot_date
-    JOIN `clinvar_ingest.monthly_conflict_scv_changes` scv
-      ON cd.variation_id = scv.variation_id
-      AND cd.snapshot_release_date = scv.snapshot_release_date
-    WHERE cd.vcv_change_status = 'resolved'
-      AND cd.primary_reason = 'scv_rank_downgraded'
-      AND scv.scv_change_status = 'rank_changed'
-      AND CAST(scv.curr_submitter_id AS INT64) = be.submitter_id
-  )
-
-  SELECT
-    snapshot_release_date,
-    variation_id,
-    bulk_event_submitter,
-    'bulk_scv_rank_downgrade' AS exclusion_reason
-  FROM bulk_resolutions
-  ORDER BY snapshot_release_date, variation_id
-  ;
+  -- NOTE: cvc_batch_effectiveness, cvc_reason_effectiveness are now VIEWS
+  -- (defined in 03-cvc-impact-analytics.sql), not materialized tables.
+  -- They query cvc_submitted_variants and cvc_resolution_attribution live.
+  --
+  -- NOTE: cvc_bulk_downgrade_exclusions is a static table with hardcoded
+  -- bulk downgrade events. It does not depend on CVC tables and only needs
+  -- updating when a new bulk event is discovered. Managed separately in
+  -- 03-cvc-impact-analytics.sql.
 
 END;
