@@ -70,7 +70,17 @@ If these dates are behind the current ClinVar release, the temporal data collect
 
 ### Step 2: Re-run the CVC Impact Analysis pipeline
 
-Once upstream data is current, rebuild the materialized tables by running the full pipeline:
+Once upstream data is current, rebuild the materialized tables by either:
+
+**Option A: Call the stored procedure (recommended after batch finalization)**
+
+```sql
+CALL `clinvar_curator.refresh_cvc_impact_analysis`();
+```
+
+This rebuilds all 14 materialized tables in dependency order. Takes 2-5 minutes. Can also be triggered from the batch finalization Apps Script.
+
+**Option B: Run the shell script**
 
 ```bash
 cd scripts/clinvar-curation/cvc-impact-analysis
@@ -1138,7 +1148,7 @@ If all 6 are unchanged, the SCV qualifies for auto-reflagging (same as a "versio
 The underlying BigQuery views are refreshed when:
 
 1. New ClinVar release is processed (~monthly)
-2. New CVC batch is submitted
+2. New CVC batch is finalized (triggers `CALL clinvar_curator.refresh_cvc_impact_analysis()` via Apps Script or manually)
 3. Pipeline is manually run with `./00-run-cvc-impact-analysis.sh --force`
 
 Recommended Google Sheets refresh: **Weekly** or **After each ClinVar release**

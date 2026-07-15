@@ -60,7 +60,7 @@ Annotations are collected into batches and submitted to ClinVar periodically. Ea
 - Is submitted to ClinVar as a single file
 - Receives an acceptance date when ClinVar processes it
 
-The **batch acceptance date** is tracked manually in `batch-accepted-dates.tsv` and marks the start of the 60-day grace period for all SCVs in that batch.
+The **batch acceptance date** is derived from the `batch_end_date` in `cvc_clinvar_batches` and marks the start of the 60-day grace period for all SCVs in that batch.
 
 ### Phase 3: Grace Period (60 Days)
 
@@ -424,7 +424,7 @@ The lifecycle is tracked across these pipeline steps, which should be re-run aft
 
 | Step | Script | What it produces |
 |------|--------|------------------|
-| Load | `load-batch-accepted-dates.sh`, `load-rejected-scvs.sh` | Batch acceptance dates, rejection records |
+| Load | `load-rejected-scvs.sh` | Rejection records (batch acceptance dates are derived from `cvc_clinvar_batches`) |
 | 00 | `00-cvc-batch-enriched-view.sql` | Grace period dates for each batch |
 | 04 | `04-flagging-candidate-outcomes.sql` | Outcome for every flagging candidate + remove-flag submission |
 | 05 | `05-version-bump-detection.sql` | Version bump detection (6-field substantive check) |

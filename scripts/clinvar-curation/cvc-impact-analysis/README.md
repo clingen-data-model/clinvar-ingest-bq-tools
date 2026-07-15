@@ -193,7 +193,6 @@ ORDER BY batch_id;
 
 | File | Description |
 |------|-------------|
-| `load-batch-accepted-dates.sh` | Loads `batch-accepted-dates.tsv` into BigQuery |
 | `load-rejected-scvs.sh` | Loads `rejected-scvs.tsv` into BigQuery |
 
 ### Ad-Hoc Query Scripts
@@ -208,7 +207,6 @@ ORDER BY batch_id;
 
 | File | Description |
 |------|-------------|
-| `batch-accepted-dates.tsv` | Maps batch IDs to ClinVar acceptance dates (determines grace period start) |
 | `rejected-scvs.tsv` | SCVs rejected by ClinVar with rejection reasons |
 
 ### Documentation
@@ -378,7 +376,7 @@ This helps distinguish between:
 ```text
 External Files                      CVC Curation Tables
     ↓                                      ↓
-batch-accepted-dates.tsv ─→ 00 ─→ cvc_batches_enriched
+cvc_clinvar_batches.batch_end_date ─→ 00 ─→ cvc_batches_enriched
                                           ↓
 rejected-scvs.tsv        ─→ cvc_rejected_scvs (external table)
                                           ↓
