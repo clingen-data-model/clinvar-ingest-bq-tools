@@ -4,12 +4,17 @@
 --
 -- Purpose:
 --   Creates a view that enriches cvc_clinvar_batches with:
---   - batch_accepted_date: When ClinVar processed/accepted the batch
+--   - batch_accepted_date: Derived from batch_end_date (when ClinVar accepted the batch)
 --   - grace_period_end_date: 60 days after acceptance (when flags are applied)
+--   - first_release_after_grace_period: The next ClinVar release after grace ends
 --
 -- Dependencies:
 --   - clinvar_curator.cvc_clinvar_batches
---   - clinvar_curator.cvc_batch_accepted_dates
+--   - clinvar_ingest.clinvar_releases
+--
+-- Note: batch_end_date in cvc_clinvar_batches is the date ClinVar accepted/processed
+-- the batch. Previously this was maintained in a separate cvc_batch_accepted_dates
+-- table loaded from a TSV file; now uses the source table directly.
 --
 -- Output:
 --   - clinvar_curator.cvc_batches_enriched
@@ -25,18 +30,16 @@ SELECT
   b.batch_start_date,
   b.batch_end_date,
   b.submission,
-  a.batch_accepted_date,
-  a.notes AS acceptance_notes,
+  -- batch_end_date IS the accepted date (previously from separate TSV table)
+  b.batch_end_date AS batch_accepted_date,
   -- 60-day grace period ends on this date
-  DATE_ADD(a.batch_accepted_date, INTERVAL 60 DAY) AS grace_period_end_date,
+  DATE_ADD(b.batch_end_date, INTERVAL 60 DAY) AS grace_period_end_date,
   -- The first ClinVar release after the grace period ends
-  -- (this is when flags would be applied if submitter doesn't respond)
   (
     SELECT MIN(release_date)
     FROM `clinvar_ingest.clinvar_releases`
-    WHERE release_date > DATE_ADD(a.batch_accepted_date, INTERVAL 60 DAY)
+    WHERE release_date > DATE_ADD(b.batch_end_date, INTERVAL 60 DAY)
   ) AS first_release_after_grace_period
 FROM `clinvar_curator.cvc_clinvar_batches` b
-LEFT JOIN `clinvar_curator.cvc_batch_accepted_dates` a
-  ON b.batch_id = a.batch_id
+WHERE b.batch_end_date IS NOT NULL
 ORDER BY b.batch_id;

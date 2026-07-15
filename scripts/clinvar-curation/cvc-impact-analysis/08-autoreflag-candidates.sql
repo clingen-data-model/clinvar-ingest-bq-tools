@@ -421,6 +421,7 @@ SELECT
   target_lab_label AS `Target Lab`,
 
   -- Original flagging context
+  annotation_id AS `Annotation ID`,
   flagging_reason AS `Original Flagging Reason`,
   batch_id AS `Original Batch ID`,
   batch_accepted_date AS `Original Submission Date`,
