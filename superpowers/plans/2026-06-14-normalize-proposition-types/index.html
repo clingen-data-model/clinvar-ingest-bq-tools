@@ -1,0 +1,2196 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the ClinVar Ingest BigQuery Tools repository">
+      
+      
+      
+        <link rel="canonical" href="https://clingen-data-model.github.io/clinvar-ingest-bq-tools/superpowers/plans/2026-06-14-normalize-proposition-types/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Normalize Proposition Types Implementation Plan - ClinVar Ingest BQ Tools</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#normalize-proposition-types-implementation-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../../.." title="ClinVar Ingest BQ Tools" class="md-header__button md-logo" aria-label="ClinVar Ingest BQ Tools" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ClinVar Ingest BQ Tools
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Normalize Proposition Types Implementation Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clingen-data-model/clinvar-ingest-bq-tools
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../../.." title="ClinVar Ingest BQ Tools" class="md-nav__button md-logo" aria-label="ClinVar Ingest BQ Tools" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ClinVar Ingest BQ Tools
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clingen-data-model/clinvar-ingest-bq-tools
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/data-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../architecture/bigquery-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BigQuery Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript Utilities
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TypeScript Utilities
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../typescript/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../typescript/bq-utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BQ Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../typescript/parse-utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SQL Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/dataset-preparation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dataset Preparation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/temporal-data-collection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Temporal Collection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/temporal-data-summation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Temporal Summation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/tracker-report-update/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tracker Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/parsing-funcs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parsing Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/clinvar-curation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClinVar Curation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/external-table-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../sql-scripts/general/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    General Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCP Services
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    GCP Services
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../gcp-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../gcp-services/gcs-file-ingest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCS File Ingest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/variation-identity-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variation Identity Issues
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/acmgv4-variant-pathogenicity-under-construction.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ACMG v4 Variant Pathogenicity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../reference/clingen-knowledge-dissemination-draft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClinGen Knowledge Dissemination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../ci-cd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#current-state-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Current State Summary
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Current State Summary">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#clinvar_clinsig_types-columns-to-drop-4" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clinvar_clinsig_types columns to DROP (4):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clinvar_clinsig_types-columns-to-rename-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clinvar_clinsig_types columns to RENAME (3):
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clinvar_clinsig_types-columns-that-stay-as-is" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clinvar_clinsig_types columns that STAY as-is:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#clinvar_proposition_types-gains" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        clinvar_proposition_types gains:
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#downstream-column-renames" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Downstream column renames:
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-1-translation-table-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk 1: Translation Table Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunk 1: Translation Table Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-1-update-clinvar_proposition_types-table-definition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 1: Update clinvar_proposition_types table definition
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-2-update-clinvar_clinsig_types-drop-4-columns-rename-3" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 2: Update clinvar_clinsig_types — drop 4 columns, rename 3
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-2-dataset-preparation-procedure-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk 2: Dataset Preparation Procedure Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunk 2: Dataset Preparation Procedure Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-3-update-scv_summary-proc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 3: Update scv_summary proc
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-4-verify-validate_dataset-proc-no-changes-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 4: Verify validate_dataset proc — no changes needed
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-5-verify-gc_scv_obs-proc-no-changes-needed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 5: Verify gc_scv_obs proc — no changes needed
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-3-temporal-data-collection-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk 3: Temporal Data Collection Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunk 3: Temporal Data Collection Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-6-update-clinvar_scvs-table-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 6: Update clinvar_scvs table schema
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-7-update-clinvar_scvs-proc" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 7: Update clinvar_scvs proc
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-4-temporal-data-summation-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk 4: Temporal Data Summation Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunk 4: Temporal Data Summation Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-8-rename-gks_proposition_type-proposition_type-in-summation-procs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 8: Rename gks_proposition_type → proposition_type in summation procs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-5-tracker-report-and-curation-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk 5: Tracker Report and Curation Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunk 5: Tracker Report and Curation Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-9-update-tracker-reports" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 9: Update tracker reports
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-10-update-curation-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 10: Update curation scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#task-11-update-analysis-scripts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 11: Update analysis scripts
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#chunk-6-documentation-updates" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Chunk 6: Documentation Updates
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Chunk 6: Documentation Updates">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#task-12-update-architecture-docs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Task 12: Update architecture docs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#impact-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Impact Summary
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#column-rename-cheat-sheet" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Column Rename Cheat Sheet
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#risk-notes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Risk Notes
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="normalize-proposition-types-implementation-plan">Normalize Proposition Types Implementation Plan<a class="headerlink" href="#normalize-proposition-types-implementation-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>For agentic workers:</strong> REQUIRED: Use superpowers:subagent-driven-development (if subagents available) or superpowers:executing-plans to implement this plan. Steps use checkbox (<code>- [ ]</code>) syntax for tracking.</p>
+</blockquote>
+<p><strong>Goal:</strong> Eliminate duplication between <code>clinvar_proposition_types</code> and <code>clinvar_clinsig_types</code> by normalizing proposition-level data (<code>gks_type</code>, <code>statement_type</code>) into <code>clinvar_proposition_types</code>, removing redundant gks/final columns from <code>clinvar_clinsig_types</code>, and renaming <code>original_*</code> columns to drop the prefix.</p>
+<p><strong>Architecture:</strong> <code>clinvar_proposition_types</code> becomes the single source of truth for proposition metadata — gks_type name, owning statement_type, display order, and conflict detectability. <code>clinvar_clinsig_types</code> keeps classification-level concerns (direction, strength, code_system, predicate, etc.) and references propositions via the <code>proposition_type</code> code column. The <code>gks_proposition_type</code>, <code>gks_code_order</code>, <code>gks_description_order</code>, and <code>final_proposition_type</code> columns are dropped. The <code>original_*</code> prefix is dropped from the three retained columns. <code>final_predicate</code> stays on <code>clinvar_clinsig_types</code> because target propositions (PROG, DIAG, TR) have multiple predicates per proposition type depending on classification outcome.</p>
+<p><strong>Tech Stack:</strong> BigQuery SQL (stored procedures, translation tables)</p>
+<hr />
+<h2 id="current-state-summary">Current State Summary<a class="headerlink" href="#current-state-summary" title="Permanent link">&para;</a></h2>
+<h3 id="clinvar_clinsig_types-columns-to-drop-4"><code>clinvar_clinsig_types</code> columns to DROP (4):<a class="headerlink" href="#clinvar_clinsig_types-columns-to-drop-4" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>gks_proposition_type</code> — redundant with <code>original_proposition_type</code></li>
+<li><code>gks_code_order</code> — redundant with <code>original_code_order</code></li>
+<li><code>gks_description_order</code> — redundant with <code>original_description_order</code></li>
+<li><code>final_proposition_type</code> — redundant with <code>clinvar_proposition_types.gks_type</code></li>
+</ul>
+<h3 id="clinvar_clinsig_types-columns-to-rename-3"><code>clinvar_clinsig_types</code> columns to RENAME (3):<a class="headerlink" href="#clinvar_clinsig_types-columns-to-rename-3" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>original_proposition_type</code> → <code>proposition_type</code></li>
+<li><code>original_code_order</code> → <code>code_order</code></li>
+<li><code>original_description_order</code> → <code>description_order</code></li>
+</ul>
+<h3 id="clinvar_clinsig_types-columns-that-stay-as-is"><code>clinvar_clinsig_types</code> columns that STAY as-is:<a class="headerlink" href="#clinvar_clinsig_types-columns-that-stay-as-is" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>final_predicate</code> — stays because target propositions have multiple predicates per type (e.g. PROG has <code>associatedWithBetterOutcomeFor</code>, <code>associatedWithWorseOutcomeFor</code>, <code>associatedWithUndefinedOutcomeFor</code>)</li>
+</ul>
+<h3 id="clinvar_proposition_types-gains"><code>clinvar_proposition_types</code> gains:<a class="headerlink" href="#clinvar_proposition_types-gains" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>statement_type_code</code> — FK to <code>clinvar_statement_types.code</code> (per the TODO comment at line 31)</li>
+</ul>
+<h3 id="downstream-column-renames">Downstream column renames:<a class="headerlink" href="#downstream-column-renames" title="Permanent link">&para;</a></h3>
+<ul>
+<li><code>gks_proposition_type</code> → <code>proposition_type</code> (everywhere)</li>
+<li><code>original_proposition_type</code> → <code>proposition_type</code> (everywhere)</li>
+<li><code>gks_code_order</code> → <code>code_order</code> (where referenced)</li>
+<li><code>original_code_order</code> → <code>code_order</code> (where referenced)</li>
+</ul>
+<hr />
+<h2 id="chunk-1-translation-table-changes">Chunk 1: Translation Table Changes<a class="headerlink" href="#chunk-1-translation-table-changes" title="Permanent link">&para;</a></h2>
+<h3 id="task-1-update-clinvar_proposition_types-table-definition">Task 1: Update <code>clinvar_proposition_types</code> table definition<a class="headerlink" href="#task-1-update-clinvar_proposition_types-table-definition" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/dataset-preparation/00-setup-translation-tables.sql:149-182</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Add <code>statement_type_code</code> column and populate all rows</strong></li>
+</ul>
+<p>The table should become:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">clinvar_ingest</span><span class="p">.</span><span class="n">clinvar_proposition_types</span><span class="o">`</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">    </span><span class="n">code</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">    </span><span class="n">label</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">    </span><span class="n">gks_type</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="n">statement_type_code</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="n">display_order</span><span class="w"> </span><span class="n">INT64</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">    </span><span class="n">conflict_detectable</span><span class="w"> </span><span class="n">BOOL</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">);</span>
+</code></pre></div>
+<p>Populate with these values:</p>
+<table>
+<thead>
+<tr>
+<th>code</th>
+<th>label</th>
+<th>gks_type</th>
+<th>statement_type_code</th>
+<th>display_order</th>
+<th>conflict_detectable</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>path</td>
+<td>Pathogenicity</td>
+<td>VariantPathogenicityProposition</td>
+<td>GermlineClassification</td>
+<td>10</td>
+<td>TRUE</td>
+</tr>
+<tr>
+<td>sci</td>
+<td>Somatic Clinical Impact</td>
+<td>VariantClinicalSignificanceProposition</td>
+<td>SomaticClinicalImpact</td>
+<td>11</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>onco</td>
+<td>Oncogenicity</td>
+<td>VariantOncogenicityProposition</td>
+<td>OncogenicityClassification</td>
+<td>12</td>
+<td>TRUE</td>
+</tr>
+<tr>
+<td>aff</td>
+<td>Affects</td>
+<td>ClinvarAffectsProposition</td>
+<td>GermlineClassification</td>
+<td>20</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>assoc</td>
+<td>Association</td>
+<td>ClinvarAssociationProposition</td>
+<td>GermlineClassification</td>
+<td>30</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>cdfs</td>
+<td>Conflicting Data From Submitters</td>
+<td>ClinvarConflictingDataFromSubmitterProposition</td>
+<td>GermlineClassification</td>
+<td>35</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>cs</td>
+<td>Confers Sensitivity</td>
+<td>ClinvarConfersSensitivityProposition</td>
+<td>GermlineClassification</td>
+<td>40</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>dr</td>
+<td>Drug Response</td>
+<td>ClinvarDrugResponseProposition</td>
+<td>GermlineClassification</td>
+<td>50</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>np</td>
+<td>Not Provided</td>
+<td>ClinvarNotProvidedProposition</td>
+<td>GermlineClassification</td>
+<td>60</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>oth</td>
+<td>Other</td>
+<td>ClinvarOtherProposition</td>
+<td>GermlineClassification</td>
+<td>70</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>protect</td>
+<td>Protective</td>
+<td>ClinvarProtectiveProposition</td>
+<td>GermlineClassification</td>
+<td>80</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>rf</td>
+<td>Risk Factor</td>
+<td>ClinvarRiskFactorProposition</td>
+<td>GermlineClassification</td>
+<td>90</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>undef</td>
+<td>Undefined</td>
+<td>ClinvarUndefinedProposition</td>
+<td>GermlineClassification</td>
+<td>95</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>prog</td>
+<td>Prognostic</td>
+<td>VariantPrognosticProposition</td>
+<td>SomaticClinicalImpact</td>
+<td>100</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>diag</td>
+<td>Diagnostic</td>
+<td>VariantDiagnosticProposition</td>
+<td>SomaticClinicalImpact</td>
+<td>110</td>
+<td>FALSE</td>
+</tr>
+<tr>
+<td>tr</td>
+<td>Therapeutic Response</td>
+<td>VariantTherapeuticResponseProposition</td>
+<td>SomaticClinicalImpact</td>
+<td>120</td>
+<td>FALSE</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>[ ] <strong>Step 2: Remove the TODO comment at line 31</strong> (now resolved by adding <code>statement_type_code</code>)</li>
+</ul>
+<hr />
+<h3 id="task-2-update-clinvar_clinsig_types-drop-4-columns-rename-3">Task 2: Update <code>clinvar_clinsig_types</code> — drop 4 columns, rename 3<a class="headerlink" href="#task-2-update-clinvar_clinsig_types-drop-4-columns-rename-3" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/dataset-preparation/00-setup-translation-tables.sql:33-113</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Update CREATE TABLE — drop 4 columns, rename 3</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">CREATE</span><span class="w"> </span><span class="k">OR</span><span class="w"> </span><span class="k">REPLACE</span><span class="w"> </span><span class="k">TABLE</span><span class="w"> </span><span class="o">`</span><span class="n">clinvar_ingest</span><span class="p">.</span><span class="n">clinvar_clinsig_types</span><span class="o">`</span><span class="w"> </span><span class="p">(</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">    </span><span class="n">statement_type</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">    </span><span class="n">code</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">    </span><span class="n">label</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="n">significance</span><span class="w"> </span><span class="n">INT64</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="n">proposition_type</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="n">code_order</span><span class="w"> </span><span class="n">INT64</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="n">description_order</span><span class="w"> </span><span class="n">INT64</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="n">direction</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="n">strength_code</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">    </span><span class="n">strength_label</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">    </span><span class="n">classification_code</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">    </span><span class="n">penetrance_level</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">    </span><span class="n">code_system</span><span class="w"> </span><span class="n">STRING</span><span class="p">,</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">    </span><span class="n">final_predicate</span><span class="w"> </span><span class="n">STRING</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="p">);</span>
+</code></pre></div>
+<ul>
+<li>[ ] <strong>Step 2: Update the INSERT column list and VALUES (lines 54-113)</strong></li>
+</ul>
+<p>Remove the 4 dropped columns from the column list and each VALUES row. Rename the 3 <code>original_*</code> columns. Each row goes from 18 values to 14.</p>
+<ul>
+<li>[ ] <strong>Step 3: Update the clingen-stage conditional block (lines 115-147)</strong></li>
+</ul>
+<p>Update the SELECT list to use renamed columns and remove dropped ones:
+- <code>original_proposition_type</code> → <code>proposition_type</code>
+- <code>original_code_order</code> → <code>code_order</code>
+- <code>original_description_order</code> → <code>description_order</code>
+- Remove: <code>gks_proposition_type</code>, <code>gks_code_order</code>, <code>gks_description_order</code></p>
+<ul>
+<li>[ ] <strong>Step 4: Commit translation table changes</strong></li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>git<span class="w"> </span>add<span class="w"> </span>scripts/dataset-preparation/00-setup-translation-tables.sql
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;refactor: normalize proposition metadata into clinvar_proposition_types</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="s2">Add statement_type_code to clinvar_proposition_types.</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="s2">Drop gks_proposition_type, gks_code_order, gks_description_order,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="s2">final_proposition_type from clinvar_clinsig_types.</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="s2">Rename original_proposition_type→proposition_type,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="s2">original_code_order→code_order, original_description_order→description_order.&quot;</span>
+</code></pre></div>
+<hr />
+<h2 id="chunk-2-dataset-preparation-procedure-updates">Chunk 2: Dataset Preparation Procedure Updates<a class="headerlink" href="#chunk-2-dataset-preparation-procedure-updates" title="Permanent link">&para;</a></h2>
+<h3 id="task-3-update-scv_summary-proc">Task 3: Update <code>scv_summary</code> proc<a class="headerlink" href="#task-3-update-scv_summary-proc" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/dataset-preparation/03-scv-summary-proc.sql:140-250</code></p>
+<ul>
+<li>[ ] <strong>Step 1: In Step 3e (clinsig temp table, ~line 145-146)</strong></li>
+</ul>
+<p>Replace:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="n">cst</span><span class="p">.</span><span class="n">original_proposition_type</span><span class="p">,</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="n">cst</span><span class="p">.</span><span class="n">gks_proposition_type</span><span class="p">,</span>
+</code></pre></div>
+With:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="n">cst</span><span class="p">.</span><span class="n">proposition_type</span><span class="p">,</span>
+</code></pre></div></p>
+<ul>
+<li>[ ] <strong>Step 2: In Step 4 (final assembly, ~lines 192-193)</strong></li>
+</ul>
+<p>Replace:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="n">cst</span><span class="p">.</span><span class="n">original_proposition_type</span><span class="p">,</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="n">cst</span><span class="p">.</span><span class="n">gks_proposition_type</span><span class="p">,</span>
+</code></pre></div>
+With:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="n">cst</span><span class="p">.</span><span class="n">proposition_type</span><span class="p">,</span>
+</code></pre></div></p>
+<ul>
+<li>[ ] <strong>Step 3: Commit</strong></li>
+</ul>
+<hr />
+<h3 id="task-4-verify-validate_dataset-proc-no-changes-needed">Task 4: Verify <code>validate_dataset</code> proc — no changes needed<a class="headerlink" href="#task-4-verify-validate_dataset-proc-no-changes-needed" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Review: <code>scripts/dataset-preparation/02-validate-dataset-proc.sql:44-73</code></p>
+<p>The validation joins <code>clinvar_clinsig_types</code> on <code>code</code> + <code>statement_type</code> — both columns are retained. No changes needed.</p>
+<hr />
+<h3 id="task-5-verify-gc_scv_obs-proc-no-changes-needed">Task 5: Verify <code>gc_scv_obs</code> proc — no changes needed<a class="headerlink" href="#task-5-verify-gc_scv_obs-proc-no-changes-needed" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Review: <code>scripts/dataset-preparation/05-gc_scv_obs-proc.sql:100-104</code></p>
+<p>Joins on <code>label</code> + <code>statement_type</code> and selects <code>cct.code</code> — all retained. No changes needed.</p>
+<hr />
+<h2 id="chunk-3-temporal-data-collection-updates">Chunk 3: Temporal Data Collection Updates<a class="headerlink" href="#chunk-3-temporal-data-collection-updates" title="Permanent link">&para;</a></h2>
+<h3 id="task-6-update-clinvar_scvs-table-schema">Task 6: Update <code>clinvar_scvs</code> table schema<a class="headerlink" href="#task-6-update-clinvar_scvs-table-schema" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/temporal-data-collection/00-setup-temporal-tables.sql:117-145</code></p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Remove <code>gks_proposition_type</code> column, rename <code>original_proposition_type</code> → <code>proposition_type</code></strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: Commit</strong></p>
+</li>
+</ul>
+<hr />
+<h3 id="task-7-update-clinvar_scvs-proc">Task 7: Update <code>clinvar_scvs</code> proc<a class="headerlink" href="#task-7-update-clinvar_scvs-proc" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/temporal-data-collection/09-clinvar-scvs-proc.sql</code></p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Replace all <code>gks_proposition_type</code> with <code>proposition_type</code> in WHERE/match clauses (~lines 100, 199)</strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: Replace <code>original_proposition_type</code> with <code>proposition_type</code> in INSERT/UPDATE (~lines 70, 126)</strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Commit</strong></p>
+</li>
+</ul>
+<hr />
+<h2 id="chunk-4-temporal-data-summation-updates">Chunk 4: Temporal Data Summation Updates<a class="headerlink" href="#chunk-4-temporal-data-summation-updates" title="Permanent link">&para;</a></h2>
+<h3 id="task-8-rename-gks_proposition_type-proposition_type-in-summation-procs">Task 8: Rename <code>gks_proposition_type</code> → <code>proposition_type</code> in summation procs<a class="headerlink" href="#task-8-rename-gks_proposition_type-proposition_type-in-summation-procs" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/temporal-data-summation/02-clinvar-sum-vsp-rank-group-proc.sql</code> — ~5 references
+- Modify: <code>scripts/temporal-data-summation/03-clinvar-sum-scvs-proc.sql</code> — ~3 references
+- Modify: <code>scripts/temporal-data-summation/04-clinvar-sum-vsp-rank-group-change-proc.sql</code> — ~9 references
+- Modify: <code>scripts/temporal-data-summation/05-clinvar-sum-vsp-top-rank-group-change-proc.sql</code> — ~11 references</p>
+<ul>
+<li>[ ] <strong>Step 1: In each file, find-and-replace <code>gks_proposition_type</code> → <code>proposition_type</code></strong></li>
+</ul>
+<p>These appear in SELECT, GROUP BY, ORDER BY, and JOIN ON clauses. Mechanical rename.</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 2: Check if any summation table schemas (e.g. <code>clinvar_sum_scvs</code>) also need the column rename</strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Commit</strong></p>
+</li>
+</ul>
+<hr />
+<h2 id="chunk-5-tracker-report-and-curation-updates">Chunk 5: Tracker Report and Curation Updates<a class="headerlink" href="#chunk-5-tracker-report-and-curation-updates" title="Permanent link">&para;</a></h2>
+<h3 id="task-9-update-tracker-reports">Task 9: Update tracker reports<a class="headerlink" href="#task-9-update-tracker-reports" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/tracker-report-update/02-tracker-reports-rebuild-proc.sql</code> — ~17 references of <code>gks_proposition_type</code>
+- Modify: <code>scripts/tracker-report-update/03-gc-tracker-report-proc.sql</code> — uses <code>gks_code_order</code></p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Replace all <code>gks_proposition_type</code> → <code>proposition_type</code></strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: In gc-tracker-report-proc.sql (~line 103), replace <code>cct.gks_code_order</code> with <code>cct.code_order</code></strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 3: Commit</strong></p>
+</li>
+</ul>
+<hr />
+<h3 id="task-10-update-curation-scripts">Task 10: Update curation scripts<a class="headerlink" href="#task-10-update-curation-scripts" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/clinvar-curation/02-cvc-annotations-func.sql</code> — ~2 references
+- Modify: <code>scripts/clinvar-curation/04-cvc-annotations-impact-func.sql</code> — ~13 references
+- Modify: <code>scripts/clinvar-curation/05-cvc-outlier-clinsig-func.sql</code> — ~12 references
+- Modify: <code>scripts/clinvar-curation/cvc-submitted-outcomes-stats.sql</code> — ~14 references</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Replace all <code>gks_proposition_type</code> → <code>proposition_type</code></strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: Commit</strong></p>
+</li>
+</ul>
+<hr />
+<h3 id="task-11-update-analysis-scripts">Task 11: Update analysis scripts<a class="headerlink" href="#task-11-update-analysis-scripts" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>scripts/clinvar-miner/01-pathogenicity-breakdown.sql</code> — ~8 references
+- Modify: <code>scripts/clinvar-miner/02-concordance-breakdown.sql</code> — ~13 references
+- Modify: <code>scripts/conflict-resolution-analysis/01-get-monthly-conflicts.sql</code> — ~6 references</p>
+<ul>
+<li>
+<p>[ ] <strong>Step 1: Replace all <code>gks_proposition_type</code> → <code>proposition_type</code></strong></p>
+</li>
+<li>
+<p>[ ] <strong>Step 2: Commit</strong></p>
+</li>
+</ul>
+<hr />
+<h2 id="chunk-6-documentation-updates">Chunk 6: Documentation Updates<a class="headerlink" href="#chunk-6-documentation-updates" title="Permanent link">&para;</a></h2>
+<h3 id="task-12-update-architecture-docs">Task 12: Update architecture docs<a class="headerlink" href="#task-12-update-architecture-docs" title="Permanent link">&para;</a></h3>
+<p><strong>Files:</strong>
+- Modify: <code>docs/architecture/bigquery-schema.md</code>
+- Modify: <code>docs/architecture/data-pipeline.md</code>
+- Modify: <code>docs/sql-scripts/dataset-preparation.md</code>
+- Modify: <code>docs/sql-scripts/temporal-data-collection.md</code>
+- Modify: <code>docs/sql-scripts/temporal-data-summation.md</code></p>
+<ul>
+<li>[ ] <strong>Step 1: Update table descriptions to reflect new schema</strong></li>
+<li>[ ] <strong>Step 2: Replace any references to <code>gks_proposition_type</code> or <code>original_proposition_type</code> with <code>proposition_type</code></strong></li>
+<li>[ ] <strong>Step 3: Commit</strong></li>
+</ul>
+<hr />
+<h2 id="impact-summary">Impact Summary<a class="headerlink" href="#impact-summary" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Area</th>
+<th>Files affected</th>
+<th>Nature of change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Translation tables</td>
+<td>1</td>
+<td>Schema restructure (the core change)</td>
+</tr>
+<tr>
+<td>Dataset preparation procs</td>
+<td>1</td>
+<td>Drop <code>gks_proposition_type</code>, rename <code>original_proposition_type</code></td>
+</tr>
+<tr>
+<td>Temporal collection</td>
+<td>2</td>
+<td>Table schema + proc column renames</td>
+</tr>
+<tr>
+<td>Temporal summation</td>
+<td>4</td>
+<td>Mechanical column renames</td>
+</tr>
+<tr>
+<td>Tracker reports</td>
+<td>2</td>
+<td>Column renames + <code>gks_code_order</code> → <code>code_order</code></td>
+</tr>
+<tr>
+<td>Curation scripts</td>
+<td>4</td>
+<td>Mechanical column renames</td>
+</tr>
+<tr>
+<td>Analysis scripts</td>
+<td>3</td>
+<td>Mechanical column renames</td>
+</tr>
+<tr>
+<td>Documentation</td>
+<td>5</td>
+<td>Description updates</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>22 files</strong></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2 id="column-rename-cheat-sheet">Column Rename Cheat Sheet<a class="headerlink" href="#column-rename-cheat-sheet" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Old name</th>
+<th>New name</th>
+<th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>original_proposition_type</code></td>
+<td><code>proposition_type</code></td>
+<td><code>clinvar_clinsig_types</code>, <code>scv_summary</code>, <code>clinvar_scvs</code>, downstream</td>
+</tr>
+<tr>
+<td><code>original_code_order</code></td>
+<td><code>code_order</code></td>
+<td><code>clinvar_clinsig_types</code></td>
+</tr>
+<tr>
+<td><code>original_description_order</code></td>
+<td><code>description_order</code></td>
+<td><code>clinvar_clinsig_types</code></td>
+</tr>
+<tr>
+<td><code>gks_proposition_type</code></td>
+<td><em>(dropped — use <code>proposition_type</code>)</em></td>
+<td><code>clinvar_clinsig_types</code>, <code>scv_summary</code>, <code>clinvar_scvs</code>, downstream</td>
+</tr>
+<tr>
+<td><code>gks_code_order</code></td>
+<td><em>(dropped — use <code>code_order</code>)</em></td>
+<td><code>clinvar_clinsig_types</code>, gc-tracker-report</td>
+</tr>
+<tr>
+<td><code>gks_description_order</code></td>
+<td><em>(dropped)</em></td>
+<td><code>clinvar_clinsig_types</code></td>
+</tr>
+<tr>
+<td><code>final_proposition_type</code></td>
+<td><em>(dropped — use <code>clinvar_proposition_types.gks_type</code>)</em></td>
+<td><code>clinvar_clinsig_types</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="risk-notes">Risk Notes<a class="headerlink" href="#risk-notes" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>The <code>clinvar_scvs</code> temporal table</strong> stores historical data. Renaming its columns requires either:</li>
+<li>A one-time migration <code>ALTER TABLE ... RENAME COLUMN</code> in BigQuery, OR</li>
+<li>Dropping and recreating (loses data)</li>
+<li>
+<p><strong>Recommendation:</strong> Use <code>ALTER TABLE ... RENAME COLUMN</code> for live BigQuery tables.</p>
+</li>
+<li>
+<p><strong>The clingen-stage conditional block</strong> re-creates <code>clinvar_clinsig_types</code> with a subset of columns. Must be updated to use the new names (Task 2, Step 3).</p>
+</li>
+<li>
+<p><strong>Any external consumers</strong> (dashboards, notebooks, downstream queries outside this repo) that reference <code>gks_proposition_type</code>, <code>original_proposition_type</code>, <code>gks_code_order</code>, or <code>final_proposition_type</code> will break. Coordinate with consumers before deploying.</p>
+</li>
+<li>
+<p><strong><code>final_predicate</code> stays on <code>clinvar_clinsig_types</code></strong> because target propositions have multiple predicates per proposition type:</p>
+</li>
+<li>PROG: <code>associatedWithBetterOutcomeFor</code>, <code>associatedWithWorseOutcomeFor</code>, <code>associatedWithUndefinedOutcomeFor</code></li>
+<li>DIAG: <code>isDiagnosticInclusionCriterionFor</code>, <code>isDiagnosticExclusionCriterionFor</code>, <code>isDiagnosticUndefinedCriterionFor</code></li>
+<li>TR: <code>predictsSensitivityTo</code>, <code>predictsResistanceTo</code>, <code>predictsReducedSensitivtyTo</code>, <code>predictsUndefinedResponseTo</code></li>
+<li>UNDEF: <code>isClinvarUndefinedAssociationFor</code></li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../../javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>
