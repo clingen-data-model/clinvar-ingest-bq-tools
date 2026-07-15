@@ -15,7 +15,6 @@
 #
 # Pipeline Steps:
 #   Phase 1 - Load Data Files:
-#     - Load batch-accepted-dates.tsv into cvc_batch_accepted_dates
 #     - Load rejected-scvs.tsv into cvc_rejected_scvs
 #
 #   Phase 2 - Core Impact Analysis (01-03):
@@ -196,18 +195,7 @@ check_rebuild_needed() {
     fi
 
     # Check if TSV files have been updated (different row count than tables)
-    local batch_dates_file="$SCRIPT_DIR/batch-accepted-dates.tsv"
     local rejected_scvs_file="$SCRIPT_DIR/rejected-scvs.tsv"
-
-    if [ -f "$batch_dates_file" ]; then
-        local file_lines=$(grep -v "^#" "$batch_dates_file" | grep -v "^$" | grep -v "^batch_id" | wc -l | tr -d ' ')
-        local table_rows=$(bq query --use_legacy_sql=false --format=csv --quiet \
-            "SELECT COUNT(*) FROM \`$PROJECT.clinvar_curator.cvc_batch_accepted_dates\`" 2>/dev/null | tail -1)
-        if [ "$file_lines" != "$table_rows" ] 2>/dev/null; then
-            log_info "batch-accepted-dates.tsv has different row count than table ($file_lines vs $table_rows). Rebuild needed."
-            return 0
-        fi
-    fi
 
     if [ -f "$rejected_scvs_file" ]; then
         local file_lines=$(grep -v "^#" "$rejected_scvs_file" | grep -v "^$" | wc -l | tr -d ' ')
@@ -264,11 +252,6 @@ main() {
         echo "----------------------------------------"
         echo ""
 
-        # Load batch accepted dates
-        run_loader "$SCRIPT_DIR/load-batch-accepted-dates.sh" \
-            "Loading batch-accepted-dates.tsv"
-        echo ""
-
         # Load rejected SCVs
         run_loader "$SCRIPT_DIR/load-rejected-scvs.sh" \
             "Loading rejected-scvs.tsv"
@@ -309,7 +292,7 @@ main() {
     echo "----------------------------------------"
     echo ""
 
-    # Step 0: Create batch enriched view (depends on cvc_batch_accepted_dates from Phase 1)
+    # Step 0: Create batch enriched view (uses batch_end_date from cvc_clinvar_batches directly)
     run_query "$SCRIPT_DIR/00-cvc-batch-enriched-view.sql" \
         "Step 0: Creating batch enriched view (cvc_batches_enriched)"
     echo ""
