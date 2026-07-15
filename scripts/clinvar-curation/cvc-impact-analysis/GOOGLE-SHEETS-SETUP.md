@@ -130,9 +130,10 @@ All flagging candidate submissions are categorized into exactly one of the follo
 | 06 | Version Bump During Grace | `06_Version_Bump_During_Grace` | Submitter resubmitted during grace period with no substantive changes (resets the clock) |
 | 07 | Version Bump After Grace | `07_Version_Bump_After_Grace` | Submitter resubmitted after grace period with no substantive changes (avoided flag) |
 | 08 | Stale at Submission | `08_Stale_at_Submission` | Submitted version was already outdated when NCBI accepted the batch (NCBI validation gap) |
-| 09 | Anomaly - Should Flag | `09_Anomaly_Should_Flag` | Past grace period, same version, still pending—should have been flagged (needs investigation) |
-| 10 | Rejected by NCBI | `10_Rejected_by_NCBI` | NCBI rejected the submission before processing (excluded from outcome analysis) |
-| 11 | Other/Unknown | `11_Other_Unknown` | Edge cases not fitting other categories |
+| 09 | Unflagged | `09_Unflagged` | CVC submitted a "remove flagged submission" for this SCV after the flagging candidate was submitted (intentional CVC action) |
+| 10 | Anomaly - Should Flag | `10_Anomaly_Should_Flag` | Past grace period, same version, still pending—should have been flagged (needs investigation) |
+| 11 | Rejected by NCBI | `11_Rejected_by_NCBI` | NCBI rejected the submission before processing (excluded from outcome analysis) |
+| 12 | Other/Unknown | `12_Other_Unknown` | Edge cases not fitting other categories |
 
 ### Category Groupings
 
@@ -142,8 +143,9 @@ All flagging candidate submissions are categorized into exactly one of the follo
 | **Neutral** | 04 (Substantive Changes) | Submitter made real changes but maintained their classification |
 | **In Progress** | 05 (Within Grace Pending) | Too early to determine outcome |
 | **Concerning** | 06-07 (Version Bumps) | Submitter avoided flag without making substantive changes |
-| **Process Issues** | 08-10 (Stale, Anomaly, Rejected) | Issues requiring investigation or outside normal workflow |
-| **Edge Cases** | 11 (Other/Unknown) | Rare situations not covered by other categories |
+| **CVC Action** | 09 (Unflagged) | CVC explicitly requested flag removal after the original flagging candidate |
+| **Process Issues** | 08, 10-11 (Stale, Anomaly, Rejected) | Issues requiring investigation or outside normal workflow |
+| **Edge Cases** | 12 (Other/Unknown) | Rare situations not covered by other categories |
 
 ---
 
@@ -217,6 +219,7 @@ The view outputs two rows:
 | `Version_Bump_During_Grace` | Red | #CC0000 |
 | `Version_Bump_After_Grace` | Orange | #E69138 |
 | `Stale_at_Submission` | Light Purple | #B4A7D6 |
+| `Unflagged` | Teal | #0097A7 |
 | `Anomaly_Should_Flag` | Purple | #674EA7 |
 | `Rejected_by_NCBI` | Gray | #666666 |
 | `Other_Unknown` | Dark Gray | #999999 |
@@ -234,9 +237,10 @@ For best visual impact, order the series so the total bar is first, then success
 7. `Version_Bump_During_Grace` (red) - Concerning
 8. `Version_Bump_After_Grace` (orange) - Concerning
 9. `Stale_at_Submission` (light purple) - Process issue
-10. `Anomaly_Should_Flag` (purple) - Needs investigation
-11. `Rejected_by_NCBI` (gray) - Out of scope
-12. `Other_Unknown` (dark gray) - Edge cases
+10. `Unflagged` (teal) - CVC requested removal
+11. `Anomaly_Should_Flag` (purple) - Needs investigation
+12. `Rejected_by_NCBI` (gray) - Out of scope
+13. `Other_Unknown` (dark gray) - Edge cases
 
 To reorder series in Google Sheets:
 1. Go to **Customize** → **Series**
@@ -255,6 +259,7 @@ To reorder series in Google Sheets:
 | Version_Bump_During_Grace | Version bumps with no substantive changes during 60-day grace period |
 | Version_Bump_After_Grace | Version bumps with no substantive changes after grace period ended |
 | Stale_at_Submission | Submitted version was already outdated when batch was accepted |
+| Unflagged | CVC submitted a "remove flagged submission" after the flagging candidate (intentional) |
 | Anomaly_Should_Flag | Past grace period, same version, but not flagged (needs investigation) |
 | Rejected_by_NCBI | SCVs rejected by NCBI before processing |
 | Other_Unknown | Edge cases not fitting other categories |
@@ -265,6 +270,7 @@ To reorder series in Google Sheets:
 - **Red/Orange segments** (Version Bumps): Concerning pattern - submitters avoiding flags without making substantive changes
 - **Yellow segment** (Substantive Changes): Neutral - submitters made real changes but kept the same classification
 - **Light Purple segment** (Stale at Submission): Process issue where NCBI accepted a stale version reference
+- **Teal segment** (Unflagged): CVC explicitly requested flag removal for these SCVs after the original flagging candidate
 - **Purple segment** (Anomaly): SCVs that should have been flagged but weren't - needs investigation
 - The total bar width represents all submitted flagging candidates (100%)
 
@@ -307,6 +313,7 @@ To reorder series in Google Sheets:
 | Version Bump During Grace | Red | #CC0000 |
 | Version Bump After Grace | Orange | #E69138 |
 | Stale at Submission | Light Purple | #B4A7D6 |
+| Unflagged | Teal | #0097A7 |
 | Anomaly - Should Flag | Purple | #674EA7 |
 | Rejected by NCBI | Gray | #666666 |
 | Other/Unknown | Dark Gray | #999999 |
@@ -1169,7 +1176,18 @@ Recommended Google Sheets refresh: **Weekly** or **After each ClinVar release**
   - Are past the grace period
   - Have the same version as when submitted
   - Are still marked as "pending"
+  - Do NOT have a subsequent "remove flagged submission" from CVC (those are categorized as "Unflagged")
 - These need manual investigation in the ClinVar system
+- Common causes: submitter disputed directly with NCBI, conflict resolved organically, or missing rejection record
+
+### Unflagged SCVs
+
+- The "Unflagged" category identifies SCVs where:
+  - CVC submitted the SCV as a flagging candidate
+  - CVC later submitted a "remove flagged submission" for the same SCV
+  - The SCV is not currently flagged
+- These are intentional CVC actions, not anomalies — CVC decided the flag should be removed
+- Previously these were counted as anomalies, inflating the "should be flagged" count
 
 ### Stale at Submission SCVs
 

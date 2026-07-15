@@ -270,6 +270,21 @@ stale_submissions AS (
     AND vb.previous_version = fco.submitted_scv_ver
     AND vb.current_start_date < fco.batch_accepted_date  -- Version changed BEFORE batch was accepted
 ),
+-- Flagging candidate submissions where CVC also submitted a "remove flagged submission"
+-- for the same SCV (meaning CVC explicitly requested the flag be removed).
+-- Queries source tables directly rather than cvc_remove_flagged_outcomes (materialized)
+-- to avoid stale data issues.
+remove_flagged_submissions AS (
+  SELECT DISTINCT fco.annotation_id
+  FROM `clinvar_curator.cvc_flagging_candidate_outcomes` fco
+  WHERE EXISTS (
+    SELECT 1
+    FROM `clinvar_curator.cvc_annotations_view` a
+    WHERE a.action = 'remove flagged submission'
+      AND a.scv_id = fco.scv_id
+      AND a.is_submitted = TRUE
+  )
+),
 -- Each row in the intersection table represents a unique batch submission (annotation_id)
 -- Aggregate version bump info per submission, not per SCV
 submission_summary AS (
@@ -290,7 +305,9 @@ submission_summary AS (
     -- Was this submission rejected by NCBI?
     LOGICAL_OR(fvi.scv_id IN (SELECT scv_id FROM `clinvar_curator.cvc_rejected_scvs` WHERE batch_id = fvi.batch_id)) AS was_rejected,
     -- Was the submitted version already stale when batch was accepted?
-    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM stale_submissions)) AS was_stale_at_submission
+    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM stale_submissions)) AS was_stale_at_submission,
+    -- Did CVC later submit a "remove flagged submission" for this SCV?
+    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM remove_flagged_submissions)) AS had_remove_flagged_submission
   FROM `clinvar_curator.cvc_flagging_version_bump_intersection` fvi
   GROUP BY fvi.annotation_id, fvi.scv_id, fvi.batch_id, fvi.current_outcome,
            fvi.submitted_scv_ver, fvi.current_version, fvi.grace_period_end_date
@@ -310,9 +327,13 @@ submission_categories AS (
     had_substantive_change,
     was_rejected,
     was_stale_at_submission,
+    had_remove_flagged_submission,
     CASE
       -- Rejected by NCBI (highest priority - never had a chance)
       WHEN was_rejected THEN 'rejected'
+      -- CVC explicitly requested flag removal — supersedes other outcomes
+      -- (CVC's latest intent is "don't flag this SCV")
+      WHEN had_remove_flagged_submission THEN 'unflagged'
       -- Successfully flagged (this is the goal)
       WHEN current_outcome = 'flagged' THEN 'flagged'
       -- Submitter reclassified (success - submitter changed classification)
@@ -354,6 +375,7 @@ totals AS (
     COUNTIF(category = 'bump_after_grace') AS bump_after_grace,
     COUNTIF(category = 'substantive_same_class') AS substantive_same_class,
     COUNTIF(category = 'stale_at_submission') AS stale_at_submission,
+    COUNTIF(category = 'unflagged') AS unflagged,
     COUNTIF(category = 'anomaly_should_flag') AS anomaly_should_flag,
     COUNTIF(category = 'within_grace_pending') AS within_grace_pending,
     COUNTIF(category = 'other') AS other
@@ -378,11 +400,13 @@ SELECT 8, 'Less: Submitter Removed SCV', -removed, ROUND(-100.0 * removed / NULL
 UNION ALL
 SELECT 9, 'Less: Within Grace Period (Pending)', -within_grace_pending, ROUND(-100.0 * within_grace_pending / NULLIF(total_submitted, 0), 1) FROM totals
 UNION ALL
-SELECT 10, 'Less: Anomaly - Should Be Flagged', -anomaly_should_flag, ROUND(-100.0 * anomaly_should_flag / NULLIF(total_submitted, 0), 1) FROM totals
+SELECT 10, 'Less: Unflagged (CVC Requested Removal)', -unflagged, ROUND(-100.0 * unflagged / NULLIF(total_submitted, 0), 1) FROM totals
 UNION ALL
-SELECT 11, 'Less: Other/Unknown', -other, ROUND(-100.0 * other / NULLIF(total_submitted, 0), 1) FROM totals
+SELECT 11, 'Less: Anomaly - Should Be Flagged', -anomaly_should_flag, ROUND(-100.0 * anomaly_should_flag / NULLIF(total_submitted, 0), 1) FROM totals
 UNION ALL
-SELECT 12, 'Equals: Successfully Flagged', flagged, ROUND(100.0 * flagged / NULLIF(total_submitted, 0), 1) FROM totals
+SELECT 12, 'Less: Other/Unknown', -other, ROUND(-100.0 * other / NULLIF(total_submitted, 0), 1) FROM totals
+UNION ALL
+SELECT 13, 'Equals: Successfully Flagged', flagged, ROUND(100.0 * flagged / NULLIF(total_submitted, 0), 1) FROM totals
 ORDER BY sort_order;
 
 
@@ -414,6 +438,21 @@ stale_submissions AS (
     AND vb.previous_version = fco.submitted_scv_ver
     AND vb.current_start_date < fco.batch_accepted_date
 ),
+-- Flagging candidate submissions where CVC also submitted a "remove flagged submission"
+-- for the same SCV (meaning CVC explicitly requested the flag be removed).
+-- Queries source tables directly rather than cvc_remove_flagged_outcomes (materialized)
+-- to avoid stale data issues.
+remove_flagged_submissions AS (
+  SELECT DISTINCT fco.annotation_id
+  FROM `clinvar_curator.cvc_flagging_candidate_outcomes` fco
+  WHERE EXISTS (
+    SELECT 1
+    FROM `clinvar_curator.cvc_annotations_view` a
+    WHERE a.action = 'remove flagged submission'
+      AND a.scv_id = fco.scv_id
+      AND a.is_submitted = TRUE
+  )
+),
 -- Each row in the intersection table represents a unique batch submission (annotation_id)
 -- Aggregate version bump info per submission, not per SCV
 submission_summary AS (
@@ -429,7 +468,8 @@ submission_summary AS (
     LOGICAL_OR(fvi.is_version_bump = TRUE AND fvi.bump_during_grace_period = FALSE) AS had_bump_after_grace,
     LOGICAL_OR(fvi.is_version_bump = FALSE AND fvi.bump_from_submitted_version = TRUE) AS had_substantive_change,
     LOGICAL_OR(fvi.scv_id IN (SELECT scv_id FROM `clinvar_curator.cvc_rejected_scvs` WHERE batch_id = fvi.batch_id)) AS was_rejected,
-    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM stale_submissions)) AS was_stale_at_submission
+    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM stale_submissions)) AS was_stale_at_submission,
+    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM remove_flagged_submissions)) AS had_remove_flagged_submission
   FROM `clinvar_curator.cvc_flagging_version_bump_intersection` fvi
   GROUP BY fvi.annotation_id, fvi.scv_id, fvi.batch_id, fvi.current_outcome,
            fvi.submitted_scv_ver, fvi.current_version, fvi.grace_period_end_date
@@ -440,6 +480,8 @@ submission_categories AS (
     annotation_id,
     CASE
       WHEN was_rejected THEN 'rejected'
+      -- CVC explicitly requested flag removal — supersedes other outcomes
+      WHEN had_remove_flagged_submission THEN 'unflagged'
       WHEN current_outcome = 'flagged' THEN 'flagged'
       WHEN current_outcome = 'scv_reclassified' THEN 'reclassified'
       WHEN current_outcome = 'scv_removed' THEN 'removed'
@@ -472,6 +514,7 @@ totals AS (
     COUNTIF(category = 'bump_during_grace') AS version_bump_during_grace,
     COUNTIF(category = 'bump_after_grace') AS version_bump_after_grace,
     COUNTIF(category = 'stale_at_submission') AS stale_at_submission,
+    COUNTIF(category = 'unflagged') AS unflagged,
     COUNTIF(category = 'anomaly_should_flag') AS anomaly_should_flag,
     COUNTIF(category = 'rejected') AS rejected_by_ncbi,
     COUNTIF(category = 'other') AS other_unknown
@@ -492,9 +535,10 @@ SELECT
   0 AS `06_Version_Bump_During_Grace`,
   0 AS `07_Version_Bump_After_Grace`,
   0 AS `08_Stale_at_Submission`,
-  0 AS `09_Anomaly_Should_Flag`,
-  0 AS `10_Rejected_by_NCBI`,
-  0 AS `11_Other_Unknown`
+  0 AS `09_Unflagged`,
+  0 AS `10_Anomaly_Should_Flag`,
+  0 AS `11_Rejected_by_NCBI`,
+  0 AS `12_Other_Unknown`
 FROM totals
 UNION ALL
 -- Row 2: Breakdown - stacked segments (Total_Submitted = 0 so it doesn't add to bar)
@@ -510,9 +554,10 @@ SELECT
   version_bump_during_grace AS `06_Version_Bump_During_Grace`,
   version_bump_after_grace AS `07_Version_Bump_After_Grace`,
   stale_at_submission AS `08_Stale_at_Submission`,
-  anomaly_should_flag AS `09_Anomaly_Should_Flag`,
-  rejected_by_ncbi AS `10_Rejected_by_NCBI`,
-  other_unknown AS `11_Other_Unknown`
+  unflagged AS `09_Unflagged`,
+  anomaly_should_flag AS `10_Anomaly_Should_Flag`,
+  rejected_by_ncbi AS `11_Rejected_by_NCBI`,
+  other_unknown AS `12_Other_Unknown`
 FROM totals
 ORDER BY sort_order;
 
@@ -544,6 +589,21 @@ stale_submissions AS (
     AND vb.previous_version = fco.submitted_scv_ver
     AND vb.current_start_date < fco.batch_accepted_date
 ),
+-- Flagging candidate submissions where CVC also submitted a "remove flagged submission"
+-- for the same SCV (meaning CVC explicitly requested the flag be removed).
+-- Queries source tables directly rather than cvc_remove_flagged_outcomes (materialized)
+-- to avoid stale data issues.
+remove_flagged_submissions AS (
+  SELECT DISTINCT fco.annotation_id
+  FROM `clinvar_curator.cvc_flagging_candidate_outcomes` fco
+  WHERE EXISTS (
+    SELECT 1
+    FROM `clinvar_curator.cvc_annotations_view` a
+    WHERE a.action = 'remove flagged submission'
+      AND a.scv_id = fco.scv_id
+      AND a.is_submitted = TRUE
+  )
+),
 -- Each row in the intersection table represents a unique batch submission (annotation_id)
 -- Aggregate version bump info per submission, not per SCV
 submission_summary AS (
@@ -559,7 +619,8 @@ submission_summary AS (
     LOGICAL_OR(fvi.is_version_bump = TRUE AND fvi.bump_during_grace_period = FALSE) AS had_bump_after_grace,
     LOGICAL_OR(fvi.is_version_bump = FALSE AND fvi.bump_from_submitted_version = TRUE) AS had_substantive_change,
     LOGICAL_OR(fvi.scv_id IN (SELECT scv_id FROM `clinvar_curator.cvc_rejected_scvs` WHERE batch_id = fvi.batch_id)) AS was_rejected,
-    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM stale_submissions)) AS was_stale_at_submission
+    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM stale_submissions)) AS was_stale_at_submission,
+    LOGICAL_OR(fvi.annotation_id IN (SELECT annotation_id FROM remove_flagged_submissions)) AS had_remove_flagged_submission
   FROM `clinvar_curator.cvc_flagging_version_bump_intersection` fvi
   GROUP BY fvi.annotation_id, fvi.scv_id, fvi.batch_id, fvi.current_outcome,
            fvi.submitted_scv_ver, fvi.current_version, fvi.grace_period_end_date
@@ -570,6 +631,8 @@ submission_categories AS (
     annotation_id,
     CASE
       WHEN was_rejected THEN 'Rejected by NCBI'
+      -- CVC explicitly requested flag removal — supersedes other outcomes
+      WHEN had_remove_flagged_submission THEN 'Unflagged'
       WHEN current_outcome = 'flagged' THEN 'Flagged'
       WHEN current_outcome = 'scv_reclassified' THEN 'Reclassified'
       WHEN current_outcome = 'scv_removed' THEN 'Removed'
@@ -611,9 +674,10 @@ FROM (
       WHEN 'Version Bump During Grace' THEN 6
       WHEN 'Version Bump After Grace' THEN 7
       WHEN 'Stale at Submission' THEN 8
-      WHEN 'Anomaly - Should Flag' THEN 9
-      WHEN 'Rejected by NCBI' THEN 10
-      ELSE 11
+      WHEN 'Unflagged' THEN 9
+      WHEN 'Anomaly - Should Flag' THEN 10
+      WHEN 'Rejected by NCBI' THEN 11
+      ELSE 12
     END AS sort_order,
     category,
     COUNT(*) AS count,
