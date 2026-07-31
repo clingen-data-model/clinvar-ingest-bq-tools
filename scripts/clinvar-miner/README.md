@@ -1,17 +1,32 @@
-# ClinVar Miner Views
+# ClinVar Miner Breakdowns
 
-SQL scripts that produce BigQuery views replicating the datasets behind [ClinVar Miner](https://clinvarminer.genetics.utah.edu/) summary pages. Each view is designed for direct use in Google Sheets Connected Sheets for donut/pie chart visualizations and dashboards.
+SQL scripts that produce BigQuery stored procedures replicating the datasets behind [ClinVar Miner](https://clinvarminer.genetics.utah.edu/) summary pages. Each procedure accepts an array of release dates and returns a single result set covering all requested snapshots — suitable for Google Sheets Connected Sheets donut/pie chart visualizations and dashboards.
 
 ## Scope
 
-All views are scoped to **GermlineClassification** variants from the latest ClinVar release. Variant selection uses the `clinvar_sum_vsp_top_rank_group_change` table to identify each variant's determining rank, prioritizing `path` over `oth` `proposition_type` when both exist for a given `variation_id`.
+All procedures are scoped to **GermlineClassification** variants for each ClinVar release date passed in the `release_dates ARRAY<DATE>` argument. Each release date is snapshotted independently (distinguished by the `release_date` output column), and `pct` is computed within each release. Variant selection uses the `clinvar_sum_vsp_top_rank_group_change` table to identify each variant's determining rank, prioritizing `path` over `oth` `proposition_type` when both exist for a given `variation_id`. Pass a single date (e.g. the latest release) for a single-snapshot breakdown.
 
 ## Scripts
 
-| Script | View | Description |
-|--------|------|-------------|
-| `01-pathogenicity-breakdown.sql` | `clinvar_miner_pathogenicity_breakdown` | Variant counts by aggregate classification category (Pathogenic, Likely pathogenic, VUS, Likely benign, Benign, conflicts, not provided/other). |
-| `02-concordance-breakdown.sql` | `clinvar_miner_concordance_breakdown` | Variant counts by submission agreement status (conflicts, confidence differences, expert panel, concordant multi-submission, single submission). |
+| Script | Procedure | Description |
+|--------|-----------|-------------|
+| `01-pathogenicity-breakdown.sql` | `clinvar_miner_pathogenicity_breakdown(release_dates ARRAY<DATE>)` | Variant counts by aggregate classification category (Pathogenic, Likely pathogenic, VUS, Likely benign, Benign, conflicts, not provided/other). |
+| `02-concordance-breakdown.sql` | `clinvar_miner_concordance_breakdown(release_dates ARRAY<DATE>)` | Variant counts by submission agreement status (conflicts, confidence differences, expert panel, concordant multi-submission, single submission). |
+
+## Usage
+
+```sql
+-- Multiple releases in one call
+CALL `clinvar_ingest.clinvar_miner_pathogenicity_breakdown`(
+  [DATE'2024-01-07', DATE'2024-02-01']);
+
+CALL `clinvar_ingest.clinvar_miner_concordance_breakdown`(
+  [DATE'2024-01-07', DATE'2024-02-01']);
+
+-- Latest release only (look it up first)
+DECLARE latest DATE DEFAULT (SELECT MAX(release_date) FROM `clinvar_ingest.all_schemas`());
+CALL `clinvar_ingest.clinvar_miner_pathogenicity_breakdown`([latest]);
+```
 
 ## Common Data Sources
 
