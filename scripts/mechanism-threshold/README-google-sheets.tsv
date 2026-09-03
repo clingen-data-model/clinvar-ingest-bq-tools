@@ -55,6 +55,37 @@ avg_variants_per_gene	Average total variants per gene
 avg_plp_1star_plof_per_gene	Average P/LP 1-star pLOF variants per gene
 
 ═══════════════════════════════════════════════════════════════════════════════
+SHEET 3: All-Genes pLOF Triage (per-gene counts)
+═══════════════════════════════════════════════════════════════════════════════
+
+View Name:	mechanism_threshold_all_genes_view
+
+Same per-gene analysis as Sheet 1, but for EVERY single gene in ClinVar (not just
+ClinGen dosage genes), so any gene can be looked up for dosage / LOF-mechanism
+triage. hi_score/ts_score are omitted (dosage-only); hgnc_id is added for lookup.
+
+WHAT'S INCLUDED (identical scope to Sheet 1)
+  • Associated with a single gene (not multi-gene variants)
+  • Smaller than 1,000 base pairs (excludes large structural variants)
+  • Have a germline disease classification in ClinVar
+
+COLUMN DEFINITIONS
+Column	Description
+release_date	The ClinVar release date for this data
+gene_symbol	The gene name (e.g., BRCA1, TP53)
+gene_id	ClinVar's internal gene identifier
+hgnc_id	HGNC identifier for the gene (e.g., HGNC:1100)
+total_variants	TOTAL number of variants in ClinVar for this gene
+one_star_variants	Variants with 1-star or higher review status
+plp_variants	Variants classified as Pathogenic or Likely Pathogenic (P/LP)
+plp_one_star_variants	# of >=1-star P/LP variants  (KEY triage field)
+plof_variants	Predicted Loss-of-Function variants (see pLOF section below)
+plof_one_star_variants	pLOF variants with 1-star or higher review status
+plp_plof_variants	Variants that are both P/LP AND pLOF
+plp_one_star_plof_variants	# of >=1-star pLOF P/LP variants  (KEY triage field)
+sample_variation_ids	Up to 10 example ClinVar Variation IDs (for reference)
+
+═══════════════════════════════════════════════════════════════════════════════
 REFERENCE: pLOF (Predicted Loss-of-Function)
 ═══════════════════════════════════════════════════════════════════════════════
 

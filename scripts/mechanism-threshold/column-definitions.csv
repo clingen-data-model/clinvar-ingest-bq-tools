@@ -27,3 +27,16 @@ Summary,plp_plof_variants,Sum of P/LP + pLOF variants
 Summary,plp_one_star_plof_variants,Sum of P/LP + pLOF + 1-star+ variants
 Summary,avg_variants_per_gene,Average total variants per gene
 Summary,avg_plp_1star_plof_per_gene,Average P/LP 1-star pLOF variants per gene
+All-Genes,release_date,The ClinVar release date for this data
+All-Genes,gene_symbol,"The gene name (e.g., BRCA1, TP53)"
+All-Genes,gene_id,ClinVar's internal gene identifier
+All-Genes,hgnc_id,"HGNC identifier for the gene (e.g., HGNC:1100)"
+All-Genes,total_variants,Total number of variants in ClinVar for this gene
+All-Genes,one_star_variants,Variants with 1-star or higher review status
+All-Genes,plp_variants,Variants classified as Pathogenic or Likely Pathogenic (P/LP)
+All-Genes,plp_one_star_variants,P/LP variants with 1-star or higher review status (KEY: # of >=1-star P/LP variants)
+All-Genes,plof_variants,Predicted Loss-of-Function variants (nonsense/frameshift/splice)
+All-Genes,plof_one_star_variants,pLOF variants with 1-star or higher review status
+All-Genes,plp_plof_variants,Variants that are both P/LP AND pLOF
+All-Genes,plp_one_star_plof_variants,P/LP + pLOF variants with 1-star or higher review status (KEY: # of >=1-star pLOF P/LP variants)
+All-Genes,sample_variation_ids,Up to 10 example ClinVar Variation IDs (for reference)

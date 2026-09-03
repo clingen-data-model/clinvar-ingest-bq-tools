@@ -88,6 +88,55 @@ The summary is broken down into three report types:
 2. **TS Score Summary** - Grouped by Triplosensitivity score
 3. **Overall Total** - Combined totals across all dosage genes
 
+---
+
+## Sheet 3: All-Genes pLOF Triage (per-gene counts)
+
+**View Name:** `mechanism_threshold_all_genes_view`
+
+The same per-gene analysis as Sheet 1, but for **every single gene in ClinVar** —
+not just ClinGen dosage genes — so any gene can be looked up at will. Use it to
+triage which genes are most likely to have a loss-of-function mechanism before
+recommending them for dosage curation.
+
+### What's Included
+
+Identical scope to Sheet 1:
+- Associated with a single gene (not multi-gene variants)
+- Smaller than 1,000 base pairs (excludes large structural variants)
+- Have a germline disease classification in ClinVar
+
+### Column Definitions
+
+| Column | Description |
+|--------|-------------|
+| **release_date** | The ClinVar release date for this data |
+| **gene_symbol** | The gene name (e.g., BRCA1, TP53) |
+| **gene_id** | ClinVar's internal gene identifier |
+| **hgnc_id** | HGNC identifier for the gene (e.g., HGNC:1100) |
+| **total_variants** | TOTAL number of variants in ClinVar for this gene |
+| **one_star_variants** | Variants with 1-star or higher review status |
+| **plp_variants** | Variants classified as Pathogenic or Likely Pathogenic (P/LP) |
+| **plp_one_star_variants** | **# of ≥1-star P/LP variants** |
+| **plof_variants** | Predicted Loss-of-Function variants (nonsense/frameshift/splice) |
+| **plof_one_star_variants** | pLOF variants with 1-star or higher review status |
+| **plp_plof_variants** | Variants that are both P/LP AND pLOF |
+| **plp_one_star_plof_variants** | **# of ≥1-star pLOF P/LP variants** |
+| **sample_variation_ids** | Up to 10 example ClinVar Variation IDs (for reference) |
+
+The three fields most used for dosage/LOF triage are **total_variants**,
+**plp_one_star_variants**, and **plp_one_star_plof_variants** (bold above). The
+other columns are carried through so this sheet stays column-compatible with
+Sheet 1. `hi_score`/`ts_score` are omitted because they only apply to dosage genes.
+
+Definitions of pLOF and star ratings are identical to Sheet 1 (see above).
+
+> "≥1 star" means VCV review-status `rank >= 1` (assertion criteria provided).
+> This matches the "1-star or higher" columns on Sheet 1. For strictly greater
+> than 1 star, use `rank >= 2` in the analysis.
+
+---
+
 ### Understanding Dosage Scores
 
 ClinGen Dosage Sensitivity scores range from 0-3:
