@@ -16,6 +16,11 @@ BEGIN
   DECLARE rcv_mapping_exists BOOLEAN;
   DECLARE required_check_table_fields ARRAY<STRUCT<table_name STRING, field_name STRING>>;
   DECLARE release_check_tables ARRAY<STRING>;
+  -- Auto-remediation of SCVs with no RCV accession mapping
+  DECLARE orphan_scv_count INT64;
+  -- Safety cap: if more than this many SCVs are missing an rcv_accession_id we
+  -- treat it as a systemic ingest failure and RAISE rather than auto-removing.
+  DECLARE max_auto_remove_scvs INT64 DEFAULT 50;
 
   -- Check for new interpretation_descriptions in clinical_assertion
   EXECUTE IMMEDIATE FORMAT("""
@@ -187,6 +192,39 @@ BEGIN
         all_validation_errors,
         ['Trait set ID mismatch detected in ' || schema_name || '.rcv_mapping']
       );
+    END IF;
+
+    -- ========================================================================
+    -- Auto-remediation: SCVs with no RCV accession mapping
+    -- ------------------------------------------------------------------------
+    -- Because rcv_mapping exists, normalize_dataset has already populated
+    -- clinical_assertion.rcv_accession_id for every SCV present in
+    -- rcv_mapping.scv_accessions. Any remaining NULLs are SCVs whose RCV was
+    -- absent from the source rcv_mapping for this release (typically the newest
+    -- RCVs, when the upstream ingest lagged). Rather than fail the whole
+    -- validation, clinvar_ingest.remove_incomplete_scvs archives each such SCV
+    -- (and its dependent + newly-orphaned records) to `<schema>.removed_*`
+    -- tables and removes them, logging a summary to
+    -- clinvar_ingest.validation_issues_log. The next release's fresh ingest is
+    -- expected to carry these records correctly.
+    --
+    -- Safety cap: if the orphan count exceeds max_auto_remove_scvs we treat it
+    -- as a systemic ingest failure and RAISE instead of auto-removing.
+    -- ========================================================================
+    EXECUTE IMMEDIATE FORMAT("""
+      SELECT COUNT(*) FROM `%s.clinical_assertion` WHERE rcv_accession_id IS NULL
+    """, schema_name) INTO orphan_scv_count;
+
+    IF orphan_scv_count > max_auto_remove_scvs THEN
+      SET all_validation_errors = ARRAY_CONCAT(
+        all_validation_errors,
+        [FORMAT(
+          "%d clinical_assertion rows have a NULL rcv_accession_id in %s, exceeding the auto-remove safety cap of %d. This likely indicates a systemic rcv_mapping ingest failure; records were NOT auto-removed. Investigate before proceeding.",
+          orphan_scv_count, schema_name, max_auto_remove_scvs
+        )]
+      );
+    ELSEIF orphan_scv_count > 0 THEN
+      CALL `clinvar_ingest.remove_incomplete_scvs`(schema_name);
     END IF;
 
   END IF;
