@@ -30,10 +30,13 @@ AS (
         FROM `region-us.INFORMATION_SCHEMA.TABLES`
         WHERE
             REGEXP_CONTAINS(table_schema, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
-            -- This condition filters for the specific table - by checking for the existing of
-            -- scv_summary it helps ensure that the release will only be returned if the post
-            -- processing of stored procedures is completed from the clinvar-ingest workflow.
-            AND table_name = 'scv_summary'
+            -- NOTE: intentionally surfaces ALL clinvar schemas, including releases not
+            -- yet post-processed (no scv_summary). The processing pipeline resolves a
+            -- release via schema_on()/all_releases() BEFORE its scv_summary is built, so
+            -- do NOT re-add an `AND table_name = 'scv_summary'` guard here — it breaks
+            -- new-release processing. The tracker "latest" issue that originally
+            -- motivated that guard is to be addressed separately (a release-scoped
+            -- tracker_report_update), not by filtering releases here.
         UNION ALL
         SELECT
             release_date
@@ -79,10 +82,8 @@ AS (
         FROM `region-us.INFORMATION_SCHEMA.TABLES`
         WHERE
             REGEXP_CONTAINS(table_schema, r'^clinvar_\d{4}_\d{2}_\d{2}_v\d_\d+_\d+$')
-            -- This condition filters for the specific table - by checking for the existing of
-            -- scv_summary it helps ensure that the release will only be returned if the post
-            -- processing of stored procedures is completed from the clinvar-ingest workflow.
-            AND table_name = 'scv_summary'
+            -- NOTE: intentionally NO `AND table_name = 'scv_summary'` guard — see the
+            -- all_releases() note above; surfacing un-processed releases is required.
     )
     SELECT
         r.schema_name,
