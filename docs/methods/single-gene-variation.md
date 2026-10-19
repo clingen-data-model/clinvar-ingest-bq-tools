@@ -276,4 +276,4 @@ To undo, copy the `*_before_backfill` tables back over the tables they were take
 | Companion genes give way to a single main gene. `entrez_gene` gains `type_of_gene` and `description`. | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | The gene reference comes from each release's own gene table, minus ids NCBI had discontinued by the release date, so every release is processed against the gene knowledge of its time | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | Antisense genes (`-AS#`) are treated as companions instead of always being ignored, so a variant whose only gene is antisense keeps it | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
-| Rule 1 uses the MANE release current on each ClinVar release date (`mane_transcript`, refreshed weekly), instead of a fixed MANE v1.0 list | MANE point-in-time |
+| Rule 1 uses the MANE release current on each ClinVar release date (`mane_transcript`, refreshed weekly), instead of a fixed MANE v1.0 list | [#42](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/pull/42) |
