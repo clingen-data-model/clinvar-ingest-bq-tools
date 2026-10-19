@@ -140,6 +140,12 @@ BEGIN
     OR
     REGEXP_CONTAINS(g.symbol, r'\-AS\d*$')         -- antisense RNA, with or without a number
     OR
+    (                                              -- older antisense names without the hyphen, e.g. ZFAS1
+      REGEXP_CONTAINS(g.symbol, r'AS\d*$')
+      AND
+      REGEXP_CONTAINS(LOWER(g.full_name), r'antisense')
+    )
+    OR
     REGEXP_CONTAINS(LOWER(g.full_name), r'readthrough');        -- readthrough (GENE1-GENE2)
 
     -- create a temp table of the variations associated with exactly one main gene

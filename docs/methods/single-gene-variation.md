@@ -111,7 +111,7 @@ Companions are recognised by HGNC naming conventions, using the symbol in effect
 | microRNA host gene | `MIR###HG` | MIR4733HG, MIR3936HG | ~80 |
 | Overlapping transcript | `GENE-OT#` | BRCA1-OT1, SIX3-OT1 | ~30 |
 | Intronic transcript | `GENE-IT#` | FTO-IT1, CAMTA1-IT1 | ~140 |
-| Antisense RNA | `GENE-AS#`, or `GENE-AS` without a number | BRCA1-AS1, KCNQ1-AS1, HTT-AS | ~2,950 |
+| Antisense RNA | `GENE-AS#`, or `GENE-AS` without a number; also older names without the hyphen (`…AS#`) when the full name says "antisense" | BRCA1-AS1, KCNQ1-AS1, HTT-AS, ZFAS1, CCR5AS | ~2,960 |
 | Readthrough | `GENE1-GENE2`, where the gene's full name says "readthrough" | INS-IGF2, SPICE1-CFAP44 | ~150 |
 
 Why "exactly one main gene":
