@@ -333,7 +333,9 @@ BEGIN
     SELECT
       %T as release_date,
       v.id as variation_id,
-      STRING_AGG(ga.gene_id) as gene_id,
+      -- HAVING COUNT(DISTINCT ga.gene_id) = 1 guarantees all non-null gene_id values in the group are identical
+      -- (ANY_VALUE ignores the NULLs from children with no gene association via the LEFT JOIN)
+      ANY_VALUE(ga.gene_id) as gene_id,
       'association not provided by clinvar' as relationship_type,
       'cvc calculated' as source
     FROM x
@@ -354,7 +356,7 @@ BEGIN
     GROUP BY
       v.id
     HAVING
-      COUNT(ga.gene_id) = 1
+      COUNT(DISTINCT ga.gene_id) = 1
   """, schema_name, schema_name, release_date, schema_name);
 
     --- Finally, update somatic flags based on current onco-gene list (should this be a
