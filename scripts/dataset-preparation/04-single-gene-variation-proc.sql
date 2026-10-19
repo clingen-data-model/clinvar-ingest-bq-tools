@@ -31,6 +31,58 @@ BEGIN
     FROM `%s.variation` v
   """, schema_name);
 
+  -- create a temp table of the genes that had an HGNC-approved symbol when the release was published.
+  --   it is the gene reference for every step, so each release only sees the genes and symbols that
+  --   were current at the time. see docs/methods/single-gene-variation.md
+  --   - the release's own gene table supplies the symbols clinvar used at the time
+  --   - genes the release does not list at all (named in a variant title but not associated by clinvar)
+  --     come from entrez_gene, so the name-matching steps can still find them
+  --   - gene ids that NCBI had discontinued by the release date are excluded; clinvar's gene table
+  --     keeps some of them, still carrying an HGNC id
+  EXECUTE IMMEDIATE FORMAT("""
+    CREATE TEMP TABLE _SESSION.temp_gene
+    AS
+    WITH release_gene AS (
+      SELECT DISTINCT
+        g.id as gene_id,
+        g.symbol,
+        g.hgnc_id,
+        g.full_name
+      FROM `%s.gene` g
+      WHERE
+        g.hgnc_id IS NOT NULL
+    ),
+    unlisted_gene AS (
+      SELECT
+        e.gene_id,
+        e.symbol_from_authority as symbol,
+        e.hgnc_id,
+        e.description as full_name
+      FROM `clinvar_ingest.entrez_gene` e
+      WHERE
+        e.gene_id NOT IN (SELECT g.id FROM `%s.gene` g)
+    ),
+    discontinued AS (
+      SELECT DISTINCT
+        h.discontinued_gene_id as gene_id
+      FROM `clinvar_ingest.ncbi_gene_history` h
+      WHERE
+        h.discontinue_date <= %T
+    )
+    SELECT
+      g.*
+    FROM (
+      SELECT * FROM release_gene
+      UNION ALL
+      SELECT * FROM unlisted_gene
+    ) g
+    LEFT JOIN discontinued d
+    ON
+      d.gene_id = g.gene_id
+    WHERE
+      d.gene_id IS NULL
+  """, schema_name, schema_name, release_date);
+
   --- step 2. (Resolvable Gene Symbol in variation name takes precedence as "single gene for variant")
   ---         initialize the set with the extracted variation name gene symbols and the associated relationship info if available
 
@@ -55,7 +107,7 @@ BEGIN
     JOIN _SESSION.temp_variation v
     ON
       STARTS_WITH(v.name, mane.transcript_id)
-    JOIN `clinvar_ingest.entrez_gene` g
+    JOIN _SESSION.temp_gene g
     ON
       g.gene_id = mane.gene_id
     LEFT JOIN `%s.gene_association` ga
@@ -65,9 +117,60 @@ BEGIN
       ga.variation_id = v.id
   """, schema_name, release_date, schema_name);
 
+    -- create a temp table of "companion" genes: non-coding transcripts named after, and lying
+    --   beside, a main gene. matched by HGNC naming convention, except readthroughs, which are
+    --   taken from the gene full_name. see docs/methods/single-gene-variation.md
+    --   a companion is only ignored when the variation has exactly one main gene
+    --   (see temp_one_main_gene_variation); a variation whose only genes are companions keeps them
+  CREATE TEMP TABLE _SESSION.temp_companion_gene
+  AS
+  SELECT
+    g.gene_id
+  FROM _SESSION.temp_gene g
+  WHERE
+    REGEXP_CONTAINS(g.symbol, r'\-DT$')            -- divergent transcript
+    OR
+    REGEXP_CONTAINS(g.symbol, r'^LINC\d+$')        -- long intergenic non-coding RNA
+    OR
+    REGEXP_CONTAINS(g.symbol, r'^MIR\d+[A-Z0-9]*HG$') -- microRNA host gene
+    OR
+    REGEXP_CONTAINS(g.symbol, r'\-OT\d*$')         -- overlapping transcript
+    OR
+    REGEXP_CONTAINS(g.symbol, r'\-IT\d*$')         -- intronic transcript
+    OR
+    REGEXP_CONTAINS(g.symbol, r'\-AS\d*$')         -- antisense RNA, with or without a number
+    OR
+    (                                              -- older antisense names without the hyphen, e.g. ZFAS1
+      REGEXP_CONTAINS(g.symbol, r'AS\d*$')
+      AND
+      REGEXP_CONTAINS(LOWER(g.full_name), r'antisense')
+    )
+    OR
+    REGEXP_CONTAINS(LOWER(g.full_name), r'readthrough');        -- readthrough (GENE1-GENE2)
+
+    -- create a temp table of the variations associated with exactly one main gene
+    --   (a gene in temp_gene that is not a companion). only for these is there
+    --   a single main gene for a companion to give way to.
+  EXECUTE IMMEDIATE FORMAT("""
+    CREATE TEMP TABLE _SESSION.temp_one_main_gene_variation
+    AS
+    SELECT
+      ga.variation_id
+    FROM `%s.gene_association` ga
+    JOIN _SESSION.temp_gene g
+    ON
+      ga.gene_id = g.gene_id
+    WHERE
+      g.gene_id NOT IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
+    GROUP BY
+      ga.variation_id
+    HAVING
+      COUNT(DISTINCT ga.gene_id) = 1
+  """, schema_name);
+
     -- create a temp table that is the list of gene associations
     --   for variations not yet in the single gene var table and
-    --   don't have the gene symbol ending in an -AS# suffix
+    --   aren't a companion gene of a variation that has exactly one main gene
   EXECUTE IMMEDIATE FORMAT("""
     CREATE TEMP TABLE _SESSION.temp_gene_assoc
     AS
@@ -77,11 +180,15 @@ BEGIN
       ga.relationship_type,
       ga.source
     FROM `%s.gene_association` ga
-    JOIN `clinvar_ingest.entrez_gene` g
+    JOIN _SESSION.temp_gene g
     ON
       ga.gene_id = g.gene_id
     WHERE
-      NOT REGEXP_CONTAINS(g.symbol_from_authority, r'\\-AS\\d$')
+      NOT (
+        ga.gene_id IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
+        AND
+        ga.variation_id IN (SELECT variation_id FROM _SESSION.temp_one_main_gene_variation)
+      )
       AND
       NOT EXISTS (
         SELECT
@@ -130,16 +237,27 @@ BEGIN
       IFNULL(ga.relationship_type,'named gene not associated') as relationship_type,
       IFNULL(ga.source,'cvc calculated') as source
     FROM x
-    JOIN `clinvar_ingest.entrez_gene` g
+    JOIN _SESSION.temp_gene g
     ON
-      UPPER(g.symbol_from_authority) = UPPER(x.symbol)
-      AND
-      NOT REGEXP_CONTAINS(x.symbol, r'\\-AS\\d$')
+      UPPER(g.symbol) = UPPER(x.symbol)
     LEFT JOIN _SESSION.temp_gene_assoc ga
     ON
       ga.variation_id = x.id
       AND
       ga.gene_id = g.gene_id
+    WHERE
+      -- skip a named companion gene when the variation has exactly one main gene to give way to
+      NOT (
+        g.gene_id IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
+        AND
+        x.id IN (SELECT variation_id FROM _SESSION.temp_one_main_gene_variation)
+      )
+    -- a symbol can map to more than one gene_id (e.g. NCBI replaced the id and the retired id is kept),
+    -- so keep one row per variation: prefer the gene_id clinvar associates with the variation, then the newest gene_id
+    QUALIFY ROW_NUMBER() OVER (
+      PARTITION BY x.id
+      ORDER BY IF(ga.gene_id IS NULL, 1, 0), SAFE_CAST(g.gene_id AS INT64) DESC, ga.relationship_type, ga.source
+    ) = 1
   """, schema_name, schema_name, release_date);
 
     -- star allele format, CYP2C19*10.
@@ -175,14 +293,21 @@ BEGIN
       IFNULL(ga.relationship_type,'named gene not associated') as relationship_type,
       IFNULL(ga.source,'cvc calculated') as source
     FROM x
-    JOIN `clinvar_ingest.entrez_gene` g
+    JOIN _SESSION.temp_gene g
     ON
-      UPPER(x.symbol) = UPPER(g.symbol_from_authority)
+      UPPER(x.symbol) = UPPER(g.symbol)
     LEFT JOIN _SESSION.temp_gene_assoc ga
     ON
       x.id = ga.variation_id
       AND
       g.gene_id = ga.gene_id
+    WHERE TRUE
+    -- a symbol can map to more than one gene_id (e.g. NCBI replaced the id and the retired id is kept),
+    -- so keep one row per variation: prefer the gene_id clinvar associates with the variation, then the newest gene_id
+    QUALIFY ROW_NUMBER() OVER (
+      PARTITION BY x.id
+      ORDER BY IF(ga.gene_id IS NULL, 1, 0), SAFE_CAST(g.gene_id AS INT64) DESC, ga.relationship_type, ga.source
+    ) = 1
   """, schema_name, schema_name, release_date);
 
     --- step 3. for any variations remaining... load all variations with any
@@ -369,7 +494,7 @@ BEGIN
         SELECT
           cg.hgnc_id
         FROM `clinvar_ingest.cancer_genes` cg
-        JOIN `clinvar_ingest.entrez_gene` g
+        JOIN _SESSION.temp_gene g
         ON
           g.hgnc_id = cg.hgnc_id
         WHERE
@@ -378,6 +503,9 @@ BEGIN
   """, schema_name);
 
   DROP TABLE _SESSION.temp_variation;
+  DROP TABLE _SESSION.temp_gene;
+  DROP TABLE _SESSION.temp_companion_gene;
+  DROP TABLE _SESSION.temp_one_main_gene_variation;
   DROP TABLE _SESSION.temp_gene_assoc;
 
 END;

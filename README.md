@@ -9,6 +9,7 @@
 - [ClinVar Ingest BiqQuery tools](#clinVar-ingest-biqquery-tools)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
+  - [Methods](#methods)
   - [Prerequisites](#prerequisites)
   - [Installation](#installation)
   - [Building the Project](#building-the-project)
@@ -24,6 +25,12 @@ used by BigQuery routines to transform the ClinVar Ingest fields that have not
 been completely parsed from their json form.  Additionally, it provides tools that
 derive HGVS from ClinVar fields, format dates and calculate nearest months for
 aggregating data around ClinVar releases.
+
+## Methods
+
+Some outputs are interpretations of ClinVar data rather than reformatting, and their methods are documented for geneticists and bioinformaticians:
+
+- **[Single Gene Variation](docs/methods/single-gene-variation.md)** ([on the docs site](https://clingen-data-model.github.io/clinvar-ingest-bq-tools/methods/single-gene-variation/)): how each ClinVar variation is assigned at most one representative gene. Covers the order of the rules, which NCBI genes are considered, how companion genes (`-DT`, `LINC`, readthroughs…) give way to a single main gene, how replaced NCBI gene ids are resolved, and how each release is processed against the gene names that were current when it was published.
 
 ## Prerequisites
 
