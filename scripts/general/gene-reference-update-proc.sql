@@ -5,6 +5,8 @@
 --     (gene_id, symbol_from_authority, symbol, hgnc_id, type_of_gene, description, has_hgnc)
 --   clinvar_ingest.ncbi_gene_history_stage  human rows of gene_history
 --     (discontinued_gene_id, replaced_by_gene_id, discontinued_symbol, discontinue_date)
+--   clinvar_ingest.mane_transcript_stage    every NCBI MANE release's summary file
+--     (mane_version, mane_release_date, gene_id, hgnc_id, symbol, transcript_id, mane_status)
 --
 -- Callers: the clinvar-ingest stored-procedures job (at the start of every run) and
 -- scripts/general/update-gene-reference.sh (by hand). validate_dataset fails a release when no
@@ -14,6 +16,7 @@
 --   - entrez_gene: inserts gene ids not yet present (HGNC-named genes only) and fills
 --     type_of_gene / description where they are still NULL
 --   - ncbi_gene_history: inserts discontinued ids not yet present (NCBI only appends to it)
+--   - mane_transcript: inserts MANE versions not yet present, whole
 --
 -- apply_changes = FALSE only reports the counts. Every applied run is logged to
 -- clinvar_ingest.gene_reference_refresh_log, even when there is nothing new.
@@ -29,8 +32,22 @@ BEGIN
   DECLARE genes_to_insert INT64;
   DECLARE rows_to_fill INT64;
   DECLARE history_to_insert INT64;
+  DECLARE staged_mane_versions INT64;
+  DECLARE current_mane_versions INT64;
+  DECLARE mane_rows_to_insert INT64;
 
-  -- one-time setup; idempotent. ncbi_gene_history must exist before the counts below.
+  -- one-time setup; idempotent. these tables must exist before the counts below.
+  CREATE TABLE IF NOT EXISTS `clinvar_ingest.mane_transcript` (
+    mane_version STRING NOT NULL OPTIONS (description = 'MANE release, e.g. 1.5'),
+    mane_release_date DATE NOT NULL OPTIONS (description = 'date NCBI published the release'),
+    gene_id STRING NOT NULL OPTIONS (description = 'NCBI gene id'),
+    hgnc_id STRING,
+    symbol STRING,
+    transcript_id STRING NOT NULL OPTIONS (description = 'RefSeq nucleotide accession.version, e.g. NM_000527.5'),
+    mane_status STRING NOT NULL OPTIONS (description = 'MANE Select or MANE Plus Clinical')
+  )
+  OPTIONS (description = 'Every NCBI MANE release (MANE.GRCh38.vX.summary.txt). Add-only; see docs/methods/single-gene-variation.md');
+
   CREATE TABLE IF NOT EXISTS `clinvar_ingest.ncbi_gene_history` (
     discontinued_gene_id STRING NOT NULL OPTIONS (description = 'NCBI gene id that was discontinued'),
     replaced_by_gene_id STRING OPTIONS (description = 'NCBI gene id that replaced it, if any'),
@@ -47,6 +64,8 @@ BEGIN
   SET current_entrez_genes = (SELECT COUNT(*) FROM `clinvar_ingest.entrez_gene`);
   SET staged_history_rows = (SELECT COUNT(*) FROM `clinvar_ingest.ncbi_gene_history_stage`);
   SET current_history_rows = (SELECT COUNT(*) FROM `clinvar_ingest.ncbi_gene_history`);
+  SET staged_mane_versions = (SELECT COUNT(DISTINCT mane_version) FROM `clinvar_ingest.mane_transcript_stage`);
+  SET current_mane_versions = (SELECT COUNT(DISTINCT mane_version) FROM `clinvar_ingest.mane_transcript`);
 
   -- refuse a truncated or empty download rather than partially updating
   IF staged_hgnc_genes < 0.9 * current_entrez_genes THEN
@@ -59,6 +78,12 @@ BEGIN
     RAISE USING MESSAGE = FORMAT(
       'gene_reference_update: the staged gene_history has %d rows, fewer than the %d already loaded. NCBI only appends to it, so the download may be incomplete.',
       staged_history_rows, current_history_rows
+    );
+  END IF;
+  IF staged_mane_versions < current_mane_versions THEN
+    RAISE USING MESSAGE = FORMAT(
+      'gene_reference_update: %d MANE releases are staged, fewer than the %d already loaded. NCBI keeps every release, so the download may be incomplete.',
+      staged_mane_versions, current_mane_versions
     );
   END IF;
 
@@ -86,6 +111,12 @@ BEGIN
     FROM `clinvar_ingest.ncbi_gene_history_stage` s
     WHERE
       s.discontinued_gene_id NOT IN (SELECT discontinued_gene_id FROM `clinvar_ingest.ncbi_gene_history`)
+  );
+  SET mane_rows_to_insert = (
+    SELECT COUNT(*)
+    FROM `clinvar_ingest.mane_transcript_stage` s
+    WHERE
+      s.mane_version NOT IN (SELECT DISTINCT mane_version FROM `clinvar_ingest.mane_transcript`)
   );
 
   IF apply_changes THEN
@@ -120,6 +151,22 @@ BEGIN
       INSERT (discontinued_gene_id, replaced_by_gene_id, discontinued_symbol, discontinue_date)
       VALUES (s.discontinued_gene_id, NULLIF(s.replaced_by_gene_id, ''), s.discontinued_symbol, s.discontinue_date);
 
+    -- a MANE release is added whole, the first time it is seen, and never changed afterwards
+    MERGE `clinvar_ingest.mane_transcript` m
+    USING (
+      SELECT *
+      FROM `clinvar_ingest.mane_transcript_stage`
+      WHERE
+        mane_version NOT IN (SELECT DISTINCT mane_version FROM `clinvar_ingest.mane_transcript`)
+    ) s
+    ON
+      m.mane_version = s.mane_version
+      AND
+      m.transcript_id = s.transcript_id
+    WHEN NOT MATCHED THEN
+      INSERT (mane_version, mane_release_date, gene_id, hgnc_id, symbol, transcript_id, mane_status)
+      VALUES (s.mane_version, s.mane_release_date, s.gene_id, NULLIF(s.hgnc_id, ''), s.symbol, s.transcript_id, s.mane_status);
+
     CREATE TABLE IF NOT EXISTS `clinvar_ingest.gene_reference_refresh_log` (
       refreshed_at TIMESTAMP NOT NULL OPTIONS (description = 'when the refresh was applied'),
       triggered_by STRING OPTIONS (description = 'caller, e.g. the clinvar-ingest job or update-gene-reference.sh'),
@@ -131,6 +178,10 @@ BEGIN
     )
     OPTIONS (description = 'One row per applied gene reference refresh; checked by validate_dataset');
 
+    ALTER TABLE `clinvar_ingest.gene_reference_refresh_log`
+      ADD COLUMN IF NOT EXISTS staged_mane_versions INT64 OPTIONS (description = 'MANE releases in the NCBI download'),
+      ADD COLUMN IF NOT EXISTS mane_rows_inserted INT64;
+
     INSERT INTO `clinvar_ingest.gene_reference_refresh_log` (
       refreshed_at,
       triggered_by,
@@ -138,7 +189,9 @@ BEGIN
       staged_history_rows,
       entrez_genes_inserted,
       entrez_rows_filled,
-      history_rows_inserted
+      history_rows_inserted,
+      staged_mane_versions,
+      mane_rows_inserted
     )
     VALUES (
       CURRENT_TIMESTAMP(),
@@ -147,7 +200,9 @@ BEGIN
       staged_history_rows,
       genes_to_insert,
       rows_to_fill,
-      history_to_insert
+      history_to_insert,
+      staged_mane_versions,
+      mane_rows_to_insert
     );
   END IF;
 
@@ -156,6 +211,8 @@ BEGIN
     genes_to_insert AS entrez_genes_to_insert,
     rows_to_fill AS entrez_rows_to_fill,
     history_to_insert AS history_rows_to_insert,
+    mane_rows_to_insert,
     staged_hgnc_genes,
-    staged_history_rows;
+    staged_history_rows,
+    staged_mane_versions;
 END;

@@ -86,7 +86,25 @@ BEGIN
   --- step 2. (Resolvable Gene Symbol in variation name takes precedence as "single gene for variant")
   ---         initialize the set with the extracted variation name gene symbols and the associated relationship info if available
 
-  -- prioritize mane select transcripts in title of variant
+  -- create a temp table of the MANE transcripts (MANE Select and MANE Plus Clinical) of the MANE release
+  --   that was current when this release was published, so a variant name is matched against the
+  --   transcript versions in use at the time. see docs/methods/single-gene-variation.md
+  CREATE TEMP TABLE _SESSION.temp_mane
+  AS
+  SELECT
+    m.gene_id,
+    m.transcript_id
+  FROM `clinvar_ingest.mane_transcript` m
+  WHERE
+    m.mane_version = (
+      SELECT
+        ARRAY_AGG(mane_version ORDER BY mane_release_date DESC LIMIT 1)[SAFE_OFFSET(0)]
+      FROM `clinvar_ingest.mane_transcript`
+      WHERE
+        mane_release_date <= release_date
+    );
+
+  -- prioritize mane transcripts in title of variant
   EXECUTE IMMEDIATE FORMAT("""
     INSERT INTO `%s.single_gene_variation` (
       release_date,
@@ -103,7 +121,7 @@ BEGIN
       IFNULL(ga.relationship_type,'named gene not associated') as relationship_type,
       IFNULL(ga.source,'cvc calculated') as source,
       TRUE as mane_select
-    FROM `clinvar_ingest.mane_select_gene_transcript` mane
+    FROM _SESSION.temp_mane mane
     JOIN _SESSION.temp_variation v
     ON
       STARTS_WITH(v.name, mane.transcript_id)
@@ -504,6 +522,7 @@ BEGIN
 
   DROP TABLE _SESSION.temp_variation;
   DROP TABLE _SESSION.temp_gene;
+  DROP TABLE _SESSION.temp_mane;
   DROP TABLE _SESSION.temp_companion_gene;
   DROP TABLE _SESSION.temp_one_main_gene_variation;
   DROP TABLE _SESSION.temp_gene_assoc;

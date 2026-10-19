@@ -23,7 +23,7 @@ This page explains how the gene is chosen, why each rule exists, and where the m
 | `{release}.gene` | ClinVar release | The NCBI genes ClinVar uses in this release, with the HGNC symbol and HGNC id **as they were at the time**. This is the main gene reference (see [Which genes the method can see](#which-genes-the-method-can-see)). |
 | `clinvar_ingest.ncbi_gene_history` | NCBI Gene, add-only (see [Reference data](#reference-data)) | When NCBI discontinued each gene id. Used to drop ids that were already discontinued when the release was published. |
 | `clinvar_ingest.entrez_gene` | NCBI Gene, add-only (see [Reference data](#reference-data)) | Fallback for genes the release's gene table does not list, e.g. a gene named in a variant title that ClinVar does not associate |
-| `clinvar_ingest.mane_select_gene_transcript` | MANE | MANE Select transcript accession → gene |
+| `clinvar_ingest.mane_transcript` | NCBI MANE, add-only (see [Reference data](#reference-data)) | Every MANE release's MANE Select and MANE Plus Clinical transcripts (accession.version → gene), with its release date. Rule 1 uses the release that was current on the ClinVar release date. |
 | `clinvar_ingest.cancer_genes` | Curated list | Sets the `somatic` flag |
 
 Output: `{release}.single_gene_variation`, one row per variation that gets a gene.
@@ -34,7 +34,7 @@ Output: `{release}.single_gene_variation`, one row per variation that gets a gen
 | `gene_id` | NCBI Gene id of the assigned gene. |
 | `relationship_type` | ClinVar's relationship for the chosen association, e.g. `within single gene`. Rules 4 and 5 can produce a comma-separated list when the gene has several associations. Note that the ClinVar value `asserted, but not computed` itself contains a comma. Three values are produced by this method, not by ClinVar: `named gene not associated` (the gene came from the variant's name, and ClinVar has no association to it), `association not provided by clinvar` (haplotype or genotype rule), and the source `cvc calculated`. |
 | `source` | ClinVar's `submitted` / `calculated`, or `cvc calculated` when the method inferred the gene. |
-| `mane_select` | `TRUE` when the gene came from a MANE Select transcript in the variant name. |
+| `mane_select` | `TRUE` when the gene came from rule 1: the variant name uses a MANE transcript (MANE Select or MANE Plus Clinical) of the MANE release current at the time. |
 | `somatic` | `TRUE` when the gene's HGNC id is in `clinvar_ingest.cancer_genes`. |
 
 ## The rules, in order
@@ -43,7 +43,7 @@ Rules are applied in order. **The first rule to assign a gene wins**, and each l
 
 ```mermaid
 flowchart TD
-    A[Variation] --> R1{"1. Name starts with a<br/>MANE Select transcript?"}
+    A[Variation] --> R1{"1. Name starts with a<br/>MANE transcript?"}
     R1 -- yes --> G1[gene of that transcript]
     R1 -- no --> R2{"2. Name is HGVS-style<br/>NM_...(GENE):c...?"}
     R2 -- yes --> G2[that gene]
@@ -62,8 +62,8 @@ flowchart TD
 
 | # | Rule | Evidence used | Example |
 |---|---|---|---|
-| 1 | **MANE Select transcript in the name.** The variation name starts with a MANE Select transcript accession. | Variant name + MANE | `NM_000527.5(LDLR):c.…` where NM_000527.5 is LDLR's MANE Select transcript → LDLR, `mane_select = TRUE` |
-| 2 | **Gene symbol in an HGVS-style name.** The name matches `NM_/NR_/…(SYMBOL):…`, and SYMBOL is an HGNC symbol in `entrez_gene`. | Variant name | `NR_189288.1(RNVU1-27):n.100C>G` → RNVU1-27 |
+| 1 | **MANE transcript in the name.** The variation name starts with a MANE Select or MANE Plus Clinical transcript accession, **including its version**, from the MANE release that was current on the ClinVar release date. | Variant name + MANE | `NM_000527.5(LDLR):c.…` where NM_000527.5 is LDLR's MANE Select transcript → LDLR, `mane_select = TRUE` |
+| 2 | **Gene symbol in an HGVS-style name.** The name matches `NM_/NR_/…(SYMBOL):…`, and SYMBOL is an HGNC symbol in the release's gene reference (see [Which genes the method can see](#which-genes-the-method-can-see)). A named companion gene is skipped when the variant has exactly one main gene. | Variant name | `NR_189288.1(RNVU1-27):n.100C>G` → RNVU1-27 |
 | 3 | **Gene-prefixed name**, such as a star allele. The name starts with a symbol followed by `*` or `,`. | Variant name | `CYP2C19*10` → CYP2C19 |
 | 4 | **One gene in ClinVar's associations.** All of the variation's gene associations point to the same gene. | `gene_association` | |
 | 5 | **One submitted gene.** Considers only associations with `source = 'submitted'`, ignoring the relationships `genes overlapped by variant` and `asserted, but not computed`, which say little about which gene the variant is about. | `gene_association` | |
@@ -72,12 +72,21 @@ flowchart TD
 
 Finally, `somatic` is set for every row whose gene is a cancer gene.
 
+!!! note "Rule 1: a MANE name wins, even for a companion gene"
+    - A different version of the same accession does not match. In the 2026-10-11 release, 6,799 variants are named with the MANE accession but another version, e.g. `NM_000527.4`. They get their gene from rule 2 instead, with `mane_select = FALSE`.
+    - Using the MANE release current at the time keeps this in step with ClinVar's own naming. Switching 2026-10-11 from MANE v1.0 to v1.5 set `mane_select` on 17,871 more variants, and removed it from 554 named with transcript versions MANE has since replaced.
+    - Rule 1 runs before the companion rule (below). MANE v1.5 includes MANE transcripts for some non-coding companion genes. So a variant named on one, e.g. `NR_003529.4(CDKN2B-AS1):n.371+1G>C`, gets that gene (CDKN2B-AS1), even though ClinVar also associates it with a main gene (CDKN2A). The variant's own name, on a MANE transcript, is taken as the strongest evidence.
+
 !!! note "Rule 7 reads associations directly"
     Rules 4–6 see only the filtered set of genes described in the next section. Rule 7 reads ClinVar's `gene_association` for the component alleles directly, without those filters. Alleles with no gene association are ignored: a haplotype of one LDLR allele and one allele with no association still gets LDLR.
 
 ## Which genes the method can see
 
-ClinVar associates variants with many kinds of NCBI Gene record, not all of which are genes in the clinical sense. Before rules 2 and 4–6 count genes, two filters apply.
+ClinVar associates variants with many kinds of NCBI Gene record, not all of which are genes in the clinical sense. Two filters decide which genes count:
+
+- **Filter 1**, the gene reference, applies to rules 1–6.
+- **Filter 2**, companion genes, applies to rules 2 and 4–6.
+- **Rule 7** reads associations directly (see the note above).
 
 ### 1. The gene must have an HGNC-approved symbol when the release was published
 
@@ -137,7 +146,10 @@ Why "exactly one main gene":
     | SNHG14 | Prader-Willi / Angelman region | 7 |
     | RMRP | Cartilage-hair hypoplasia | 3 |
 
-    HGNC naming conventions encode the relationship that matters, "named after the neighbouring gene", so they are used instead. NCBI's description is used only for readthroughs. Their symbols have no single pattern, and gene type does not help: most readthroughs are typed `protein-coding`.
+    HGNC naming conventions encode the relationship that matters, "named after the neighbouring gene", so they are used instead. The gene's full name is used in only two cases:
+
+    - **Readthroughs.** Their symbols have no single pattern, and gene type does not help: most readthroughs are typed `protein-coding`.
+    - **Older antisense names without a hyphen.** A symbol ending in `AS` counts only when the full name says "antisense", so that HRAS and KRAS do not.
 
 ## Shared symbols and replaced gene ids
 
@@ -157,12 +169,22 @@ Because ClinVar's own association wins, each release gets the id ClinVar used at
 | `{release}.gene` | ClinVar release | Genes ClinVar uses in the release: `id`, `symbol`, `hgnc_id`, `full_name` | Main gene reference, as of the release |
 | `clinvar_ingest.ncbi_gene_history` | NCBI [`gene_history.gz`](https://ftp.ncbi.nih.gov/gene/DATA/), human rows | `discontinued_gene_id`, `replaced_by_gene_id`, `discontinued_symbol`, `discontinue_date` | Drops ids already discontinued by the release date |
 | `clinvar_ingest.entrez_gene` | NCBI [`Homo_sapiens.gene_info.gz`](https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/), genes with an HGNC symbol and HGNC id | `gene_id`, `symbol_from_authority` (HGNC symbol), `symbol` (NCBI symbol), `hgnc_id`, `type_of_gene`, `description` | Fallback for genes the release does not list; also used by the tracker reports |
+| `clinvar_ingest.mane_transcript` | NCBI [MANE releases](https://ftp.ncbi.nlm.nih.gov/refseq/MANE/MANE_human/) (`MANE.GRCh38.vX.summary.txt.gz`, v0.91 onward) | `mane_version`, `mane_release_date`, `gene_id`, `hgnc_id`, `symbol`, `transcript_id` (RefSeq accession.version), `mane_status` | Rule 1, using the release current on the ClinVar release date |
+
+**MANE release dates.** NCBI does not publish release dates directly, so each release's date is the earlier of two dates: its directory's and its summary file's. Most release directories were copied in bulk long after their release, and v1.5's summary file was regenerated after it. The resulting dates are 1.0 → 2022-01-31, 1.1 → 2023-04-20, 1.2 → 2023-06-21, 1.3 → 2023-10-25, 1.4 → 2024-10-08 and 1.5 → 2025-09-30. Releases 0.5–0.9 (2018–2020) use an older format and are not loaded; they predate every ClinVar release processed here. The hand-made `clinvar_ingest.mane_select_gene_transcript` table, which this replaces, held MANE v1.0 and is no longer used.
 
 ### Keeping the reference current
 
-The stored procedure `clinvar_ingest.gene_reference_update` (`scripts/general/gene-reference-update-proc.sql`) applies the add-only changes. Its caller first downloads the two NCBI files and loads them into the staging tables `entrez_gene_stage` and `ncbi_gene_history_stage`. The procedure:
+The stored procedure `clinvar_ingest.gene_reference_update` (`scripts/general/gene-reference-update-proc.sql`) applies the add-only changes. Its caller first downloads the NCBI files and loads them into three staging tables:
 
-- refuses a download that looks incomplete: fewer than 90% of the current HGNC-named genes, or fewer gene-history rows than are already loaded
+- `entrez_gene_stage`: human rows of `gene_info`
+- `ncbi_gene_history_stage`: human rows of `gene_history`
+- `mane_transcript_stage`: every MANE release's summary file
+
+The procedure:
+
+- refuses a download that looks incomplete: fewer than 90% of the current HGNC-named genes, fewer gene-history rows than are already loaded, or fewer MANE releases than are already loaded
+- adds a MANE release whole the first time it appears, and never changes it afterwards
 - logs every applied run, even one with nothing new, to `clinvar_ingest.gene_reference_refresh_log`
 
 It has two callers:
@@ -176,7 +198,11 @@ It has two callers:
 `entrez_gene` was built once in September 2024 and refreshed in October 2026, adding 2,230 genes.
 
 !!! warning "Add-only, on purpose"
-    The update **never changes or removes** an existing row. It adds new gene ids to `entrez_gene`, fills in its `type_of_gene` / `description` where they are empty, and adds newly discontinued ids to `ncbi_gene_history`. NCBI itself only ever appends to `gene_history`.
+    The update **never changes or removes** an existing row. It:
+
+    - adds new gene ids to `entrez_gene`, and fills in its `type_of_gene` / `description` where they are empty
+    - adds newly discontinued ids to `ncbi_gene_history`; NCBI itself only ever appends to `gene_history`
+    - adds each new MANE release to `mane_transcript` whole
 
     If a symbol were overwritten or a retired id deleted, re-processing an older release could silently give a different answer than it did originally. The cost of add-only is that a renamed gene keeps its old symbol in `entrez_gene`. That only matters for the fallback, because each release's symbols come from its own gene table.
 
@@ -191,7 +217,7 @@ The table is rebuilt from scratch whenever the procedure runs for a release. Bec
 Remaining sources of drift, all small:
 
 - **The `entrez_gene` fallback** reflects today's knowledge. It only affects name matching for genes the release does not list, and a release's variant names can only contain symbols that existed at the time.
-- **`mane_select_gene_transcript` and `cancer_genes` are today's lists.** Re-running an old release uses the current MANE transcripts for rule 1 and the current cancer genes for the `somatic` flag.
+- **`cancer_genes` is today's list.** Re-running an old release uses the current cancer genes for the `somatic` flag. MANE, by contrast, is matched against the release current at the time (see rule 1).
 - **ClinVar's gene table is taken as published.** Errors in it, apart from discontinued ids, carry through.
 
 ## Known limitations
@@ -250,3 +276,4 @@ To undo, copy the `*_before_backfill` tables back over the tables they were take
 | Companion genes give way to a single main gene. `entrez_gene` gains `type_of_gene` and `description`. | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | The gene reference comes from each release's own gene table, minus ids NCBI had discontinued by the release date, so every release is processed against the gene knowledge of its time | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | Antisense genes (`-AS#`) are treated as companions instead of always being ignored, so a variant whose only gene is antisense keeps it | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
+| Rule 1 uses the MANE release current on each ClinVar release date (`mane_transcript`, refreshed weekly), instead of a fixed MANE v1.0 list | MANE point-in-time |
