@@ -54,7 +54,8 @@ These tables are populated by the setup scripts and Cloud Functions. They provid
 | `submission_level` | Maps SCV integer ranks to readable labels and short codes (PG, EP, CP, NOCP, NOCL, FLAG). |
 | `submitter_organization` | Submitter metadata from ClinVar FTP (organization name, type, location, submission counts). |
 | `ncbi_gene` | NCBI gene records (id, symbol, description, gene type, synonyms). |
-| `entrez_gene` | Human NCBI genes with an HGNC symbol and id, plus NCBI gene type and description. The gene reference for `single_gene_variation`. Add-only: updated with `scripts/general/update-entrez-gene.sh`, which never changes or removes existing ids or symbols. See [Single Gene Variation](../methods/single-gene-variation.md#reference-data-entrez_gene). |
+| `entrez_gene` | Human NCBI genes with an HGNC symbol and id, plus NCBI gene type and description. `single_gene_variation` uses it as a fallback for genes a release does not list; the tracker reports also use it. Add-only. See [Single Gene Variation](../methods/single-gene-variation.md#reference-data). |
+| `ncbi_gene_history` | Human gene ids NCBI has discontinued, with the replacement id and discontinue date. Lets `single_gene_variation` drop ids that were already discontinued when a release was published. Add-only. See [Single Gene Variation](../methods/single-gene-variation.md#reference-data). |
 | `hgnc_gene` | HGNC gene records with aliases, cross-references, and MANE select transcripts. |
 | `hpo_terms` | HPO ontology terms (id, label). |
 | `mondo_terms` | MONDO ontology terms with SKOS matches. |

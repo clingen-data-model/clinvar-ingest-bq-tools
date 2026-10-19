@@ -20,7 +20,9 @@ This page explains how the gene is chosen, why each rule exists, and where the m
 |---|---|---|
 | `{release}.variation` | ClinVar release | Variation name (title), subclass (SimpleAllele, Haplotype, Genotype) and component alleles |
 | `{release}.gene_association` | ClinVar release | ClinVar's variant-to-gene links, each with a `relationship_type` and a `source` (`submitted` or `calculated`) |
-| `clinvar_ingest.entrez_gene` | NCBI Gene, add-only (see [Reference data](#reference-data-entrez_gene)) | The genes the method can see: gene id, HGNC symbol, HGNC id, NCBI gene type and description |
+| `{release}.gene` | ClinVar release | The NCBI genes ClinVar uses in this release, with the HGNC symbol and HGNC id **as they were at the time**. This is the main gene reference (see [Which genes the method can see](#which-genes-the-method-can-see)). |
+| `clinvar_ingest.ncbi_gene_history` | NCBI Gene, add-only (see [Reference data](#reference-data)) | When NCBI discontinued each gene id. Used to drop ids that were already discontinued when the release was published. |
+| `clinvar_ingest.entrez_gene` | NCBI Gene, add-only (see [Reference data](#reference-data)) | Fallback for genes the release's gene table does not list, e.g. a gene named in a variant title that ClinVar does not associate |
 | `clinvar_ingest.mane_select_gene_transcript` | MANE | MANE Select transcript accession → gene |
 | `clinvar_ingest.cancer_genes` | Curated list | Sets the `somatic` flag |
 
@@ -77,9 +79,15 @@ Finally, `somatic` is set for every row whose gene is a cancer gene.
 
 ClinVar associates variants with many kinds of NCBI Gene record, not all of which are genes in the clinical sense. Before rules 2 and 4–6 count genes, three filters apply.
 
-### 1. The gene must be in `entrez_gene`
+### 1. The gene must have an HGNC-approved symbol when the release was published
 
-`entrez_gene` holds human NCBI genes that have an **HGNC-approved symbol and HGNC id** (about 45,000). A ClinVar association to any other record is invisible to rules 1–6. The main excluded groups, as of the 2026-10-11 release:
+The gene reference is rebuilt for every release, so a release only sees the genes, and the symbols, that were current when it came out:
+
+1. **The release's own `gene` table.** ClinVar records, for every gene it uses, the HGNC symbol and HGNC id in effect that week. Genes with no HGNC id at the time (unnamed `LOC…` genes) are left out. A gene HGNC named later, e.g. LOC730100, now NRXN1-DT, is invisible in releases from before it was named.
+2. **Minus gene ids NCBI had already discontinued by the release date** (`ncbi_gene_history`). ClinVar's gene table keeps some discontinued ids, still carrying an HGNC id: 83 in the 2023-01-07 release and 31 in 2026-10-11. For example, CRIPAK (285464) was discontinued in 2019 but is still listed, and it lies inside UVSSA. Counting it would cost about 180 UVSSA variants their gene.
+3. **Plus `entrez_gene` for genes the release does not list at all.** The release's gene table only holds genes ClinVar associates with some variant. A variant can be named after a gene ClinVar does not associate, e.g. `NR_164162.1(GLRA4):n.1091C>T`, and the name-matching rules still need to find it. Only rules 1–3 can use these genes, because rules 4–6 work from ClinVar's associations.
+
+A ClinVar association to any other record is invisible to rules 1–6. The main excluded groups, as of the 2026-10-11 release:
 
 | Excluded | Why | Scale |
 |---|---|---|
@@ -96,11 +104,11 @@ HGNC names antisense RNA genes after the gene they overlap, with a numbered suff
 
 Many genes are non-coding transcripts **named after, and lying beside, a protein-coding gene**. When ClinVar computes overlaps, a variant in the main gene is often also associated with its companion. Counting both would hide the obvious answer. So:
 
-> A companion gene is ignored **only when the variant has exactly one main gene** — a gene in `entrez_gene` that is neither `-AS#` nor a companion. Otherwise it is treated like any other gene.
+> A companion gene is ignored **only when the variant has exactly one main gene** — a visible gene that is neither `-AS#` nor a companion. Otherwise it is treated like any other gene.
 
-Companions are recognised by HGNC naming conventions, plus NCBI's description for readthroughs:
+Companions are recognised by HGNC naming conventions, using the symbol in effect for the release. Readthroughs are recognised from the gene's full name:
 
-| Family | HGNC convention | Example | Genes (2026-10-18) |
+| Family | HGNC convention | Example | Human genes (Oct 2026) |
 |---|---|---|---|
 | Divergent transcript | `GENE-DT` | NRXN1-DT, ANKRD11-DT | ~760 |
 | Long intergenic non-coding RNA | `LINC#####` | LINC03113 | ~2,500 |
@@ -108,7 +116,7 @@ Companions are recognised by HGNC naming conventions, plus NCBI's description fo
 | Overlapping transcript | `GENE-OT#` | BRCA1-OT1, SIX3-OT1 | ~30 |
 | Intronic transcript | `GENE-IT#` | FTO-IT1, CAMTA1-IT1 | ~140 |
 | Antisense RNA without a number | `GENE-AS` | HTT-AS, DM1-AS, BDNF-AS | ~30 |
-| Readthrough | `GENE1-GENE2`, where NCBI's description says "readthrough" | INS-IGF2, SPICE1-CFAP44 | ~150 |
+| Readthrough | `GENE1-GENE2`, where the gene's full name says "readthrough" | INS-IGF2, SPICE1-CFAP44 | ~150 |
 
 Why "exactly one main gene":
 
@@ -118,7 +126,8 @@ Why "exactly one main gene":
 - **A non-coding gene that follows no companion convention counts as a main gene.** Four 6p25.3 copy-number variants show this, e.g. variation 146147, `GRCh38/hg38 6p25.3(chr6:163083-293493)x3`. ClinVar associates each with DUSP22 (protein-coding), LINC03066 (a companion) and LIRIL2R (a long non-coding RNA).
   - LIRIL2R is a second main gene, so nothing gives way, and the variants get **no single gene**.
   - This is the intended outcome: the variant spans several genes, so no one gene represents it.
-  - Before the October 2026 refresh, LINC03066 and LIRIL2R were missing from `entrez_gene`, so these variants were wrongly reduced to DUSP22.
+  - Earlier versions of the method used a gene reference that lacked LINC03066 and LIRIL2R, so these variants were wrongly reduced to DUSP22.
+  - A 37 kb duplication over FLG and the newly named CCDST (variation 974718) is handled the same way.
 
 !!! question "Why naming conventions and not NCBI gene type?"
     A rule like "ignore non-coding genes when a protein-coding gene is present" would also catch these companions. It resolves about 18,000 more variants to a single gene in the 2026-10-11 release. But "non-coding" is not the same as "companion". It would also demote **stand-alone non-coding disease genes** whenever ClinVar also lists a protein-coding neighbour. Measured on the 2026-10-11 release, it would move existing assignments away from:
@@ -135,46 +144,47 @@ Why "exactly one main gene":
 
 ## Shared symbols and replaced gene ids
 
-NCBI sometimes **replaces a gene id**: the old id is retired and a new id takes over the same symbol and HGNC id. For example, RNVU1-27 moved from 115409988 to 124904621. Because `entrez_gene` is add-only, both ids stay, so a few symbols (59 in October 2026) map to two gene ids.
+NCBI sometimes **replaces a gene id**: the old id is discontinued and a new id takes over the same symbol and HGNC id. For example, RNVU1-27 moved from 115409988 to 124904621. Discontinued ids are dropped from a release's gene reference once their discontinue date has passed, which removes most overlaps. Two ids can still share a symbol, for example when one comes from the release's gene table and the other from the `entrez_gene` fallback.
 
 This matters only for rules 2 and 3, which match on symbol. When a name's symbol matches two ids, the method keeps one:
 
 1. the gene id that **ClinVar associates with this variant in this release**, then
 2. the newest (highest) gene id.
 
-Because ClinVar's own association wins, a release from before the replacement resolves to the old id, and a later release resolves to the new one. Each release gets the id that was current when it came out. Variation 3362390, `NR_189288.1(RNVU1-27):n.100C>G`, resolves to 124904621 in the 2026-10-11 release because that is the id ClinVar associates.
+Because ClinVar's own association wins, each release gets the id ClinVar used at the time. Variation 3362390, `NR_189288.1(RNVU1-27):n.100C>G`, resolves to 124904621 in the 2026-10-11 release because that is the id ClinVar associates.
 
-## Reference data: `entrez_gene`
+## Reference data
 
-| | |
-|---|---|
-| Source | NCBI Gene, [`Homo_sapiens.gene_info.gz`](https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/) |
-| Rows included | Human genes with an HGNC symbol (`Symbol_from_nomenclature_authority`) and an HGNC id in `dbXrefs` |
-| Columns | `gene_id`, `symbol_from_authority` (HGNC symbol), `symbol` (NCBI symbol), `hgnc_id`, `type_of_gene`, `description` |
-| Update | `scripts/general/update-entrez-gene.sh`. It reports by default, and applies only with `--apply` after backing up the table. |
-| History | Built once in September 2024. Refreshed October 2026, adding 2,230 genes. |
+| Table | Source | Contents | Role |
+|---|---|---|---|
+| `{release}.gene` | ClinVar release | Genes ClinVar uses in the release: `id`, `symbol`, `hgnc_id`, `full_name` | Main gene reference, as of the release |
+| `clinvar_ingest.ncbi_gene_history` | NCBI [`gene_history.gz`](https://ftp.ncbi.nih.gov/gene/DATA/), human rows | `discontinued_gene_id`, `replaced_by_gene_id`, `discontinued_symbol`, `discontinue_date` | Drops ids already discontinued by the release date |
+| `clinvar_ingest.entrez_gene` | NCBI [`Homo_sapiens.gene_info.gz`](https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/), genes with an HGNC symbol and HGNC id | `gene_id`, `symbol_from_authority` (HGNC symbol), `symbol` (NCBI symbol), `hgnc_id`, `type_of_gene`, `description` | Fallback for genes the release does not list; also used by the tracker reports |
+
+`scripts/general/update-gene-reference.sh` updates both `clinvar_ingest` tables. It only reports by default, and applies changes only with `--apply`, after backing up `entrez_gene`. `entrez_gene` was built once in September 2024 and refreshed in October 2026, adding 2,230 genes.
 
 !!! warning "Add-only, on purpose"
-    The update **never changes or removes** an existing gene id, symbol or HGNC id. It only adds new gene ids and fills in `type_of_gene` / `description` where they are empty.
+    The update **never changes or removes** an existing row. It adds new gene ids to `entrez_gene`, fills in its `type_of_gene` / `description` where they are empty, and adds newly discontinued ids to `ncbi_gene_history`. NCBI itself only ever appends to `gene_history`.
 
-    If a symbol were overwritten, re-processing an older release would silently match different names than it did originally. If a retired id were deleted, every older release that references it would lose its gene. The cost of add-only is that a renamed gene keeps its old symbol in this table. That only affects the name-based rules 2 and 3.
+    If a symbol were overwritten or a retired id deleted, re-processing an older release could silently give a different answer than it did originally. The cost of add-only is that a renamed gene keeps its old symbol in `entrez_gene`. That only matters for the fallback, because each release's symbols come from its own gene table.
 
 ## Reproducibility over time
 
-The table is rebuilt from scratch whenever the procedure runs for a release. Its result depends on the release and on the reference tables *as they are on that day*.
+The table is rebuilt from scratch whenever the procedure runs for a release. Because the gene reference comes from the release itself, filtered by NCBI's discontinue dates, re-running an old release reproduces the gene knowledge of its time:
 
-- **Stable:** rules driven by ClinVar's own gene ids (4–7, and the tie-break above) cannot pick up a gene that ClinVar did not reference in that release.
-- **Can drift:** re-running an old release after `entrez_gene` has grown can make a gene visible that the original run could not see. There are two causes:
-    1. **The table was out of date** when the release was first processed. Keeping `entrez_gene` current prevents this. ClinVar can only reference NCBI gene ids that already exist, so a current table would have held them.
-    2. **HGNC named the gene later.** ClinVar often references an NCBI gene id while it is still an unnamed `LOC…` gene, and `entrez_gene` only admits a gene once HGNC has named it. Of the genes added in October 2026, 195 are referenced in the 2023-01-07 release. 176 of them had no HGNC symbol at that time, e.g. LOC93622, now MRFAP1L2. Re-running that release applies today's names, which a table that was current in 2023 would not have contained.
+- it sees only genes HGNC had named by then, under the symbols then in use
+- it ignores gene ids NCBI had already discontinued
+- it still counts gene ids that were valid then, even if NCBI discontinued them later
 
-    Either way the re-run uses today's gene knowledge. The result is consistent across releases, but it is not a strict point-in-time reconstruction.
+Remaining sources of drift, all small:
 
-[Issue #39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) proposes a dated, add-only gene history. It would let a release be processed against the gene reference as it stood on its release date.
+- **The `entrez_gene` fallback** reflects today's knowledge. It only affects name matching for genes the release does not list, and a release's variant names can only contain symbols that existed at the time.
+- **`mane_select_gene_transcript` and `cancer_genes` are today's lists.** Re-running an old release uses the current MANE transcripts for rule 1 and the current cancer genes for the `somatic` flag.
+- **ClinVar's gene table is taken as published.** Errors in it, apart from discontinued ids, carry through.
 
 ## Known limitations
 
-- **Retired readthrough ids are not recognised as companions.** NCBI no longer describes them, so no description is available.
+- **A variant whose only gene is an `-AS#` antisense gene gets no gene.** For example, `NR_024274.1(CDKN2A-AS1):n.154T>G` (variation 2659128). This follows from the long-standing rule that `-AS#` genes are always ignored. Other companion families, by contrast, keep a variant's only gene.
 - **Some names in a companion family belong to genes of another type.**
   - Three protein-coding genes have `-AS#` names (e.g. SFTA2-AS1) and are always ignored.
   - LINC00672 is typed protein-coding but is treated as a companion.
@@ -188,13 +198,13 @@ The table is rebuilt from scratch whenever the procedure runs for a release. Its
 
 The procedure is `scripts/dataset-preparation/04-single-gene-variation-proc.sql`. Before deploying a change:
 
-1. Copy the release's `variation` and `gene_association` tables into a scratch dataset.
+1. Copy the release's `variation`, `gene_association` and `gene` tables into a scratch dataset. Test at least one early release (e.g. 2023-01-07) and the latest.
 2. Run the changed procedure there under a test name.
 3. Compare the result with the release's existing `single_gene_variation`:
    - added rows, removed rows, and changed genes, each grouped by the rule that produced them
    - a check for duplicate `variation_id`s
 4. Explain every removed or changed row in the pull request before merging.
-5. If the change reads a new column of `entrez_gene`, run `update-entrez-gene.sh --apply` first. BigQuery does not check column names in a procedure until it runs.
+5. If the change reads a new reference table or column, run `update-gene-reference.sh --apply` first. BigQuery does not check table or column names in a procedure until it runs.
 
 ## Change history
 
@@ -203,3 +213,4 @@ The procedure is `scripts/dataset-preparation/04-single-gene-variation-proc.sql`
 | Rule 7 counts distinct genes instead of association rows, so haplotypes whose alleles share one gene get it | [#38](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/38) / [#40](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/pull/40) |
 | `entrez_gene` refreshed add-only. Names that match a symbol shared by two gene ids resolve to one id. | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | Companion genes give way to a single main gene. `entrez_gene` gains `type_of_gene` and `description`. | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
+| The gene reference comes from each release's own gene table, minus ids NCBI had discontinued by the release date, so every release is processed against the gene knowledge of its time | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
