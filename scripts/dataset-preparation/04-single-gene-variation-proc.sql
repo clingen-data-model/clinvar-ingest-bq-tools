@@ -121,7 +121,7 @@ BEGIN
     --   beside, a main gene. matched by HGNC naming convention, except readthroughs, which are
     --   taken from the gene full_name. see docs/methods/single-gene-variation.md
     --   a companion is only ignored when the variation has exactly one main gene
-    --   (see temp_one_main_gene_variation), unlike -AS# antisense genes, which are always ignored
+    --   (see temp_one_main_gene_variation); a variation whose only genes are companions keeps them
   CREATE TEMP TABLE _SESSION.temp_companion_gene
   AS
   SELECT
@@ -138,12 +138,12 @@ BEGIN
     OR
     REGEXP_CONTAINS(g.symbol, r'\-IT\d*$')         -- intronic transcript
     OR
-    REGEXP_CONTAINS(g.symbol, r'\-AS$')            -- antisense RNA without a number
+    REGEXP_CONTAINS(g.symbol, r'\-AS\d*$')         -- antisense RNA, with or without a number
     OR
     REGEXP_CONTAINS(LOWER(g.full_name), r'readthrough');        -- readthrough (GENE1-GENE2)
 
     -- create a temp table of the variations associated with exactly one main gene
-    --   (a gene in temp_gene that is neither -AS# nor a companion). only for these is there
+    --   (a gene in temp_gene that is not a companion). only for these is there
     --   a single main gene for a companion to give way to.
   EXECUTE IMMEDIATE FORMAT("""
     CREATE TEMP TABLE _SESSION.temp_one_main_gene_variation
@@ -155,8 +155,6 @@ BEGIN
     ON
       ga.gene_id = g.gene_id
     WHERE
-      NOT REGEXP_CONTAINS(g.symbol, r'\\-AS\\d$')
-      AND
       g.gene_id NOT IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
     GROUP BY
       ga.variation_id
@@ -166,7 +164,6 @@ BEGIN
 
     -- create a temp table that is the list of gene associations
     --   for variations not yet in the single gene var table and
-    --   don't have the gene symbol ending in an -AS# suffix and
     --   aren't a companion gene of a variation that has exactly one main gene
   EXECUTE IMMEDIATE FORMAT("""
     CREATE TEMP TABLE _SESSION.temp_gene_assoc
@@ -181,8 +178,6 @@ BEGIN
     ON
       ga.gene_id = g.gene_id
     WHERE
-      NOT REGEXP_CONTAINS(g.symbol, r'\\-AS\\d$')
-      AND
       NOT (
         ga.gene_id IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
         AND
@@ -239,8 +234,6 @@ BEGIN
     JOIN _SESSION.temp_gene g
     ON
       UPPER(g.symbol) = UPPER(x.symbol)
-      AND
-      NOT REGEXP_CONTAINS(x.symbol, r'\\-AS\\d$')
     LEFT JOIN _SESSION.temp_gene_assoc ga
     ON
       ga.variation_id = x.id

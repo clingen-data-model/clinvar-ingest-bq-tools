@@ -77,7 +77,7 @@ Finally, `somatic` is set for every row whose gene is a cancer gene.
 
 ## Which genes the method can see
 
-ClinVar associates variants with many kinds of NCBI Gene record, not all of which are genes in the clinical sense. Before rules 2 and 4–6 count genes, three filters apply.
+ClinVar associates variants with many kinds of NCBI Gene record, not all of which are genes in the clinical sense. Before rules 2 and 4–6 count genes, two filters apply.
 
 ### 1. The gene must have an HGNC-approved symbol when the release was published
 
@@ -96,15 +96,11 @@ A ClinVar association to any other record is invisible to rules 1–6. The main 
 
 Without this filter, a variant in BRCA1 that also overlaps a catalogued enhancer would have "two genes" and would never get BRCA1.
 
-### 2. Antisense genes (`-AS#`) are always ignored
-
-HGNC names antisense RNA genes after the gene they overlap, with a numbered suffix: `BRCA1-AS1`, `KCNQ1-AS1`… These are ignored in rules 2 and 4–6, whether or not the variant has another gene. This has been the method's behaviour since its first version and is kept unchanged.
-
-### 3. Companion genes give way to a single main gene
+### 2. Companion genes give way to a single main gene
 
 Many genes are non-coding transcripts **named after, and lying beside, a protein-coding gene**. When ClinVar computes overlaps, a variant in the main gene is often also associated with its companion. Counting both would hide the obvious answer. So:
 
-> A companion gene is ignored **only when the variant has exactly one main gene** — a visible gene that is neither `-AS#` nor a companion. Otherwise it is treated like any other gene.
+> A companion gene is ignored **only when the variant has exactly one main gene** — a visible gene that is not a companion. Otherwise it is treated like any other gene.
 
 Companions are recognised by HGNC naming conventions, using the symbol in effect for the release. Readthroughs are recognised from the gene's full name:
 
@@ -115,14 +111,15 @@ Companions are recognised by HGNC naming conventions, using the symbol in effect
 | microRNA host gene | `MIR###HG` | MIR4733HG, MIR3936HG | ~80 |
 | Overlapping transcript | `GENE-OT#` | BRCA1-OT1, SIX3-OT1 | ~30 |
 | Intronic transcript | `GENE-IT#` | FTO-IT1, CAMTA1-IT1 | ~140 |
-| Antisense RNA without a number | `GENE-AS` | HTT-AS, DM1-AS, BDNF-AS | ~30 |
+| Antisense RNA | `GENE-AS#`, or `GENE-AS` without a number | BRCA1-AS1, KCNQ1-AS1, HTT-AS | ~2,950 |
 | Readthrough | `GENE1-GENE2`, where the gene's full name says "readthrough" | INS-IGF2, SPICE1-CFAP44 | ~150 |
 
 Why "exactly one main gene":
 
 - **NRXN1 + NRXN1-DT** (variation 146354). ClinVar lists both. One main gene, NRXN1, so NRXN1-DT gives way → **NRXN1**.
 - **INS + IGF2 + the readthrough INS-IGF2.** Ignoring the readthrough would leave two main genes, which is not a single-gene answer. The readthrough is not ignored, and the variant is handled exactly as it was before companions were introduced.
-- **A variant whose only gene is a companion**, e.g. in MIR550A3HG or a LINC gene, keeps that gene. There is no main gene to give way to.
+- **A variant whose only gene is a companion**, e.g. in MIR550A3HG, CDKN2A-AS1 or a LINC gene, keeps that gene. There is no main gene to give way to.
+- **A variant whose only genes are two or more companions gets no single gene.** For example, the 18q22.1 duplication `GRCh38/hg38 18q22.1(chr18:67600914-67981221)x3` (variation 152550) spans LINC01903 and DSEL-AS1. Neither gives way, because there is no main gene to give way to.
 - **A non-coding gene that follows no companion convention counts as a main gene.** Four 6p25.3 copy-number variants show this, e.g. variation 146147, `GRCh38/hg38 6p25.3(chr6:163083-293493)x3`. ClinVar associates each with DUSP22 (protein-coding), LINC03066 (a companion) and LIRIL2R (a long non-coding RNA).
   - LIRIL2R is a second main gene, so nothing gives way, and the variants get **no single gene**.
   - This is the intended outcome: the variant spans several genes, so no one gene represents it.
@@ -184,15 +181,14 @@ Remaining sources of drift, all small:
 
 ## Known limitations
 
-- **A variant whose only gene is an `-AS#` antisense gene gets no gene.** For example, `NR_024274.1(CDKN2A-AS1):n.154T>G` (variation 2659128). This follows from the long-standing rule that `-AS#` genes are always ignored. Other companion families, by contrast, keep a variant's only gene.
 - **Some names in a companion family belong to genes of another type.**
-  - Three protein-coding genes have `-AS#` names (e.g. SFTA2-AS1) and are always ignored.
+  - Three protein-coding genes have `-AS#` names (e.g. SFTA2-AS1) and are treated as companions.
   - LINC00672 is typed protein-coding but is treated as a companion.
 - **microRNA host genes include a disease gene.**
   - MIR17HG causes Feingold syndrome 2.
   - When it is a variant's only gene it is kept. When the variant also has exactly one main gene, MIR17HG gives way to that gene.
 - **Rule 6 counts association rows.** A variant whose only `within single gene` gene ClinVar reports twice, once `submitted` and once `calculated`, gets no gene from rule 6. No such variant exists in the 2026-10-11 release.
-- **Rule 3 does not apply the antisense or companion filters.** Gene-prefixed names, such as star alleles, are almost always main genes.
+- **Rule 3 does not apply the companion rule.** Gene-prefixed names, such as star alleles, are almost always main genes.
 
 ## Changing the method
 
@@ -214,3 +210,4 @@ The procedure is `scripts/dataset-preparation/04-single-gene-variation-proc.sql`
 | `entrez_gene` refreshed add-only. Names that match a symbol shared by two gene ids resolve to one id. | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | Companion genes give way to a single main gene. `entrez_gene` gains `type_of_gene` and `description`. | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | The gene reference comes from each release's own gene table, minus ids NCBI had discontinued by the release date, so every release is processed against the gene knowledge of its time | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
+| Antisense genes (`-AS#`) are treated as companions instead of always being ignored, so a variant whose only gene is antisense keeps it | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
