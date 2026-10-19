@@ -58,6 +58,8 @@ nav:
     - Overview: architecture/index.md
     - Data Pipeline: architecture/data-pipeline.md
     - BigQuery Schema: architecture/bigquery-schema.md
+  - Methods:
+    - Single Gene Variation: methods/single-gene-variation.md
   - TypeScript Utilities:
     - Overview: typescript/index.md
     - BQ Utils: typescript/bq-utils.md

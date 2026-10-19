@@ -65,9 +65,57 @@ BEGIN
       ga.variation_id = v.id
   """, schema_name, release_date, schema_name);
 
+    -- create a temp table of "companion" genes: non-coding transcripts named after, and lying
+    --   beside, a main gene. matched by HGNC naming convention, except readthroughs, which are
+    --   taken from the NCBI gene_info description. see docs/methods/single-gene-variation.md
+    --   a companion is only ignored when the variation has exactly one main gene
+    --   (see temp_one_main_gene_variation), unlike -AS# antisense genes, which are always ignored
+  CREATE TEMP TABLE _SESSION.temp_companion_gene
+  AS
+  SELECT
+    g.gene_id
+  FROM `clinvar_ingest.entrez_gene` g
+  WHERE
+    REGEXP_CONTAINS(g.symbol_from_authority, r'\-DT$')            -- divergent transcript
+    OR
+    REGEXP_CONTAINS(g.symbol_from_authority, r'^LINC\d+$')        -- long intergenic non-coding RNA
+    OR
+    REGEXP_CONTAINS(g.symbol_from_authority, r'^MIR\d+[A-Z0-9]*HG$') -- microRNA host gene
+    OR
+    REGEXP_CONTAINS(g.symbol_from_authority, r'\-OT\d*$')         -- overlapping transcript
+    OR
+    REGEXP_CONTAINS(g.symbol_from_authority, r'\-IT\d*$')         -- intronic transcript
+    OR
+    REGEXP_CONTAINS(g.symbol_from_authority, r'\-AS$')            -- antisense RNA without a number
+    OR
+    REGEXP_CONTAINS(LOWER(g.description), r'readthrough');        -- readthrough (GENE1-GENE2)
+
+    -- create a temp table of the variations associated with exactly one main gene
+    --   (a gene in entrez_gene that is neither -AS# nor a companion). only for these is there
+    --   a single main gene for a companion to give way to.
+  EXECUTE IMMEDIATE FORMAT("""
+    CREATE TEMP TABLE _SESSION.temp_one_main_gene_variation
+    AS
+    SELECT
+      ga.variation_id
+    FROM `%s.gene_association` ga
+    JOIN `clinvar_ingest.entrez_gene` g
+    ON
+      ga.gene_id = g.gene_id
+    WHERE
+      NOT REGEXP_CONTAINS(g.symbol_from_authority, r'\\-AS\\d$')
+      AND
+      g.gene_id NOT IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
+    GROUP BY
+      ga.variation_id
+    HAVING
+      COUNT(DISTINCT ga.gene_id) = 1
+  """, schema_name);
+
     -- create a temp table that is the list of gene associations
     --   for variations not yet in the single gene var table and
-    --   don't have the gene symbol ending in an -AS# suffix
+    --   don't have the gene symbol ending in an -AS# suffix and
+    --   aren't a companion gene of a variation that has exactly one main gene
   EXECUTE IMMEDIATE FORMAT("""
     CREATE TEMP TABLE _SESSION.temp_gene_assoc
     AS
@@ -82,6 +130,12 @@ BEGIN
       ga.gene_id = g.gene_id
     WHERE
       NOT REGEXP_CONTAINS(g.symbol_from_authority, r'\\-AS\\d$')
+      AND
+      NOT (
+        ga.gene_id IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
+        AND
+        ga.variation_id IN (SELECT variation_id FROM _SESSION.temp_one_main_gene_variation)
+      )
       AND
       NOT EXISTS (
         SELECT
@@ -140,7 +194,13 @@ BEGIN
       ga.variation_id = x.id
       AND
       ga.gene_id = g.gene_id
-    WHERE TRUE
+    WHERE
+      -- skip a named companion gene when the variation has exactly one main gene to give way to
+      NOT (
+        g.gene_id IN (SELECT gene_id FROM _SESSION.temp_companion_gene)
+        AND
+        x.id IN (SELECT variation_id FROM _SESSION.temp_one_main_gene_variation)
+      )
     -- a symbol can map to more than one gene_id (e.g. NCBI replaced the id and the retired id is kept),
     -- so keep one row per variation: prefer the gene_id clinvar associates with the variation, then the newest gene_id
     QUALIFY ROW_NUMBER() OVER (
@@ -392,6 +452,8 @@ BEGIN
   """, schema_name);
 
   DROP TABLE _SESSION.temp_variation;
+  DROP TABLE _SESSION.temp_companion_gene;
+  DROP TABLE _SESSION.temp_one_main_gene_variation;
   DROP TABLE _SESSION.temp_gene_assoc;
 
 END;
