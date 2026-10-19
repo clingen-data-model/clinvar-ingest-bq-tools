@@ -140,6 +140,13 @@ BEGIN
       ga.variation_id = x.id
       AND
       ga.gene_id = g.gene_id
+    WHERE TRUE
+    -- a symbol can map to more than one gene_id (e.g. NCBI replaced the id and the retired id is kept),
+    -- so keep one row per variation: prefer the gene_id clinvar associates with the variation, then the newest gene_id
+    QUALIFY ROW_NUMBER() OVER (
+      PARTITION BY x.id
+      ORDER BY IF(ga.gene_id IS NULL, 1, 0), SAFE_CAST(g.gene_id AS INT64) DESC, ga.relationship_type, ga.source
+    ) = 1
   """, schema_name, schema_name, release_date);
 
     -- star allele format, CYP2C19*10.
@@ -183,6 +190,13 @@ BEGIN
       x.id = ga.variation_id
       AND
       g.gene_id = ga.gene_id
+    WHERE TRUE
+    -- a symbol can map to more than one gene_id (e.g. NCBI replaced the id and the retired id is kept),
+    -- so keep one row per variation: prefer the gene_id clinvar associates with the variation, then the newest gene_id
+    QUALIFY ROW_NUMBER() OVER (
+      PARTITION BY x.id
+      ORDER BY IF(ga.gene_id IS NULL, 1, 0), SAFE_CAST(g.gene_id AS INT64) DESC, ga.relationship_type, ga.source
+    ) = 1
   """, schema_name, schema_name, release_date);
 
     --- step 3. for any variations remaining... load all variations with any
