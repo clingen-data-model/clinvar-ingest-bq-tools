@@ -100,6 +100,9 @@ mode = sys.argv[1]
 data = json.load(sys.stdin)
 if data and isinstance(data[0], dict):
     data = [data]
+# Scripts also emit status strings ("Created ...", "Number of affected rows")
+# for the temp-table statements; keep only the SELECT result sets.
+data = [x for x in data if isinstance(x, list)]
 mvs = data[0] if data else []
 derived = data[1] if len(data) > 1 else None
 

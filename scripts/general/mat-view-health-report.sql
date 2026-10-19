@@ -18,14 +18,23 @@
 --     written. Lineage comes from INFORMATION_SCHEMA.JOBS referenced_tables,
 --     so it only covers tables written within `derived_lookback_days`.
 --
--- This script only reads INFORMATION_SCHEMA metadata. It never refreshes,
--- creates, alters or deletes anything. Run it with:
+-- This script only READS metadata (INFORMATION_SCHEMA + per-dataset
+-- __TABLES__). It never refreshes, creates, alters or deletes any persistent
+-- object; the only writes are to script-scoped TEMP tables that BigQuery drops
+-- when the script ends. Run it with:
 --
 --   bq query --nouse_legacy_sql --project_id=clingen-dev \
 --     < scripts/general/mat-view-health-report.sql
 --
 -- or use the wrapper `scripts/general/mat-view-health.sh` (see
 -- docs/sql-scripts/general.md#materialized-view-health-report).
+--
+-- Why __TABLES__ and not INFORMATION_SCHEMA.TABLE_STORAGE:
+--   TABLE_STORAGE.storage_last_modified_time is refreshed asynchronously and
+--   was observed lagging real WRITE_TRUNCATE loads by an hour, which would hide
+--   staleness. __TABLES__.last_modified_time is current, but it is per dataset
+--   and BigQuery rate-limits concurrent __TABLES__ reads, so only the datasets
+--   that matter are read, `tables_chunk_size` at a time.
 --
 -- NOTE: the file name intentionally does NOT end in -proc.sql / -func.sql so
 --       CI does not execute it on push.
@@ -45,47 +54,49 @@ DECLARE mv_lookback_days INT64 DEFAULT 30;
 DECLARE include_derived BOOL DEFAULT TRUE;
 DECLARE derived_datasets ARRAY<STRING> DEFAULT ['clinvar_ingest', 'clinvar_curator'];
 DECLARE derived_lookback_days INT64 DEFAULT 180;
+-- Datasets whose __TABLES__ are read per statement (rate-limit guard).
+DECLARE tables_chunk_size INT64 DEFAULT 15;
 
 -- ----------------------------------------------------------------------------
--- 1. Materialized views
+-- Stage 1: materialized views, their options and refresh-job history
 -- ----------------------------------------------------------------------------
-WITH RECURSIVE
-mv AS (
+CREATE TEMP TABLE mv AS
+WITH opts AS (
   SELECT
-    m.table_catalog AS project_id,
-    m.table_schema AS dataset_id,
-    m.table_name AS mv_name,
-    FORMAT('%s.%s.%s', m.table_catalog, m.table_schema, m.table_name) AS mv_fqn,
-    m.last_refresh_time,
-    m.refresh_watermark,
-    m.last_refresh_status,
-    t.creation_time AS mv_created,
-    t.ddl
-  FROM `region-us`.INFORMATION_SCHEMA.MATERIALIZED_VIEWS AS m
-  JOIN `region-us`.INFORMATION_SCHEMA.TABLES AS t
-    USING (table_catalog, table_schema, table_name)
-),
-opts AS (
-  SELECT
-    FORMAT('%s.%s.%s', table_catalog, table_schema, table_name) AS mv_fqn,
+    table_catalog, table_schema, table_name,
     -- BigQuery only lists options that were set explicitly; defaults below.
     COALESCE(MAX(IF(option_name = 'enable_refresh', option_value, NULL)), 'true') = 'true' AS auto_refresh,
     CAST(COALESCE(MAX(IF(option_name = 'refresh_interval_minutes', option_value, NULL)), '30') AS FLOAT64) AS refresh_interval_minutes,
     MAX(IF(option_name = 'max_staleness', option_value, NULL)) AS max_staleness,
     COALESCE(MAX(IF(option_name = 'allow_non_incremental_definition', option_value, NULL)), 'false') = 'true' AS non_incremental
   FROM `region-us`.INFORMATION_SCHEMA.TABLE_OPTIONS
-  WHERE FORMAT('%s.%s.%s', table_catalog, table_schema, table_name) IN (SELECT mv_fqn FROM mv)
-  GROUP BY 1
-),
--- Refresh jobs (automatic ones run as bigquery-adminbot with job ids
--- `materialized_view_refresh_*`; manual ones are CALL BQ.REFRESH_...).
-refresh_jobs AS (
+  GROUP BY 1, 2, 3
+)
+SELECT
+  m.table_catalog AS project_id,
+  m.table_schema AS dataset_id,
+  m.table_name AS mv_name,
+  FORMAT('%s.%s.%s', m.table_catalog, m.table_schema, m.table_name) AS mv_fqn,
+  m.last_refresh_time,
+  m.refresh_watermark,
+  m.last_refresh_status.message AS last_refresh_error,
+  t.ddl,
+  COALESCE(o.auto_refresh, TRUE) AS auto_refresh,
+  COALESCE(o.refresh_interval_minutes, 30) AS refresh_interval_minutes,
+  o.max_staleness,
+  COALESCE(o.non_incremental, FALSE) AS non_incremental
+FROM `region-us`.INFORMATION_SCHEMA.MATERIALIZED_VIEWS AS m
+JOIN `region-us`.INFORMATION_SCHEMA.TABLES AS t
+  USING (table_catalog, table_schema, table_name)
+LEFT JOIN opts AS o
+  USING (table_catalog, table_schema, table_name);
+
+-- Refresh jobs: automatic ones run as bigquery-adminbot (job ids
+-- `materialized_view_refresh_*`); manual ones are CALL BQ.REFRESH_... too.
+CREATE TEMP TABLE refresh_job_stats AS
+WITH refresh_jobs AS (
   SELECT
-    j.job_id,
-    j.user_email,
     j.creation_time,
-    j.end_time,
-    j.state,
     j.error_result,
     j.referenced_tables,
     j.project_id AS job_project,
@@ -105,75 +116,141 @@ refresh_jobs_norm AS (
     COALESCE(REGEXP_CONTAINS(rj.error_result.message, r'(?i)already being refreshed'), FALSE) AS is_collision
   FROM refresh_jobs AS rj
   WHERE rj.target IS NOT NULL
-),
-refresh_job_stats AS (
-  SELECT
-    mv_fqn,
-    COUNTIF(NOT is_collision) AS refresh_jobs_in_window,
-    COUNTIF(error_result IS NOT NULL AND NOT is_collision) AS failed_refresh_jobs_in_window,
-    ARRAY_AGG(IF(is_collision, NULL, STRUCT(job_id, creation_time, error_result))
-              IGNORE NULLS ORDER BY creation_time DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest_job,
-    ARRAY_AGG(IF(error_result IS NULL, STRUCT(referenced_tables AS refs), NULL) IGNORE NULLS
-              ORDER BY creation_time DESC LIMIT 1)[SAFE_OFFSET(0)].refs AS latest_ok_refs
-  FROM refresh_jobs_norm
-  GROUP BY mv_fqn
-),
+)
+SELECT
+  mv_fqn,
+  COUNTIF(NOT is_collision) AS refresh_jobs_in_window,
+  COUNTIF(error_result IS NOT NULL AND NOT is_collision) AS failed_refresh_jobs_in_window,
+  ARRAY_AGG(IF(is_collision, NULL, STRUCT(creation_time, error_result.message AS error))
+            IGNORE NULLS ORDER BY creation_time DESC LIMIT 1)[SAFE_OFFSET(0)] AS latest_job,
+  ARRAY_AGG(IF(error_result IS NULL, STRUCT(referenced_tables AS refs), NULL) IGNORE NULLS
+            ORDER BY creation_time DESC LIMIT 1)[SAFE_OFFSET(0)].refs AS latest_ok_refs
+FROM refresh_jobs_norm
+GROUP BY mv_fqn;
+
 -- Base tables: preferred source is the most recent successful refresh job's
 -- referenced_tables (exactly what BigQuery read); fallback is a parse of the
 -- MV DDL's FROM / JOIN targets for MVs with no refresh job in the window.
-bases_from_jobs AS (
+CREATE TEMP TABLE mv_bases AS
+WITH from_jobs AS (
   SELECT DISTINCT
     s.mv_fqn,
     FORMAT('%s.%s.%s', r.project_id, r.dataset_id, r.table_id) AS base_fqn,
     'refresh job' AS lineage_source
-  FROM refresh_job_stats AS s,
-    UNNEST(s.latest_ok_refs) AS r
+  FROM refresh_job_stats AS s
+  CROSS JOIN UNNEST(s.latest_ok_refs) AS r
   WHERE FORMAT('%s.%s.%s', r.project_id, r.dataset_id, r.table_id) != s.mv_fqn
     AND NOT STARTS_WITH(r.table_id, 'INFORMATION_SCHEMA')
-),
-bases_from_ddl AS (
-  SELECT DISTINCT
-    mv.mv_fqn,
-    IF(ARRAY_LENGTH(SPLIT(ref, '.')) = 2, CONCAT(mv.project_id, '.', ref), ref) AS base_fqn,
-    'ddl parse' AS lineage_source
-  FROM mv,
-    UNNEST(REGEXP_EXTRACT_ALL(
-      REGEXP_REPLACE(REPLACE(mv.ddl, '`', ''), r'--[^\n]*', ''),
-      r'(?i)\b(?:FROM|JOIN)\s+([A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+){1,2})'
-    )) AS ref
-  WHERE mv.mv_fqn NOT IN (SELECT mv_fqn FROM bases_from_jobs)
-),
-bases AS (
-  SELECT * FROM bases_from_jobs
-  UNION ALL
-  SELECT * FROM bases_from_ddl
-),
-storage AS (
+)
+SELECT * FROM from_jobs
+UNION ALL
+SELECT DISTINCT
+  mv.mv_fqn,
+  IF(ARRAY_LENGTH(SPLIT(ref, '.')) = 2, CONCAT(mv.project_id, '.', ref), ref) AS base_fqn,
+  'ddl parse' AS lineage_source
+FROM mv
+CROSS JOIN UNNEST(REGEXP_EXTRACT_ALL(
+  REGEXP_REPLACE(REPLACE(mv.ddl, '`', ''), r'--[^\n]*', ''),
+  r'(?i)\b(?:FROM|JOIN)\s+([A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+){1,2})'
+)) AS ref
+WHERE mv.mv_fqn NOT IN (SELECT mv_fqn FROM from_jobs);
+
+-- ----------------------------------------------------------------------------
+-- Stage 2: writer jobs for derived tables (empty when include_derived = FALSE)
+-- ----------------------------------------------------------------------------
+CREATE TEMP TABLE derived_jobs AS
+SELECT
+  j.job_id,
+  j.parent_job_id,
+  j.end_time,
+  j.query,
+  j.referenced_tables,
+  FORMAT('%s.%s.%s', j.destination_table.project_id, j.destination_table.dataset_id,
+         j.destination_table.table_id) AS dest_fqn
+FROM `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT AS j
+WHERE include_derived
+  AND j.creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL derived_lookback_days DAY)
+  AND j.job_type = 'QUERY'
+  AND j.state = 'DONE'
+  AND j.error_result IS NULL
+  AND j.destination_table.dataset_id IN UNNEST(derived_datasets)
+  AND j.statement_type IN ('SELECT', 'CREATE_TABLE_AS_SELECT', 'INSERT', 'MERGE', 'UPDATE');
+
+CREATE TEMP TABLE derived_latest AS
+SELECT
+  dest_fqn,
+  ARRAY_AGG(STRUCT(job_id, parent_job_id, end_time, query)
+            ORDER BY end_time DESC LIMIT 1)[OFFSET(0)] AS w
+FROM derived_jobs
+GROUP BY dest_fqn;
+
+-- All writes to the table from the same script/procedure run (or the single
+-- job) contribute sources; e.g. CTAS followed by UPDATE.
+CREATE TEMP TABLE derived_sources AS
+SELECT DISTINCT
+  lw.dest_fqn,
+  FORMAT('%s.%s.%s', r.project_id, r.dataset_id, r.table_id) AS src_fqn
+FROM derived_latest AS lw
+JOIN derived_jobs AS j
+  ON j.dest_fqn = lw.dest_fqn
+ AND COALESCE(j.parent_job_id, j.job_id) = COALESCE(lw.w.parent_job_id, lw.w.job_id)
+CROSS JOIN UNNEST(j.referenced_tables) AS r
+WHERE NOT STARTS_WITH(r.table_id, 'INFORMATION_SCHEMA')
+  AND NOT STARTS_WITH(r.dataset_id, '_')
+  AND FORMAT('%s.%s.%s', r.project_id, r.dataset_id, r.table_id) != lw.dest_fqn;
+
+-- ----------------------------------------------------------------------------
+-- Stage 3: current last-modified time of every table involved (__TABLES__)
+-- ----------------------------------------------------------------------------
+CREATE TEMP TABLE table_mod (fqn STRING, table_type INT64, last_modified TIMESTAMP);
+
+FOR chunk IN (
+  WITH fqns AS (
+    SELECT mv_fqn AS fqn FROM mv
+    UNION ALL SELECT base_fqn FROM mv_bases
+    UNION ALL SELECT dest_fqn FROM derived_latest
+    UNION ALL SELECT src_fqn FROM derived_sources
+  ),
+  ds AS (
+    SELECT DISTINCT s.catalog_name AS p, s.schema_name AS d
+    FROM fqns
+    JOIN `region-us`.INFORMATION_SCHEMA.SCHEMATA AS s
+      ON s.catalog_name = SPLIT(fqns.fqn, '.')[SAFE_OFFSET(0)]
+     AND s.schema_name = SPLIT(fqns.fqn, '.')[SAFE_OFFSET(1)]
+  ),
+  numbered AS (
+    SELECT p, d, DIV(ROW_NUMBER() OVER (ORDER BY p, d) - 1, tables_chunk_size) AS n
+    FROM ds
+  )
   SELECT
-    FORMAT('%s.%s.%s', project_id, table_schema, table_name) AS fqn,
-    MAX(storage_last_modified_time) AS last_modified
-  FROM `region-us`.INFORMATION_SCHEMA.TABLE_STORAGE
-  WHERE NOT deleted
-  GROUP BY 1
-),
-existing AS (
-  SELECT FORMAT('%s.%s.%s', table_catalog, table_schema, table_name) AS fqn, table_type
-  FROM `region-us`.INFORMATION_SCHEMA.TABLES
-),
+    n,
+    STRING_AGG(FORMAT(
+      "SELECT CONCAT('%s.%s.', table_id), type, TIMESTAMP_MILLIS(last_modified_time) FROM `%s.%s.__TABLES__`",
+      p, d, p, d), ' UNION ALL ') AS q
+  FROM numbered
+  GROUP BY n
+)
+DO
+  EXECUTE IMMEDIATE CONCAT('INSERT INTO table_mod ', chunk.q);
+END FOR;
+
+-- ----------------------------------------------------------------------------
+-- Result set 1: materialized views
+-- ----------------------------------------------------------------------------
+WITH RECURSIVE
 base_status AS (
   SELECT
     b.mv_fqn,
     b.base_fqn,
     b.lineage_source,
-    e.table_type AS base_type,
-    s.last_modified AS base_last_modified,
-    e.fqn IS NULL AS base_missing,
-    s.last_modified > COALESCE(mv.refresh_watermark, mv.last_refresh_time) AS changed_since_refresh,
+    CASE tm.table_type WHEN 1 THEN 'TABLE' WHEN 2 THEN 'VIEW' WHEN 3 THEN 'EXTERNAL' END AS base_type,
+    tm.last_modified AS base_last_modified,
+    tm.fqn IS NULL AS base_missing,
+    COALESCE(tm.last_modified > COALESCE(mv.refresh_watermark, mv.last_refresh_time), FALSE) AS changed_since_refresh,
     mv2.mv_fqn IS NOT NULL AS base_is_mv
-  FROM bases AS b
+  FROM mv_bases AS b
   JOIN mv ON mv.mv_fqn = b.mv_fqn
-  LEFT JOIN existing AS e ON e.fqn = b.base_fqn
-  LEFT JOIN storage AS s ON s.fqn = b.base_fqn
+  LEFT JOIN table_mod AS tm ON tm.fqn = b.base_fqn
   LEFT JOIN mv AS mv2 ON mv2.mv_fqn = b.base_fqn
 ),
 -- MV -> MV dependency closure (an MV built on another MV).
@@ -213,13 +290,9 @@ depth_agg AS (
 mv_eval AS (
   SELECT
     mv.*,
-    o.auto_refresh,
-    o.refresh_interval_minutes,
-    o.max_staleness,
-    o.non_incremental,
     rs.refresh_jobs_in_window,
     rs.failed_refresh_jobs_in_window,
-    rs.latest_job.error_result.message AS latest_refresh_job_error,
+    COALESCE(mv.last_refresh_error, rs.latest_job.error) AS refresh_error,
     ba.base_tables,
     ba.lineage_source,
     ba.newest_base_change,
@@ -228,7 +301,6 @@ mv_eval AS (
     COALESCE(ba.missing_base_count, 0) AS missing_base_count,
     COALESCE(da.refresh_order, 0) AS refresh_order
   FROM mv
-  LEFT JOIN opts AS o ON o.mv_fqn = mv.mv_fqn
   LEFT JOIN refresh_job_stats AS rs ON rs.mv_fqn = mv.mv_fqn
   LEFT JOIN base_agg AS ba ON ba.mv_fqn = mv.mv_fqn
   LEFT JOIN depth_agg AS da ON da.mv_fqn = mv.mv_fqn
@@ -239,7 +311,7 @@ mv_status AS (
     TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), e.stale_since, MINUTE) AS minutes_stale,
     CASE
       WHEN e.missing_base_count > 0 THEN 'BROKEN'
-      WHEN e.last_refresh_status IS NOT NULL OR e.latest_refresh_job_error IS NOT NULL THEN 'REFRESH_FAILED'
+      WHEN e.refresh_error IS NOT NULL THEN 'REFRESH_FAILED'
       WHEN e.changed_base_count > 0 AND NOT e.auto_refresh THEN 'STALE_MANUAL'
       WHEN e.changed_base_count > 0
         AND TIMESTAMP_DIFF(CURRENT_TIMESTAMP(), e.stale_since, MINUTE)
@@ -283,7 +355,7 @@ SELECT
   non_incremental,
   refresh_jobs_in_window,
   failed_refresh_jobs_in_window,
-  COALESCE(last_refresh_status.message, latest_refresh_job_error) AS refresh_error,
+  refresh_error,
   stale_upstream_mvs,
   lineage_source,
   base_tables,
@@ -298,82 +370,25 @@ ORDER BY
     WHEN 'BROKEN' THEN 0 WHEN 'REFRESH_FAILED' THEN 1 WHEN 'STALE_OVERDUE' THEN 2
     WHEN 'STALE_MANUAL' THEN 3 WHEN 'STALE' THEN 4 WHEN 'STALE_UPSTREAM' THEN 4 ELSE 5 END,
   refresh_order,
-  materialized_view
-;
+  materialized_view;
 
 -- ----------------------------------------------------------------------------
--- 2. Derived ("materialized") tables rebuilt by procedures / scheduled queries
+-- Result set 2: derived ("materialized") tables rebuilt by procedures /
+-- scheduled queries
 -- ----------------------------------------------------------------------------
 IF include_derived THEN
 
   WITH RECURSIVE
-  jobs AS (
-    SELECT
-      j.job_id,
-      j.parent_job_id,
-      j.creation_time,
-      j.end_time,
-      j.statement_type,
-      j.query,
-      j.referenced_tables,
-      FORMAT('%s.%s.%s', j.destination_table.project_id, j.destination_table.dataset_id,
-             j.destination_table.table_id) AS dest_fqn
-    FROM `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT AS j
-    WHERE j.creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL derived_lookback_days DAY)
-      AND j.job_type = 'QUERY'
-      AND j.state = 'DONE'
-      AND j.error_result IS NULL
-      AND j.destination_table.dataset_id IN UNNEST(derived_datasets)
-      AND NOT STARTS_WITH(j.destination_table.table_id, 'anon')
-      AND j.statement_type IN ('SELECT', 'CREATE_TABLE_AS_SELECT', 'INSERT', 'MERGE', 'UPDATE')
-  ),
-  latest_writer AS (
-    SELECT
-      dest_fqn,
-      ARRAY_AGG(STRUCT(job_id, parent_job_id, end_time, statement_type, query)
-                ORDER BY end_time DESC LIMIT 1)[OFFSET(0)] AS w
-    FROM jobs
-    GROUP BY dest_fqn
-  ),
-  -- All writes to the table from the same script/procedure run (or the single
-  -- job) contribute sources; e.g. CTAS followed by UPDATE.
-  sources AS (
-    SELECT DISTINCT
-      lw.dest_fqn,
-      FORMAT('%s.%s.%s', r.project_id, r.dataset_id, r.table_id) AS src_fqn
-    FROM latest_writer AS lw
-    JOIN jobs AS j
-      ON j.dest_fqn = lw.dest_fqn
-     AND COALESCE(j.parent_job_id, j.job_id) = COALESCE(lw.w.parent_job_id, lw.w.job_id)
-    CROSS JOIN UNNEST(j.referenced_tables) AS r
-    WHERE NOT STARTS_WITH(r.table_id, 'INFORMATION_SCHEMA')
-      AND NOT STARTS_WITH(r.dataset_id, '_')
-      AND FORMAT('%s.%s.%s', r.project_id, r.dataset_id, r.table_id) != lw.dest_fqn
-  ),
-  storage AS (
-    SELECT
-      FORMAT('%s.%s.%s', project_id, table_schema, table_name) AS fqn,
-      MAX(storage_last_modified_time) AS last_modified
-    FROM `region-us`.INFORMATION_SCHEMA.TABLE_STORAGE
-    WHERE NOT deleted
-    GROUP BY 1
-  ),
-  current_tables AS (
-    SELECT FORMAT('%s.%s.%s', table_catalog, table_schema, table_name) AS fqn
-    FROM `region-us`.INFORMATION_SCHEMA.TABLES
-    WHERE table_type = 'BASE TABLE'
-  ),
   src_status AS (
     SELECT
       s.dest_fqn,
       s.src_fqn,
       ss.last_modified AS src_last_modified,
       ds.last_modified AS dest_last_modified,
-      ss.last_modified > ds.last_modified AS changed_since_build
-    FROM sources AS s
-    JOIN current_tables AS ct ON ct.fqn = s.dest_fqn
-    JOIN storage AS ds ON ds.fqn = s.dest_fqn
-    LEFT JOIN storage AS ss ON ss.fqn = s.src_fqn
+      COALESCE(ss.last_modified > ds.last_modified, FALSE) AS changed_since_build
+    FROM derived_sources AS s
+    JOIN table_mod AS ds ON ds.fqn = s.dest_fqn AND ds.table_type = 1
+    LEFT JOIN table_mod AS ss ON ss.fqn = s.src_fqn
   ),
   stale AS (
     SELECT
@@ -402,15 +417,19 @@ IF include_derived THEN
     JOIN edges AS e ON e.dest_fqn = dp.upstream_fqn
     WHERE dp.d < 10
   ),
+  depth_agg AS (
+    SELECT dest_fqn, MAX(d) AS rebuild_order FROM depth GROUP BY dest_fqn
+  ),
   parent_jobs AS (
     SELECT job_id, query
     FROM `region-us`.INFORMATION_SCHEMA.JOBS_BY_PROJECT
     WHERE creation_time >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL derived_lookback_days DAY)
       AND statement_type = 'SCRIPT'
+      AND job_id IN (SELECT w.parent_job_id FROM derived_latest)
   )
   SELECT
     'DERIVED_STALE' AS status,
-    COALESCE((SELECT MAX(d) FROM depth WHERE depth.dest_fqn = s.dest_fqn), 0) AS rebuild_order,
+    COALESCE(da.rebuild_order, 0) AS rebuild_order,
     s.dest_fqn AS derived_table,
     s.last_built,
     s.newest_source_change,
@@ -423,9 +442,9 @@ IF include_derived THEN
       ELSE CONCAT('query: ', LEFT(REGEXP_REPLACE(lw.w.query, r'\s+', ' '), 160))
     END AS last_built_by
   FROM stale AS s
-  JOIN latest_writer AS lw ON lw.dest_fqn = s.dest_fqn
+  JOIN derived_latest AS lw ON lw.dest_fqn = s.dest_fqn
+  LEFT JOIN depth_agg AS da ON da.dest_fqn = s.dest_fqn
   LEFT JOIN parent_jobs AS pj ON pj.job_id = lw.w.parent_job_id
-  ORDER BY rebuild_order, derived_table
-  ;
+  ORDER BY rebuild_order, derived_table;
 
 END IF;

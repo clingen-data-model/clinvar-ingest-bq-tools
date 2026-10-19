@@ -74,7 +74,10 @@ scripts/general/mat-view-health.sh --refresh
 
 The SQL file also runs on its own, with no wrapper: `bq query --nouse_legacy_sql --project_id=clingen-dev < scripts/general/mat-view-health-report.sql`. Its settings are the `DECLARE` defaults at the top of the file. The file name does not end in `-proc.sql`/`-func.sql`, so CI does not deploy it.
 
-You need `bigquery.jobs.listAll` on the project, because the report reads `INFORMATION_SCHEMA.JOBS_BY_PROJECT`. A full run scans about 13 GB of job metadata (upper bound). `--mv-only` or a smaller `--lookback` reduces that.
+You need `bigquery.jobs.listAll` on the project, because the report reads `INFORMATION_SCHEMA.JOBS_BY_PROJECT`. A full run takes about 40 seconds and scans up to about 13 GB of job metadata. `--mv-only` or a smaller `--lookback` reduces both.
+
+!!! info "Why `__TABLES__` and not `TABLE_STORAGE`"
+    `INFORMATION_SCHEMA.TABLE_STORAGE.storage_last_modified_time` is updated asynchronously. It was seen lagging an hourly `WRITE_TRUNCATE` load by about an hour, long enough to hide staleness. So the script reads `__TABLES__.last_modified_time` from each dataset involved. BigQuery rate-limits concurrent `__TABLES__` reads, so the script reads only the datasets it needs, a few at a time. The only things it writes are script-scoped temp tables, which BigQuery drops when the run ends. Note that `__TABLES__.last_modified_time` also changes on metadata-only edits, such as a new description.
 
 ### Section 1: Materialized views
 
@@ -83,7 +86,7 @@ The report finds every BigQuery materialized view in the project and region auto
 | Field | Meaning |
 |-------|---------|
 | `last refresh` / `watermark` | When BigQuery last refreshed the MV, and the base-table point in time the MV reflects |
-| `base tables` | Each base table and when its data last changed (`TABLE_STORAGE.storage_last_modified_time`). `*` = changed after the watermark, `!` = table no longer exists. This list comes from the most recent successful refresh job's `referenced_tables`. If no refresh job is in the window, it comes from a parse of the MV's DDL. |
+| `base tables` | Each base table and when it last changed (`__TABLES__.last_modified_time`). `*` = changed after the watermark, `!` = table no longer exists. This list comes from the most recent successful refresh job's `referenced_tables`. If no refresh job is in the window, it comes from a parse of the MV's DDL. |
 | `auto-refresh` | `enable_refresh` and `refresh_interval_minutes` (plus `max_staleness` if set) |
 | `refresh jobs` | Refresh jobs in the last 30 days, and how many failed. "Materialized view is already being refreshed" collisions are harmless and not counted. |
 | `fix` | A ready-to-run `CALL BQ.REFRESH_MATERIALIZED_VIEW('project.dataset.view');` |
