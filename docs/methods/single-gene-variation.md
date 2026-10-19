@@ -217,6 +217,30 @@ The procedure is `scripts/dataset-preparation/04-single-gene-variation-proc.sql`
 4. Explain every removed or changed row in the pull request before merging.
 5. If the change reads a new reference table or column, run `update-gene-reference.sh --apply` first. BigQuery does not check table or column names in a procedure until it runs.
 
+## Backfilling past releases
+
+A change to the method only affects releases processed after it is deployed. Two routines bring past releases, and the temporal data built from them, up to date:
+
+| Routine | What it does |
+|---|---|
+| `clinvar_ingest.single_gene_variation_backfill(from_date, to_date)` | Re-runs `single_gene_variation` for each release dataset in the range. Before the first re-run it keeps the original table as `{release}.single_gene_variation_before_backfill`, created once so a rerun never overwrites it. Logs each release's comparison with the original (added, removed, gene changed, duplicate rows) to `clinvar_ingest.single_gene_variation_backfill_log`. Safe to re-run. |
+| `clinvar_ingest.single_gene_variation_temporal_rebuild(apply_changes)` | Rebuilds `clinvar_single_gene_variations`, and the gene columns of `clinvar_variations`, directly from the per-release tables. It does not replay the weekly temporal pipeline, because these tables keep one row per variation per unbroken run of releases. `FALSE` only builds side tables (`*_rebuild`, expiring after 7 days) and reports differences. `TRUE` keeps `*_before_backfill` copies, then applies the changes in one transaction. No other temporal table uses `single_gene_variation`. |
+
+Steps, after the new procedures are deployed and a gene reference refresh is logged:
+
+1. **Confirm the rebuild reproduces today's data.** Run `CALL clinvar_ingest.single_gene_variation_temporal_rebuild(FALSE);` before any release is re-run.
+    - Every count except `identical` must be 0.
+    - In October 2026 this matched all 4,668,446 `clinvar_single_gene_variations` rows and all 4,723,744 `clinvar_variations` rows, in about a minute.
+2. **Try one release.** Run `CALL clinvar_ingest.single_gene_variation_backfill(DATE '2023-01-07', DATE '2023-01-07');`.
+    - The result row should show 488 added, 4 removed, 110 gene changed and 0 duplicate rows.
+    - Compare `{release}.single_gene_variation` with `{release}.single_gene_variation_before_backfill` to inspect individual variants.
+3. **Re-run the rest in chunks**, e.g. one year per call. A BigQuery script stops after 6 hours, and each release takes one to a few minutes. Re-running a range is safe, so resume from where a call stopped.
+4. **Review the log.** For example, `SELECT * FROM clinvar_ingest.single_gene_variation_backfill_log ORDER BY release_date`. Look for duplicate rows (must be 0) and for any release whose removals stand out.
+5. **Rebuild the temporal data.** Run `CALL clinvar_ingest.single_gene_variation_temporal_rebuild(FALSE);`, review the differences, then run it with `TRUE`. Do this between weekly releases, not while the pipeline is running.
+6. **Rebuild what reads the temporal tables,** e.g. `CALL clinvar_ingest.tracker_report_update();`.
+
+To undo, copy the `*_before_backfill` tables back over the tables they were taken from.
+
 ## Change history
 
 | Change | Issue / PR |
