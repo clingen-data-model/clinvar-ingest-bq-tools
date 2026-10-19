@@ -21,6 +21,10 @@ BEGIN
   -- Safety cap: if more than this many SCVs are missing an rcv_accession_id we
   -- treat it as a systemic ingest failure and RAISE rather than auto-removing.
   DECLARE max_auto_remove_scvs INT64 DEFAULT 50;
+  -- Gene reference freshness (see the check near the end)
+  DECLARE gene_refresh_log_exists BOOLEAN;
+  DECLARE last_gene_reference_refresh TIMESTAMP;
+  DECLARE schema_release_date DATE DEFAULT PARSE_DATE('%Y_%m_%d', REGEXP_EXTRACT(schema_name, r'^clinvar_(\d{4}_\d{2}_\d{2})_v'));
 
   -- Check for new interpretation_descriptions in clinical_assertion
   EXECUTE IMMEDIATE FORMAT("""
@@ -300,6 +304,28 @@ BEGIN
     SET all_validation_errors = ARRAY_CONCAT(
       all_validation_errors,
       release_date_validation_errors
+    );
+  END IF;
+
+  -- Check that the gene reference tables (entrez_gene, ncbi_gene_history) were refreshed on or
+  -- after this release's date, so single_gene_variation can see every gene id the release uses and
+  -- which ids NCBI had discontinued by then. The clinvar-ingest stored-procedures job runs the refresh
+  -- (clinvar_ingest.gene_reference_update) at the start of every run; by hand it is
+  -- scripts/general/update-gene-reference.sh --apply.
+  CALL `clinvar_ingest.check_table_exists`('clinvar_ingest', 'gene_reference_refresh_log', gene_refresh_log_exists);
+  IF gene_refresh_log_exists THEN
+    SET last_gene_reference_refresh = (
+      SELECT MAX(refreshed_at) FROM `clinvar_ingest.gene_reference_refresh_log`
+    );
+  END IF;
+  IF last_gene_reference_refresh IS NULL OR DATE(last_gene_reference_refresh) < schema_release_date THEN
+    SET all_validation_errors = ARRAY_CONCAT(
+      all_validation_errors,
+      [FORMAT(
+        'The gene reference tables were last refreshed %s, before this release (%t). Run clinvar_ingest.gene_reference_update (scripts/general/update-gene-reference.sh --apply) and re-run.',
+        IFNULL(FORMAT_TIMESTAMP('%Y-%m-%d %H:%M UTC', last_gene_reference_refresh), 'never'),
+        schema_release_date
+      )]
     );
   END IF;
 

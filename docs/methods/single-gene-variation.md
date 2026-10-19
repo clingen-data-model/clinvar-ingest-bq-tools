@@ -158,7 +158,22 @@ Because ClinVar's own association wins, each release gets the id ClinVar used at
 | `clinvar_ingest.ncbi_gene_history` | NCBI [`gene_history.gz`](https://ftp.ncbi.nih.gov/gene/DATA/), human rows | `discontinued_gene_id`, `replaced_by_gene_id`, `discontinued_symbol`, `discontinue_date` | Drops ids already discontinued by the release date |
 | `clinvar_ingest.entrez_gene` | NCBI [`Homo_sapiens.gene_info.gz`](https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/), genes with an HGNC symbol and HGNC id | `gene_id`, `symbol_from_authority` (HGNC symbol), `symbol` (NCBI symbol), `hgnc_id`, `type_of_gene`, `description` | Fallback for genes the release does not list; also used by the tracker reports |
 
-`scripts/general/update-gene-reference.sh` updates both `clinvar_ingest` tables. It only reports by default, and applies changes only with `--apply`, after backing up `entrez_gene`. `entrez_gene` was built once in September 2024 and refreshed in October 2026, adding 2,230 genes.
+### Keeping the reference current
+
+The stored procedure `clinvar_ingest.gene_reference_update` (`scripts/general/gene-reference-update-proc.sql`) applies the add-only changes. Its caller first downloads the two NCBI files and loads them into the staging tables `entrez_gene_stage` and `ncbi_gene_history_stage`. The procedure:
+
+- refuses a download that looks incomplete: fewer than 90% of the current HGNC-named genes, or fewer gene-history rows than are already loaded
+- logs every applied run, even one with nothing new, to `clinvar_ingest.gene_reference_refresh_log`
+
+It has two callers:
+
+- **The clinvar-ingest stored-procedures job**, at the start of every run, before `dataset_preparation`.
+- **`scripts/general/update-gene-reference.sh`**, for manual runs. It only reports by default, and applies changes only with `--apply`, after backing up `entrez_gene`.
+
+!!! danger "Validation stops a release without a current refresh"
+    `validate_dataset` fails a release if no refresh is logged **on or after the release date**. The error names the last refresh and how to run one. Run `update-gene-reference.sh --apply`, then re-run the release.
+
+`entrez_gene` was built once in September 2024 and refreshed in October 2026, adding 2,230 genes.
 
 !!! warning "Add-only, on purpose"
     The update **never changes or removes** an existing row. It adds new gene ids to `entrez_gene`, fills in its `type_of_gene` / `description` where they are empty, and adds newly discontinued ids to `ncbi_gene_history`. NCBI itself only ever appends to `gene_history`.
