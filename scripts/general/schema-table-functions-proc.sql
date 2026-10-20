@@ -37,7 +37,9 @@ AS (
             -- new-release processing. The tracker "latest" issue that originally
             -- motivated that guard is to be addressed separately (a release-scoped
             -- tracker_report_update), not by filtering releases here.
-        UNION ALL
+        -- UNION DISTINCT, not UNION ALL: a date listed twice would get two conflicting prev/next
+        -- dates, which corrupted the temporal summation windows in October 2026
+        UNION DISTINCT
         SELECT
             release_date
         FROM `clingen-dev.clinvar_ingest.historic_release_dates`
@@ -150,7 +152,12 @@ CREATE TABLE IF NOT EXISTS `clinvar_ingest.historic_release_dates`
   release_date DATE NOT NULL
 );
 
-INSERT INTO `clinvar_ingest.historic_release_dates` (release_date) VALUES
+-- CI re-runs this whole file whenever it changes, so this setup must be idempotent: the dates are
+-- staged in a temp table and only the missing ones are inserted. A plain INSERT here duplicated
+-- every historic date on 2026-10-01, which broke all_releases() prev/next dates.
+CREATE TEMP TABLE _historic_release_dates (release_date DATE);
+
+INSERT INTO _historic_release_dates (release_date) VALUES
 ('2012-11-16'),
 ('2013-01-24'),
 ('2013-04-08'),
@@ -377,3 +384,8 @@ INSERT INTO `clinvar_ingest.historic_release_dates` (release_date) VALUES
 ('2022-12-17'),
 ('2022-12-24'),
 ('2022-12-31');
+
+INSERT INTO `clinvar_ingest.historic_release_dates` (release_date)
+SELECT DISTINCT h.release_date
+FROM _historic_release_dates h
+WHERE h.release_date NOT IN (SELECT release_date FROM `clinvar_ingest.historic_release_dates`);
