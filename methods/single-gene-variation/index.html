@@ -1,0 +1,2460 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the ClinVar Ingest BigQuery Tools repository">
+      
+      
+      
+        <link rel="canonical" href="https://clingen-data-model.github.io/clinvar-ingest-bq-tools/methods/single-gene-variation/">
+      
+      
+        <link rel="prev" href="../../architecture/bigquery-schema/">
+      
+      
+        <link rel="next" href="../../typescript/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>Single Gene Variation - ClinVar Ingest BQ Tools</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#single-gene-variation-method" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ClinVar Ingest BQ Tools" class="md-header__button md-logo" aria-label="ClinVar Ingest BQ Tools" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ClinVar Ingest BQ Tools
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Single Gene Variation
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clingen-data-model/clinvar-ingest-bq-tools
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ClinVar Ingest BQ Tools" class="md-nav__button md-logo" aria-label="ClinVar Ingest BQ Tools" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ClinVar Ingest BQ Tools
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clingen-data-model/clinvar-ingest-bq-tools
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/data-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/bigquery-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BigQuery Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Gene Variation
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Gene Variation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-and-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and output
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs and output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-genes-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gene's identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-rules-in-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The rules, in order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-genes-the-method-can-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which genes the method can see
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Which genes the method can see">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-the-gene-must-have-an-hgnc-approved-symbol-when-the-release-was-published" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The gene must have an HGNC-approved symbol when the release was published
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-companion-genes-give-way-to-a-single-main-gene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Companion genes give way to a single main gene
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shared-symbols-and-replaced-gene-ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared symbols and replaced gene ids
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reference data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keeping-the-reference-current" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping the reference current
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproducibility-over-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility over time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-the-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing the method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backfilling-past-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backfilling past releases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backfilling-the-gene-identity-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backfilling the gene identity columns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backfilling the gene identity columns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-the-temporal-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In the temporal tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change history
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript Utilities
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TypeScript Utilities
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../typescript/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../typescript/bq-utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BQ Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../typescript/parse-utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SQL Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/dataset-preparation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dataset Preparation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/temporal-data-collection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Temporal Collection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/temporal-data-summation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Temporal Summation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/tracker-report-update/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tracker Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/parsing-funcs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parsing Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/clinvar-curation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClinVar Curation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/external-table-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../sql-scripts/general/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    General Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCP Services
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    GCP Services
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gcp-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gcp-services/gcs-file-ingest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCS File Ingest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/variation-identity-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variation Identity Issues
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/acmgv4-variant-pathogenicity-under-construction.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ACMG v4 Variant Pathogenicity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/clingen-knowledge-dissemination-draft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClinGen Knowledge Dissemination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ci-cd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#inputs-and-output" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inputs and output
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Inputs and output">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-genes-identity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The gene's identity
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#the-rules-in-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The rules, in order
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#which-genes-the-method-can-see" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Which genes the method can see
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Which genes the method can see">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-the-gene-must-have-an-hgnc-approved-symbol-when-the-release-was-published" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. The gene must have an HGNC-approved symbol when the release was published
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-companion-genes-give-way-to-a-single-main-gene" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Companion genes give way to a single main gene
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shared-symbols-and-replaced-gene-ids" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shared symbols and replaced gene ids
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reference-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reference data
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Reference data">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#keeping-the-reference-current" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Keeping the reference current
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#reproducibility-over-time" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility over time
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#known-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Known limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#changing-the-method" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Changing the method
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backfilling-past-releases" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backfilling past releases
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#backfilling-the-gene-identity-columns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Backfilling the gene identity columns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Backfilling the gene identity columns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#in-the-temporal-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        In the temporal tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#change-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Change history
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="single-gene-variation-method">Single Gene Variation: Method<a class="headerlink" href="#single-gene-variation-method" title="Permanent link">&para;</a></h1>
+<p>The <code>single_gene_variation</code> table assigns <strong>at most one representative gene</strong> to each ClinVar variation in a release. Downstream work uses it whenever it needs a variant's gene context:</p>
+<ul>
+<li>GenomeConnect observations (<code>gc_scv_obs</code>)</li>
+<li>curation tracker reports</li>
+<li>the somatic (cancer gene) flag</li>
+<li>the gene qualifier on ClinVar-GKM propositions</li>
+</ul>
+<p>This page explains how the gene is chosen, why each rule exists, and where the method knowingly falls short. It is written for geneticists and bioinformaticians who need to trust, question, or extend the result.</p>
+<div class="admonition info">
+<p class="admonition-title">What this table is, and is not</p>
+<ul>
+<li><strong>It is a derived interpretation.</strong> ClinVar's own data is never modified. Every rule reads ClinVar's release tables (<code>variation</code>, <code>gene_association</code>) and a gene reference table, and writes only <code>single_gene_variation</code>.</li>
+<li><strong>"No single gene" is a valid outcome.</strong> A variant that ClinVar associates with two or more genes, such as a multi-gene deletion, gets no row. The method does not force a choice where none is justified.</li>
+<li><strong>One gene, not the gene.</strong> A variant may lie in one gene and still affect another. This table answers "which single gene, if any, is this variant <em>about</em>?" It does not say which genes the variant may affect.</li>
+</ul>
+</div>
+<h2 id="inputs-and-output">Inputs and output<a class="headerlink" href="#inputs-and-output" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Input</th>
+<th>Source</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{release}.variation</code></td>
+<td>ClinVar release</td>
+<td>Variation name (title), subclass (SimpleAllele, Haplotype, Genotype) and component alleles</td>
+</tr>
+<tr>
+<td><code>{release}.gene_association</code></td>
+<td>ClinVar release</td>
+<td>ClinVar's variant-to-gene links, each with a <code>relationship_type</code> and a <code>source</code> (<code>submitted</code> or <code>calculated</code>)</td>
+</tr>
+<tr>
+<td><code>{release}.gene</code></td>
+<td>ClinVar release</td>
+<td>The NCBI genes ClinVar uses in this release, with the HGNC symbol and HGNC id <strong>as they were at the time</strong>. This is the main gene reference (see <a href="#which-genes-the-method-can-see">Which genes the method can see</a>).</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.ncbi_gene_history</code></td>
+<td>NCBI Gene, add-only (see <a href="#reference-data">Reference data</a>)</td>
+<td>When NCBI discontinued each gene id. Used to drop ids that were already discontinued when the release was published.</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.entrez_gene</code></td>
+<td>NCBI Gene, add-only (see <a href="#reference-data">Reference data</a>)</td>
+<td>Fallback for genes the release's gene table does not list, e.g. a gene named in a variant title that ClinVar does not associate. Also gives those genes' <code>symbol</code> and <code>hgnc_id</code>.</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.mane_transcript</code></td>
+<td>NCBI MANE, add-only (see <a href="#reference-data">Reference data</a>)</td>
+<td>Every MANE release's MANE Select and MANE Plus Clinical transcripts (accession.version → gene), with its release date. Rule 1 uses the release that was current on the ClinVar release date.</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.cancer_genes</code></td>
+<td>Curated list</td>
+<td>Sets the <code>somatic</code> flag</td>
+</tr>
+</tbody>
+</table>
+<p>Output: <code>{release}.single_gene_variation</code>, one row per variation that gets a gene.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>variation_id</code></td>
+<td>ClinVar variation id. Unique in the table.</td>
+</tr>
+<tr>
+<td><code>gene_id</code></td>
+<td>NCBI Gene id of the assigned gene.</td>
+</tr>
+<tr>
+<td><code>relationship_type</code></td>
+<td>ClinVar's relationship for the chosen association, e.g. <code>within single gene</code>. Rules 4 and 5 can produce a comma-separated list when the gene has several associations. Note that the ClinVar value <code>asserted, but not computed</code> itself contains a comma. Three values are produced by this method, not by ClinVar: <code>named gene not associated</code> (the gene came from the variant's name, and ClinVar has no association to it), <code>association not provided by clinvar</code> (haplotype or genotype rule), and the source <code>cvc calculated</code>.</td>
+</tr>
+<tr>
+<td><code>source</code></td>
+<td>ClinVar's <code>submitted</code> / <code>calculated</code>, or <code>cvc calculated</code> when the method inferred the gene.</td>
+</tr>
+<tr>
+<td><code>mane_select</code></td>
+<td><code>TRUE</code> when the gene came from rule 1: the variant name uses a MANE transcript (MANE Select or MANE Plus Clinical) of the MANE release current at the time.</td>
+</tr>
+<tr>
+<td><code>somatic</code></td>
+<td><code>TRUE</code> when the gene's HGNC id is in <code>clinvar_ingest.cancer_genes</code>.</td>
+</tr>
+<tr>
+<td><code>symbol</code></td>
+<td>The gene's HGNC symbol as of the release. See <a href="#the-genes-identity">The gene's identity</a>.</td>
+</tr>
+<tr>
+<td><code>hgnc_id</code></td>
+<td>The gene's HGNC id as of the release, e.g. <code>HGNC:4177</code>. See <a href="#the-genes-identity">The gene's identity</a>.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="the-genes-identity">The gene's identity<a class="headerlink" href="#the-genes-identity" title="Permanent link">&para;</a></h3>
+<p><code>symbol</code> and <code>hgnc_id</code> name the chosen gene as the method saw it, so a reader needs no second gene table. They come from the same two sources the method picks genes from:</p>
+<ul>
+<li><strong>The release's <code>gene</code> table,</strong> when it lists the gene. This gives the symbol and HGNC id ClinVar used that week, so <code>symbol</code> always equals the release <code>gene</code> table's symbol for that <code>gene_id</code>.</li>
+<li><strong><code>entrez_gene</code>,</strong> when the release does not list the gene at all. These are genes named in a variant title that ClinVar does not associate (<code>relationship_type</code> <code>named gene not associated</code>), e.g. <code>NR_164162.1(GLRA4):n.1091C&gt;T</code>. There are about 25 such rows per recent release, e.g. GLRA4, CCDC144NL and RNU6-81P.</li>
+</ul>
+<p>The two filters that decide which genes can be picked (an HGNC id at the time, and not discontinued) are not applied here. They are about choosing a gene, not naming it. In practice every row has both values, with one exception: rule 7 reads associations directly, so a haplotype can get a gene the release lists without an HGNC id. In 24 releases from 2023-01-07 to 2023-06-26, variation 217510 gets LOC730100 (later NRXN1-DT), with <code>symbol</code> <code>LOC730100</code> and no <code>hgnc_id</code>.</p>
+<p>Both columns are filled by <code>clinvar_ingest.single_gene_variation_identity</code> as the last step of the method. Releases built before the columns existed get them from the <a href="#backfilling-the-gene-identity-columns">identity backfill</a>.</p>
+<h2 id="the-rules-in-order">The rules, in order<a class="headerlink" href="#the-rules-in-order" title="Permanent link">&para;</a></h2>
+<p>Rules are applied in order. <strong>The first rule to assign a gene wins</strong>, and each later rule only looks at variations that still have no gene. Earlier rules use stronger evidence: what the submitter or ClinVar named the variant by comes before computed overlaps.</p>
+<pre class="mermaid"><code>flowchart TD
+    A[Variation] --&gt; R1{"1. Name starts with a&lt;br/&gt;MANE transcript?"}
+    R1 -- yes --&gt; G1[gene of that transcript]
+    R1 -- no --&gt; R2{"2. Name is HGVS-style&lt;br/&gt;NM_...(GENE):c...?"}
+    R2 -- yes --&gt; G2[that gene]
+    R2 -- no --&gt; R3{"3. Name starts with a gene symbol&lt;br/&gt;followed by * or , ?"}
+    R3 -- yes --&gt; G3[that gene]
+    R3 -- no --&gt; R4{"4. Exactly one gene among&lt;br/&gt;ClinVar associations?"}
+    R4 -- yes --&gt; G4[that gene]
+    R4 -- no --&gt; R5{"5. Exactly one submitted gene,&lt;br/&gt;excluding overlap-only links?"}
+    R5 -- yes --&gt; G5[that gene]
+    R5 -- no --&gt; R6{"6. Exactly one 'within single&lt;br/&gt;gene' association?"}
+    R6 -- yes --&gt; G6[that gene]
+    R6 -- no --&gt; R7{"7. Haplotype/genotype whose&lt;br/&gt;alleles all share one gene?"}
+    R7 -- yes --&gt; G7[that gene]
+    R7 -- no --&gt; N[no single gene]</code></pre>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Rule</th>
+<th>Evidence used</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>MANE transcript in the name.</strong> The variation name starts with a MANE Select or MANE Plus Clinical transcript accession, <strong>including its version</strong>, from the MANE release that was current on the ClinVar release date.</td>
+<td>Variant name + MANE</td>
+<td><code>NM_000527.5(LDLR):c.…</code> where NM_000527.5 is LDLR's MANE Select transcript → LDLR, <code>mane_select = TRUE</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Gene symbol in an HGVS-style name.</strong> The name matches <code>NM_/NR_/…(SYMBOL):…</code>, and SYMBOL is an HGNC symbol in the release's gene reference (see <a href="#which-genes-the-method-can-see">Which genes the method can see</a>). A named companion gene is skipped when the variant has exactly one main gene.</td>
+<td>Variant name</td>
+<td><code>NR_189288.1(RNVU1-27):n.100C&gt;G</code> → RNVU1-27</td>
+</tr>
+<tr>
+<td>3</td>
+<td><strong>Gene-prefixed name</strong>, such as a star allele. The name starts with a symbol followed by <code>*</code> or <code>,</code>.</td>
+<td>Variant name</td>
+<td><code>CYP2C19*10</code> → CYP2C19</td>
+</tr>
+<tr>
+<td>4</td>
+<td><strong>One gene in ClinVar's associations.</strong> All of the variation's gene associations point to the same gene.</td>
+<td><code>gene_association</code></td>
+<td></td>
+</tr>
+<tr>
+<td>5</td>
+<td><strong>One submitted gene.</strong> Considers only associations with <code>source = 'submitted'</code>, ignoring the relationships <code>genes overlapped by variant</code> and <code>asserted, but not computed</code>, which say little about which gene the variant is about.</td>
+<td><code>gene_association</code></td>
+<td></td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>One <code>within single gene</code> association.</strong></td>
+<td><code>gene_association</code></td>
+<td></td>
+</tr>
+<tr>
+<td>7</td>
+<td><strong>Haplotype or genotype.</strong> All component SimpleAlleles that have a gene association share one gene.</td>
+<td>Component alleles' <code>gene_association</code></td>
+<td>Variation 3737 ("FH Aarhus"), a haplotype of two alleles both in LDLR → LDLR</td>
+</tr>
+</tbody>
+</table>
+<p>Finally, <code>somatic</code> is set for every row whose gene is a cancer gene.</p>
+<div class="admonition note">
+<p class="admonition-title">Rule 1: a MANE name wins, even for a companion gene</p>
+<ul>
+<li>A different version of the same accession does not match. In the 2026-10-11 release, 6,799 variants are named with the MANE accession but another version, e.g. <code>NM_000527.4</code>. They get their gene from rule 2 instead, with <code>mane_select = FALSE</code>.</li>
+<li>Using the MANE release current at the time keeps this in step with ClinVar's own naming. Switching 2026-10-11 from MANE v1.0 to v1.5 set <code>mane_select</code> on 17,871 more variants, and removed it from 554 named with transcript versions MANE has since replaced.</li>
+<li>Rule 1 runs before the companion rule (below). MANE v1.5 includes MANE transcripts for some non-coding companion genes. So a variant named on one, e.g. <code>NR_003529.4(CDKN2B-AS1):n.371+1G&gt;C</code>, gets that gene (CDKN2B-AS1), even though ClinVar also associates it with a main gene (CDKN2A). The variant's own name, on a MANE transcript, is taken as the strongest evidence.</li>
+</ul>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Rule 7 reads associations directly</p>
+<p>Rules 4–6 see only the filtered set of genes described in the next section. Rule 7 reads ClinVar's <code>gene_association</code> for the component alleles directly, without those filters. Alleles with no gene association are ignored: a haplotype of one LDLR allele and one allele with no association still gets LDLR.</p>
+</div>
+<h2 id="which-genes-the-method-can-see">Which genes the method can see<a class="headerlink" href="#which-genes-the-method-can-see" title="Permanent link">&para;</a></h2>
+<p>ClinVar associates variants with many kinds of NCBI Gene record, not all of which are genes in the clinical sense. Two filters decide which genes count:</p>
+<ul>
+<li><strong>Filter 1</strong>, the gene reference, applies to rules 1–6.</li>
+<li><strong>Filter 2</strong>, companion genes, applies to rules 2 and 4–6.</li>
+<li><strong>Rule 7</strong> reads associations directly (see the note above).</li>
+</ul>
+<h3 id="1-the-gene-must-have-an-hgnc-approved-symbol-when-the-release-was-published">1. The gene must have an HGNC-approved symbol when the release was published<a class="headerlink" href="#1-the-gene-must-have-an-hgnc-approved-symbol-when-the-release-was-published" title="Permanent link">&para;</a></h3>
+<p>The gene reference is rebuilt for every release, so a release only sees the genes, and the symbols, that were current when it came out:</p>
+<ol>
+<li><strong>The release's own <code>gene</code> table.</strong> ClinVar records, for every gene it uses, the HGNC symbol and HGNC id in effect that week. Genes with no HGNC id at the time (unnamed <code>LOC…</code> genes) are left out. A gene HGNC named later, e.g. LOC730100, now NRXN1-DT, is invisible in releases from before it was named.</li>
+<li><strong>Minus gene ids NCBI had already discontinued by the release date</strong> (<code>ncbi_gene_history</code>). ClinVar's gene table keeps some discontinued ids, still carrying an HGNC id: 83 in the 2023-01-07 release and 31 in 2026-10-11. For example, CRIPAK (285464) was discontinued in 2019 but is still listed, and it lies inside UVSSA. Counting it would cost about 180 UVSSA variants their gene.</li>
+<li><strong>Plus <code>entrez_gene</code> for genes the release does not list at all.</strong> The release's gene table only holds genes ClinVar associates with some variant. A variant can be named after a gene ClinVar does not associate, e.g. <code>NR_164162.1(GLRA4):n.1091C&gt;T</code>, and the name-matching rules still need to find it. Only rules 1–3 can use these genes, because rules 4–6 work from ClinVar's associations.</li>
+</ol>
+<p>A ClinVar association to any other record is invisible to rules 1–6. The main excluded groups, as of the 2026-10-11 release:</p>
+<table>
+<thead>
+<tr>
+<th>Excluded</th>
+<th>Why</th>
+<th>Scale</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>NCBI <code>biological-region</code> records, e.g. STARR-seq/MPRA regulatory regions, enhancers, CRISPRi elements</td>
+<td>Functional annotations of genomic regions, not genes</td>
+<td>~62,800 gene ids</td>
+</tr>
+<tr>
+<td><code>LOC…</code> genes and readthroughs without an HGNC symbol</td>
+<td>No approved nomenclature</td>
+<td>~1,500 gene ids</td>
+</tr>
+</tbody>
+</table>
+<p>Without this filter, a variant in BRCA1 that also overlaps a catalogued enhancer would have "two genes" and would never get BRCA1.</p>
+<h3 id="2-companion-genes-give-way-to-a-single-main-gene">2. Companion genes give way to a single main gene<a class="headerlink" href="#2-companion-genes-give-way-to-a-single-main-gene" title="Permanent link">&para;</a></h3>
+<p>Many genes are non-coding transcripts <strong>named after, and lying beside, a protein-coding gene</strong>. When ClinVar computes overlaps, a variant in the main gene is often also associated with its companion. Counting both would hide the obvious answer. So:</p>
+<blockquote>
+<p>A companion gene is ignored <strong>only when the variant has exactly one main gene</strong> — a visible gene that is not a companion. Otherwise it is treated like any other gene.</p>
+</blockquote>
+<p>Companions are recognised by HGNC naming conventions, using the symbol in effect for the release. Readthroughs are recognised from the gene's full name:</p>
+<table>
+<thead>
+<tr>
+<th>Family</th>
+<th>HGNC convention</th>
+<th>Example</th>
+<th>Human genes (Oct 2026)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Divergent transcript</td>
+<td><code>GENE-DT</code></td>
+<td>NRXN1-DT, ANKRD11-DT</td>
+<td>~760</td>
+</tr>
+<tr>
+<td>Long intergenic non-coding RNA</td>
+<td><code>LINC#####</code></td>
+<td>LINC03113</td>
+<td>~2,500</td>
+</tr>
+<tr>
+<td>microRNA host gene</td>
+<td><code>MIR###HG</code></td>
+<td>MIR4733HG, MIR3936HG</td>
+<td>~80</td>
+</tr>
+<tr>
+<td>Overlapping transcript</td>
+<td><code>GENE-OT#</code></td>
+<td>BRCA1-OT1, SIX3-OT1</td>
+<td>~30</td>
+</tr>
+<tr>
+<td>Intronic transcript</td>
+<td><code>GENE-IT#</code></td>
+<td>FTO-IT1, CAMTA1-IT1</td>
+<td>~140</td>
+</tr>
+<tr>
+<td>Antisense RNA</td>
+<td><code>GENE-AS#</code>, or <code>GENE-AS</code> without a number; also older names without the hyphen (<code>…AS#</code>) when the full name says "antisense"</td>
+<td>BRCA1-AS1, KCNQ1-AS1, HTT-AS, ZFAS1, CCR5AS</td>
+<td>~2,960</td>
+</tr>
+<tr>
+<td>Readthrough</td>
+<td><code>GENE1-GENE2</code>, where the gene's full name says "readthrough"</td>
+<td>INS-IGF2, SPICE1-CFAP44</td>
+<td>~150</td>
+</tr>
+</tbody>
+</table>
+<p>Why "exactly one main gene":</p>
+<ul>
+<li><strong>NRXN1 + NRXN1-DT</strong> (variation 146354). ClinVar lists both. One main gene, NRXN1, so NRXN1-DT gives way → <strong>NRXN1</strong>.</li>
+<li><strong>INS + IGF2 + the readthrough INS-IGF2.</strong> Ignoring the readthrough would leave two main genes, which is not a single-gene answer. The readthrough is not ignored, and the variant is handled exactly as it was before companions were introduced.</li>
+<li><strong>A variant whose only gene is a companion</strong>, e.g. in MIR550A3HG, CDKN2A-AS1 or a LINC gene, keeps that gene. There is no main gene to give way to.</li>
+<li><strong>A variant whose only genes are two or more companions gets no single gene.</strong> For example, the 18q22.1 duplication <code>GRCh38/hg38 18q22.1(chr18:67600914-67981221)x3</code> (variation 152550) spans LINC01903 and DSEL-AS1. Neither gives way, because there is no main gene to give way to.</li>
+<li><strong>A non-coding gene that follows no companion convention counts as a main gene.</strong> Four 6p25.3 copy-number variants show this, e.g. variation 146147, <code>GRCh38/hg38 6p25.3(chr6:163083-293493)x3</code>. ClinVar associates each with DUSP22 (protein-coding), LINC03066 (a companion) and LIRIL2R (a long non-coding RNA).</li>
+<li>LIRIL2R is a second main gene, so nothing gives way, and the variants get <strong>no single gene</strong>.</li>
+<li>This is the intended outcome: the variant spans several genes, so no one gene represents it.</li>
+<li>Earlier versions of the method used a gene reference that lacked LINC03066 and LIRIL2R, so these variants were wrongly reduced to DUSP22.</li>
+<li>A 37 kb duplication over FLG and the newly named CCDST (variation 974718) is handled the same way.</li>
+</ul>
+<div class="admonition question">
+<p class="admonition-title">Why naming conventions and not NCBI gene type?</p>
+<p>A rule like "ignore non-coding genes when a protein-coding gene is present" would also catch these companions. It resolves about 18,000 more variants to a single gene in the 2026-10-11 release. But "non-coding" is not the same as "companion". It would also demote <strong>stand-alone non-coding disease genes</strong> whenever ClinVar also lists a protein-coding neighbour. Measured on the 2026-10-11 release, it would move existing assignments away from:</p>
+<table>
+<thead>
+<tr>
+<th>Gene</th>
+<th>Disease relevance</th>
+<th>Assignments that would move</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H19</td>
+<td>Imprinting disorders (Beckwith-Wiedemann / Silver-Russell)</td>
+<td>91 of 93</td>
+</tr>
+<tr>
+<td>MIR204</td>
+<td>Inherited retinal dystrophy</td>
+<td>17</td>
+</tr>
+<tr>
+<td>KCNQ1OT1</td>
+<td>Imprinting (11p15)</td>
+<td>7</td>
+</tr>
+<tr>
+<td>SNHG14</td>
+<td>Prader-Willi / Angelman region</td>
+<td>7</td>
+</tr>
+<tr>
+<td>RMRP</td>
+<td>Cartilage-hair hypoplasia</td>
+<td>3</td>
+</tr>
+</tbody>
+</table>
+<p>HGNC naming conventions encode the relationship that matters, "named after the neighbouring gene", so they are used instead. The gene's full name is used in only two cases:</p>
+<ul>
+<li><strong>Readthroughs.</strong> Their symbols have no single pattern, and gene type does not help: most readthroughs are typed <code>protein-coding</code>.</li>
+<li><strong>Older antisense names without a hyphen.</strong> A symbol ending in <code>AS</code> counts only when the full name says "antisense", so that HRAS and KRAS do not.</li>
+</ul>
+</div>
+<h2 id="shared-symbols-and-replaced-gene-ids">Shared symbols and replaced gene ids<a class="headerlink" href="#shared-symbols-and-replaced-gene-ids" title="Permanent link">&para;</a></h2>
+<p>NCBI sometimes <strong>replaces a gene id</strong>: the old id is discontinued and a new id takes over the same symbol and HGNC id. For example, RNVU1-27 moved from 115409988 to 124904621. Discontinued ids are dropped from a release's gene reference once their discontinue date has passed, which removes most overlaps. Two ids can still share a symbol, for example when one comes from the release's gene table and the other from the <code>entrez_gene</code> fallback.</p>
+<p>This matters only for rules 2 and 3, which match on symbol. When a name's symbol matches two ids, the method keeps one:</p>
+<ol>
+<li>the gene id that <strong>ClinVar associates with this variant in this release</strong>, then</li>
+<li>the newest (highest) gene id.</li>
+</ol>
+<p>Because ClinVar's own association wins, each release gets the id ClinVar used at the time. Variation 3362390, <code>NR_189288.1(RNVU1-27):n.100C&gt;G</code>, resolves to 124904621 in the 2026-10-11 release because that is the id ClinVar associates.</p>
+<h2 id="reference-data">Reference data<a class="headerlink" href="#reference-data" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Table</th>
+<th>Source</th>
+<th>Contents</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>{release}.gene</code></td>
+<td>ClinVar release</td>
+<td>Genes ClinVar uses in the release: <code>id</code>, <code>symbol</code>, <code>hgnc_id</code>, <code>full_name</code></td>
+<td>Main gene reference, as of the release</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.ncbi_gene_history</code></td>
+<td>NCBI <a href="https://ftp.ncbi.nih.gov/gene/DATA/"><code>gene_history.gz</code></a>, human rows</td>
+<td><code>discontinued_gene_id</code>, <code>replaced_by_gene_id</code>, <code>discontinued_symbol</code>, <code>discontinue_date</code></td>
+<td>Drops ids already discontinued by the release date</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.entrez_gene</code></td>
+<td>NCBI <a href="https://ftp.ncbi.nih.gov/gene/DATA/GENE_INFO/Mammalia/"><code>Homo_sapiens.gene_info.gz</code></a>, genes with an HGNC symbol and HGNC id</td>
+<td><code>gene_id</code>, <code>symbol_from_authority</code> (HGNC symbol), <code>symbol</code> (NCBI symbol), <code>hgnc_id</code>, <code>type_of_gene</code>, <code>description</code></td>
+<td>Fallback for genes the release does not list; also used by the tracker reports</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.mane_transcript</code></td>
+<td>NCBI <a href="https://ftp.ncbi.nlm.nih.gov/refseq/MANE/MANE_human/">MANE releases</a> (<code>MANE.GRCh38.vX.summary.txt.gz</code>, v0.91 onward)</td>
+<td><code>mane_version</code>, <code>mane_release_date</code>, <code>gene_id</code>, <code>hgnc_id</code>, <code>symbol</code>, <code>transcript_id</code> (RefSeq accession.version), <code>mane_status</code></td>
+<td>Rule 1, using the release current on the ClinVar release date</td>
+</tr>
+</tbody>
+</table>
+<p><strong>MANE release dates.</strong> NCBI does not publish release dates directly, so each release's date is the earlier of two dates: its directory's and its summary file's. Most release directories were copied in bulk long after their release, and v1.5's summary file was regenerated after it. The resulting dates are 1.0 → 2022-01-31, 1.1 → 2023-04-20, 1.2 → 2023-06-21, 1.3 → 2023-10-25, 1.4 → 2024-10-08 and 1.5 → 2025-09-30. Releases 0.5–0.9 (2018–2020) use an older format and are not loaded; they predate every ClinVar release processed here. The hand-made <code>clinvar_ingest.mane_select_gene_transcript</code> table, which this replaces, held MANE v1.0 and is no longer used.</p>
+<h3 id="keeping-the-reference-current">Keeping the reference current<a class="headerlink" href="#keeping-the-reference-current" title="Permanent link">&para;</a></h3>
+<p>The stored procedure <code>clinvar_ingest.gene_reference_update</code> (<code>scripts/general/gene-reference-update-proc.sql</code>) applies the add-only changes. Its caller first downloads the NCBI files and loads them into three staging tables:</p>
+<ul>
+<li><code>entrez_gene_stage</code>: human rows of <code>gene_info</code></li>
+<li><code>ncbi_gene_history_stage</code>: human rows of <code>gene_history</code></li>
+<li><code>mane_transcript_stage</code>: every MANE release's summary file</li>
+</ul>
+<p>The procedure:</p>
+<ul>
+<li>refuses a download that looks incomplete: fewer than 90% of the current HGNC-named genes, fewer gene-history rows than are already loaded, or fewer MANE releases than are already loaded</li>
+<li>adds a MANE release whole the first time it appears, and never changes it afterwards</li>
+<li>logs every applied run, even one with nothing new, to <code>clinvar_ingest.gene_reference_refresh_log</code></li>
+</ul>
+<p>It has two callers:</p>
+<ul>
+<li><strong>The clinvar-ingest stored-procedures job</strong>, at the start of every run, before <code>dataset_preparation</code>.</li>
+<li><strong><code>scripts/general/update-gene-reference.sh</code></strong>, for manual runs. It only reports by default, and applies changes only with <code>--apply</code>, after backing up <code>entrez_gene</code>.</li>
+</ul>
+<div class="admonition danger">
+<p class="admonition-title">Validation stops a release without a current refresh</p>
+<p><code>validate_dataset</code> fails a release if no refresh is logged <strong>on or after the release date</strong>. The error names the last refresh and how to run one. Run <code>update-gene-reference.sh --apply</code>, then re-run the release.</p>
+</div>
+<p><code>entrez_gene</code> was built once in September 2024 and refreshed in October 2026, adding 2,230 genes.</p>
+<div class="admonition warning">
+<p class="admonition-title">Add-only, on purpose</p>
+<p>The update <strong>never changes or removes</strong> an existing row. It:</p>
+<ul>
+<li>adds new gene ids to <code>entrez_gene</code>, and fills in its <code>type_of_gene</code> / <code>description</code> where they are empty</li>
+<li>adds newly discontinued ids to <code>ncbi_gene_history</code>; NCBI itself only ever appends to <code>gene_history</code></li>
+<li>adds each new MANE release to <code>mane_transcript</code> whole</li>
+</ul>
+<p>If a symbol were overwritten or a retired id deleted, re-processing an older release could silently give a different answer than it did originally. The cost of add-only is that a renamed gene keeps its old symbol in <code>entrez_gene</code>. That only matters for the fallback, because each release's symbols come from its own gene table.</p>
+</div>
+<h2 id="reproducibility-over-time">Reproducibility over time<a class="headerlink" href="#reproducibility-over-time" title="Permanent link">&para;</a></h2>
+<p>The table is rebuilt from scratch whenever the procedure runs for a release. Because the gene reference comes from the release itself, filtered by NCBI's discontinue dates, re-running an old release reproduces the gene knowledge of its time:</p>
+<ul>
+<li>it sees only genes HGNC had named by then, under the symbols then in use</li>
+<li>it ignores gene ids NCBI had already discontinued</li>
+<li>it still counts gene ids that were valid then, even if NCBI discontinued them later</li>
+</ul>
+<p>Remaining sources of drift, all small:</p>
+<ul>
+<li><strong>The <code>entrez_gene</code> fallback</strong> reflects today's knowledge. It only affects name matching, and the <code>symbol</code> and <code>hgnc_id</code>, for genes the release does not list, and a release's variant names can only contain symbols that existed at the time.</li>
+<li><strong><code>cancer_genes</code> is today's list.</strong> Re-running an old release uses the current cancer genes for the <code>somatic</code> flag. MANE, by contrast, is matched against the release current at the time (see rule 1).</li>
+<li><strong>ClinVar's gene table is taken as published.</strong> Errors in it, apart from discontinued ids, carry through.</li>
+</ul>
+<h2 id="known-limitations">Known limitations<a class="headerlink" href="#known-limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Some names in a companion family belong to genes of another type.</strong></li>
+<li>Three protein-coding genes have <code>-AS#</code> names (e.g. SFTA2-AS1) and are treated as companions.</li>
+<li>LINC00672 is typed protein-coding but is treated as a companion.</li>
+<li><strong>microRNA host genes include a disease gene.</strong></li>
+<li>MIR17HG causes Feingold syndrome 2.</li>
+<li>When it is a variant's only gene it is kept. When the variant also has exactly one main gene, MIR17HG gives way to that gene.</li>
+<li><strong>Rule 6 counts association rows.</strong> A variant whose only <code>within single gene</code> gene ClinVar reports twice, once <code>submitted</code> and once <code>calculated</code>, gets no gene from rule 6. No such variant exists in the 2026-10-11 release.</li>
+<li><strong>Rule 3 does not apply the companion rule.</strong> Gene-prefixed names, such as star alleles, are almost always main genes.</li>
+</ul>
+<h2 id="changing-the-method">Changing the method<a class="headerlink" href="#changing-the-method" title="Permanent link">&para;</a></h2>
+<p>The procedure is <code>scripts/dataset-preparation/04-single-gene-variation-proc.sql</code>. Before deploying a change:</p>
+<ol>
+<li>Copy the release's <code>variation</code>, <code>gene_association</code> and <code>gene</code> tables into a scratch dataset. Test at least one early release (e.g. 2023-01-07) and the latest.</li>
+<li>Run the changed procedure there under a test name.</li>
+<li>Compare the result with the release's existing <code>single_gene_variation</code>:</li>
+<li>added rows, removed rows, and changed genes, each grouped by the rule that produced them</li>
+<li>a check for duplicate <code>variation_id</code>s</li>
+<li>Explain every removed or changed row in the pull request before merging.</li>
+<li>If the change reads a new reference table or column, run <code>update-gene-reference.sh --apply</code> first. BigQuery does not check table or column names in a procedure until it runs.</li>
+</ol>
+<h2 id="backfilling-past-releases">Backfilling past releases<a class="headerlink" href="#backfilling-past-releases" title="Permanent link">&para;</a></h2>
+<p>A change to the method only affects releases processed after it is deployed. Two routines bring past releases, and the temporal data built from them, up to date:</p>
+<table>
+<thead>
+<tr>
+<th>Routine</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>clinvar_ingest.single_gene_variation_backfill(from_date, to_date, rerun_gc_scv_obs)</code></td>
+<td>Re-runs <code>single_gene_variation</code> for each release dataset in the range. Before the first re-run it keeps the original table as <code>{release}.single_gene_variation_before_backfill</code>, created once so a rerun never overwrites it. With <code>rerun_gc_scv_obs = TRUE</code> it also re-runs <code>gc_scv_obs</code>, which reads <code>single_gene_variation</code>, keeping <code>{release}.gc_scv_obs_before_backfill</code> the same way. Logs each release's comparison with the originals (added, removed, gene changed, duplicate rows; <code>gc_scv_obs</code> rows and observations whose gene changed, or the error) to <code>clinvar_ingest.single_gene_variation_backfill_log</code>. Safe to re-run.</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.single_gene_variation_temporal_rebuild(apply_changes)</code></td>
+<td>Rebuilds <code>clinvar_single_gene_variations</code>, including its <code>hgnc_id</code>, and the gene columns of <code>clinvar_variations</code>, directly from the per-release tables. Every release it reads must have the <code>hgnc_id</code> column; otherwise it stops and names the <a href="#backfilling-the-gene-identity-columns">identity backfill</a> to run. It does not replay the weekly temporal pipeline, because these tables keep one row per variation per unbroken run of releases. <code>FALSE</code> only builds side tables (<code>*_rebuild</code>, expiring after 7 days) and reports differences; <code>hgnc_id_differs</code> counts rows that match except for <code>hgnc_id</code>. <code>TRUE</code> keeps <code>*_before_backfill</code> copies, then applies the changes in one transaction. No other temporal table uses <code>single_gene_variation</code>.</td>
+</tr>
+</tbody>
+</table>
+<p>Steps, after the new procedures are deployed and a gene reference refresh is logged:</p>
+<ol>
+<li><strong>Confirm the rebuild reproduces today's data.</strong> Run <code>CALL clinvar_ingest.single_gene_variation_temporal_rebuild(FALSE);</code> before any release is re-run.<ul>
+<li>Every count except <code>identical</code> must be 0. <code>hgnc_id_differs</code> is 0 too, once the rebuild has been applied after the <a href="#backfilling-the-gene-identity-columns">identity backfill</a>.</li>
+<li>In October 2026 this matched all 4,668,446 <code>clinvar_single_gene_variations</code> rows and all 4,723,744 <code>clinvar_variations</code> rows, in about a minute.</li>
+</ul>
+</li>
+<li><strong>Try one release.</strong> Run <code>CALL clinvar_ingest.single_gene_variation_backfill(DATE '2023-01-07', DATE '2023-01-07', FALSE);</code>.<ul>
+<li>The result row should show 488 added, 4 removed, 110 gene changed and 0 duplicate rows.</li>
+<li>Compare <code>{release}.single_gene_variation</code> with <code>{release}.single_gene_variation_before_backfill</code> to inspect individual variants.</li>
+</ul>
+</li>
+<li><strong>Re-run the rest in chunks</strong>, e.g. one year per call. A BigQuery script stops after 6 hours, and each release takes one to a few minutes. Re-running a range is safe, so resume from where a call stopped.</li>
+<li><strong>Review the log.</strong> For example, <code>SELECT * FROM clinvar_ingest.single_gene_variation_backfill_log ORDER BY release_date</code>. Look for duplicate rows (must be 0) and for any release whose removals stand out.</li>
+<li><strong>Rebuild the temporal data.</strong> Run <code>CALL clinvar_ingest.single_gene_variation_temporal_rebuild(FALSE);</code>, review the differences, then run it with <code>TRUE</code>. Do this between weekly releases, not while the pipeline is running.</li>
+<li><strong>Rebuild what reads the temporal tables,</strong> e.g. <code>CALL clinvar_ingest.tracker_report_update();</code>.</li>
+</ol>
+<div class="admonition note">
+<p class="admonition-title">Should <code>gc_scv_obs</code> be re-run too?</p>
+<p><code>gc_scv_obs</code> takes each observation's gene from the release's <code>single_gene_variation</code>. But only the <strong>latest</strong> release's copy is read, by the GenomeConnect tracker report (<code>variation_tracker.gc_tracker_report_rebuild</code>). The weekly pipeline rebuilds it for each new release.</p>
+<ul>
+<li><strong>For the latest release only:</strong> after the backfill reaches it, run <code>CALL clinvar_ingest.gc_scv_obs('&lt;latest release schema&gt;');</code> and then <code>CALL variation_tracker.gc_tracker_report_rebuild(NULL);</code>.</li>
+<li><strong>For every release</strong> (<code>rerun_gc_scv_obs = TRUE</code>): only worth it if someone compares GenomeConnect observations across releases. It applies today's <code>gc_scv_obs</code> logic and reference data to old data, so expect changes beyond the gene.<ul>
+<li>On 2023-01-07 it changed no observation's gene, added 5 rows and altered about 160. Some list columns come out in no fixed order, so the changed-row count varies slightly between runs.</li>
+<li>A failure on a release is logged in <code>gc_scv_obs_error</code>, and that release's table is left as it was.</li>
+</ul>
+</li>
+</ul>
+</div>
+<p>To undo, copy the <code>*_before_backfill</code> tables back over the tables they were taken from.</p>
+<h2 id="backfilling-the-gene-identity-columns">Backfilling the gene identity columns<a class="headerlink" href="#backfilling-the-gene-identity-columns" title="Permanent link">&para;</a></h2>
+<p><code>symbol</code> and <code>hgnc_id</code> were added in October 2026. Releases built before then don't have them. The identity backfill adds them without re-running the method; no other column changes.</p>
+<table>
+<thead>
+<tr>
+<th>Routine</th>
+<th>What it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>clinvar_ingest.single_gene_variation_identity_backfill(from_date, to_date)</code></td>
+<td>For each release dataset in the range, calls <code>single_gene_variation_identity</code>, which adds the two columns if they are missing (<code>ALTER TABLE … ADD COLUMN IF NOT EXISTS</code>) and fills them for every row (see <a href="#the-genes-identity">The gene's identity</a>). Logs each release's row count, rows with a symbol, rows with an HGNC id, and rows whose gene came from <code>entrez_gene</code> to <code>clinvar_ingest.single_gene_variation_identity_backfill_log</code>. Re-running a release gives the same result.</td>
+</tr>
+</tbody>
+</table>
+<p>It scans about 0.4 GB for a recent release and less for older ones, about 50 GB for all 193 releases from 2023-01-07 to 2026-10-18, and adds about 12 GB of storage.</p>
+<p>Steps, after the procedures are deployed:</p>
+<ol>
+<li><strong>Try one release.</strong> Run <code>CALL clinvar_ingest.single_gene_variation_identity_backfill(DATE '2026-10-11', DATE '2026-10-11');</code>. The 2026-10-11 release logs 4,642,958 rows, all with a symbol and an HGNC id, 25 of them from <code>entrez_gene</code>.</li>
+<li><strong>Run the rest.</strong> Run <code>CALL clinvar_ingest.single_gene_variation_identity_backfill(DATE '2023-01-07', DATE '2026-10-18');</code>, or in chunks. Each release takes about 20 seconds.</li>
+<li><strong>Review the log.</strong> For example, <code>SELECT * FROM clinvar_ingest.single_gene_variation_identity_backfill_log ORDER BY release_date</code>. <code>with_symbol</code> must equal <code>rows_total</code>. <code>with_hgnc_id</code> is one less in the 24 releases from 2023-01-07 to 2023-06-26 (variation 217510, LOC730100) and equal everywhere else.</li>
+<li><strong>Rebuild the temporal data,</strong> so <code>clinvar_single_gene_variations</code> gets <code>hgnc_id</code>. Run <code>CALL clinvar_ingest.single_gene_variation_temporal_rebuild(FALSE);</code>. Every count except <code>identical</code> and <code>hgnc_id_differs</code> must be 0. Then run it with <code>TRUE</code>, between weekly releases.</li>
+</ol>
+<p>To undo, drop the two columns: <code>ALTER TABLE {release}.single_gene_variation DROP COLUMN symbol, DROP COLUMN hgnc_id</code>.</p>
+<h3 id="in-the-temporal-tables">In the temporal tables<a class="headerlink" href="#in-the-temporal-tables" title="Permanent link">&para;</a></h3>
+<p><code>clinvar_single_gene_variations</code> carries <code>hgnc_id</code>, but not <code>symbol</code>. Each of its rows covers an unbroken run of releases, with the values of the run's last release. A symbol can change within a run when HGNC renames a gene, e.g. GBA to GBA1, so a stored symbol would describe only the last release of the run. The HGNC id stays the same across renames. The weekly <code>clinvar_single_gene_variations</code> procedure fills it for new and updated rows, and the temporal rebuild fills it for every row.</p>
+<p><code>clinvar_variations</code> does not get <code>hgnc_id</code>. It already carries the variation's <code>gene_id</code> and <code>symbol</code> (from the release's gene table, so name-derived genes that ClinVar does not list have no symbol there). The gene's HGNC id is one join away in <code>clinvar_single_gene_variations</code>, for the same variation and release range.</p>
+<h2 id="change-history">Change history<a class="headerlink" href="#change-history" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Change</th>
+<th>Issue / PR</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Rule 7 counts distinct genes instead of association rows, so haplotypes whose alleles share one gene get it</td>
+<td><a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/38">#38</a> / <a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/pull/40">#40</a></td>
+</tr>
+<tr>
+<td><code>entrez_gene</code> refreshed add-only. Names that match a symbol shared by two gene ids resolve to one id.</td>
+<td><a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39">#39</a></td>
+</tr>
+<tr>
+<td>Companion genes give way to a single main gene. <code>entrez_gene</code> gains <code>type_of_gene</code> and <code>description</code>.</td>
+<td><a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39">#39</a></td>
+</tr>
+<tr>
+<td>The gene reference comes from each release's own gene table, minus ids NCBI had discontinued by the release date, so every release is processed against the gene knowledge of its time</td>
+<td><a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39">#39</a></td>
+</tr>
+<tr>
+<td>Antisense genes (<code>-AS#</code>) are treated as companions instead of always being ignored, so a variant whose only gene is antisense keeps it</td>
+<td><a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39">#39</a></td>
+</tr>
+<tr>
+<td>Rule 1 uses the MANE release current on each ClinVar release date (<code>mane_transcript</code>, refreshed weekly), instead of a fixed MANE v1.0 list</td>
+<td><a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/pull/42">#42</a></td>
+</tr>
+<tr>
+<td><code>single_gene_variation</code> gains <code>symbol</code> and <code>hgnc_id</code>, the chosen gene's identity as of the release; <code>clinvar_single_gene_variations</code> gains <code>hgnc_id</code></td>
+<td><a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools/pull/45">#45</a></td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+        <script src="../../javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>
