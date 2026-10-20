@@ -9,7 +9,8 @@ CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_single_gene_variations`
   somatic BOOLEAN DEFAULT FALSE,
   start_release_date DATE,
   end_release_date DATE,
-  deleted_release_date DATE
+  deleted_release_date DATE,
+  hgnc_id STRING
 );
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_genes`
