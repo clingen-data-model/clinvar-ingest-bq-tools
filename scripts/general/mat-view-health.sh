@@ -18,8 +18,8 @@
 #   --region REGION    BigQuery region qualifier (default: us -> `region-us`)
 #   --grace MINUTES    Minutes past refresh_interval before a stale MV is
 #                      STALE_OVERDUE (default: 30)
-#   --datasets A,B     Datasets checked for stale derived tables
-#                      (default: clinvar_ingest,clinvar_curator)
+#   --datasets A,B*    Datasets covered by the whole report; * matches any
+#                      characters (default: clinvar_ingest,variation_tracker,clinvar_curator*)
 #   --lookback DAYS    JOBS history used for derived-table lineage (default: 180)
 #   --mv-only          Skip the derived-table section
 #   --format FMT       text (default, readable summary) | json | prettyjson
@@ -75,9 +75,14 @@ build_sql() {
     sql="$(sed -E "s/^(DECLARE derived_lookback_days INT64 DEFAULT )[0-9]+;/\1${LOOKBACK};/" <<<"$sql")"
   fi
   if [[ -n "$DATASETS" ]]; then
-    local arr
-    arr="$(awk -v s="$DATASETS" 'BEGIN{n=split(s,a,",");for(i=1;i<=n;i++){printf "%s'\''%s'\''", (i>1?", ":""), a[i]}}')"
-    sql="$(sed -E "s/^(DECLARE derived_datasets ARRAY<STRING> DEFAULT )\[.*\];/\1[${arr}];/" <<<"$sql")"
+    # "a,b*" -> ^(a|b.*)$ ; dataset names are letters, digits and underscores
+    if [[ ! "$DATASETS" =~ ^[A-Za-z0-9_*,]+$ ]]; then
+      echo "--datasets takes comma-separated dataset names (letters, digits, _ and *): $DATASETS" >&2
+      exit 1
+    fi
+    local pattern
+    pattern="^($(sed -e 's/\*/.*/g' -e 's/,/|/g' <<<"$DATASETS"))\$"
+    sql="$(sed -E "s/^(DECLARE dataset_pattern STRING DEFAULT r')[^']*(';)/\1${pattern}\2/" <<<"$sql")"
   fi
   if [[ "$mv_only" == true ]]; then
     sql="$(sed -E "s/^(DECLARE include_derived BOOL DEFAULT )TRUE;/\1FALSE;/" <<<"$sql")"

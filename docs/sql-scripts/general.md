@@ -55,6 +55,8 @@ The `schema-table-functions-proc.sql` file defines the foundational table functi
 
 `mat-view-health.sh` (a wrapper around `mat-view-health-report.sql`) tells you which materialized views, and which "materialized" tables rebuilt by procedures, are behind the tables they are built from. It only reads `INFORMATION_SCHEMA` metadata. Nothing is refreshed unless you pass `--refresh`.
 
+One report covers every dataset in scope. By default that is `clinvar_ingest`, `variation_tracker` and every dataset whose name starts with `clinvar_curator` (today `clinvar_curator`, `clinvar_curator_v4` and `clinvar_curator_v4_dev`). A new `clinvar_curator*` dataset is picked up automatically. The tables these views and snapshots are built from are checked wherever they live, including release datasets. `--datasets` changes the scope for the whole report.
+
 ```bash
 # Readable report (default project clingen-dev, region us)
 scripts/general/mat-view-health.sh
@@ -62,8 +64,9 @@ scripts/general/mat-view-health.sh
 # Only the real BigQuery materialized views
 scripts/general/mat-view-health.sh --mv-only
 
-# Check other datasets for stale derived tables, with a shorter JOBS lookback
-scripts/general/mat-view-health.sh --datasets clinvar_ingest,clinvar_curator,clinvar_2026_10_11_v2_6_0 --lookback 60
+# Cover a different set of datasets (* matches any characters; quote it so the shell
+# leaves it alone), with a shorter JOBS lookback
+scripts/general/mat-view-health.sh --datasets 'clinvar_ingest,clinvar_curator*,clinvar_2026_10_11_v2_6_0' --lookback 60
 
 # Raw result sets as JSON
 scripts/general/mat-view-health.sh --format json
@@ -81,7 +84,7 @@ You need `bigquery.jobs.listAll` on the project, because the report reads `INFOR
 
 ### Section 1: Materialized views
 
-The report finds every BigQuery materialized view in the project and region automatically. Today that is just `clinvar_curator.cvc_annotations_base_mv`. For each view it shows the following.
+The report finds every BigQuery materialized view in the covered datasets automatically. Today that is just `clinvar_curator.cvc_annotations_base_mv`. For each view it shows the following.
 
 | Field | Meaning |
 |-------|---------|
@@ -110,7 +113,7 @@ The **MV REFRESH PLAN** lists the refresh statements in dependency order: an MV 
 
 ### Section 2: Stale derived tables
 
-Many tables in `clinvar_ingest` and `clinvar_curator` are snapshots built with `CREATE OR REPLACE TABLE ... AS SELECT` by procedures such as `clinvar_curator.refresh_cvc_impact_analysis()`, `clinvar_ingest.refresh_mechanism_threshold()` and the release pipeline. They work like materialized views, but BigQuery does not track them. For every table in `--datasets` written within `--lookback` days, the report:
+Many tables in the covered datasets are snapshots built with `CREATE OR REPLACE TABLE ... AS SELECT` by procedures such as `clinvar_curator.refresh_cvc_impact_analysis()`, `clinvar_ingest.refresh_mechanism_threshold()`, the tracker report rebuilds and the release pipeline. They work like materialized views, but BigQuery does not track them. For every table in the covered datasets written within `--lookback` days, the report:
 
 1. Finds the most recent successful job that wrote the table, plus any other writes to it from the same script run.
 2. Takes that job's `referenced_tables` as the table's sources. `INFORMATION_SCHEMA` and temp tables are ignored.

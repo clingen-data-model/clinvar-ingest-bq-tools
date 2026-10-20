@@ -2,9 +2,12 @@
 -- Materialized View Health Report  (READ-ONLY)
 --
 -- Description:
---   Reports whether the project's BigQuery MATERIALIZED VIEWS (and, optionally,
---   the "materialized" derived TABLES rebuilt by procedures / scheduled queries)
---   are behind the tables they are built from.
+--   Reports whether the BigQuery MATERIALIZED VIEWS (and, optionally, the
+--   "materialized" derived TABLES rebuilt by procedures / scheduled queries) in
+--   the covered datasets are behind the tables they are built from. One report
+--   covers every dataset that matches `dataset_pattern` (default: clinvar_ingest,
+--   variation_tracker and every clinvar_curator* dataset); the source tables
+--   they read are checked wherever they live, e.g. in release datasets.
 --
 --   Result set 1 - Materialized views (real BigQuery MVs, auto-discovered):
 --     base tables, base-table last-modified times, last refresh time/watermark,
@@ -13,7 +16,7 @@
 --     ordered so an MV built on another MV refreshes after its base.
 --
 --   Result set 2 - Derived tables (optional, include_derived = TRUE):
---     tables in `derived_datasets` whose most recent writer job read from a
+--     tables in the covered datasets whose most recent writer job read from a
 --     source table that has been modified since the derived table was last
 --     written. Lineage comes from INFORMATION_SCHEMA.JOBS referenced_tables,
 --     so it only covers tables written within `derived_lookback_days`.
@@ -44,6 +47,8 @@
 --           wrapper rewrites it when --region is given.
 -- ============================================================================
 
+-- Datasets covered by both result sets (a regular expression on the dataset name).
+DECLARE dataset_pattern STRING DEFAULT r'^(clinvar_ingest|variation_tracker|clinvar_curator.*)$';
 -- Minutes allowed beyond an MV's refresh_interval_minutes before a stale MV
 -- with auto-refresh enabled is reported as STALE_OVERDUE (auto-refresh is
 -- best-effort; BigQuery typically refreshes within one interval of a change).
@@ -52,7 +57,6 @@ DECLARE grace_minutes INT64 DEFAULT 30;
 DECLARE mv_lookback_days INT64 DEFAULT 30;
 -- Derived-table section.
 DECLARE include_derived BOOL DEFAULT TRUE;
-DECLARE derived_datasets ARRAY<STRING> DEFAULT ['clinvar_ingest', 'clinvar_curator'];
 DECLARE derived_lookback_days INT64 DEFAULT 180;
 -- Datasets whose __TABLES__ are read per statement (rate-limit guard).
 DECLARE tables_chunk_size INT64 DEFAULT 15;
@@ -89,7 +93,8 @@ FROM `region-us`.INFORMATION_SCHEMA.MATERIALIZED_VIEWS AS m
 JOIN `region-us`.INFORMATION_SCHEMA.TABLES AS t
   USING (table_catalog, table_schema, table_name)
 LEFT JOIN opts AS o
-  USING (table_catalog, table_schema, table_name);
+  USING (table_catalog, table_schema, table_name)
+WHERE REGEXP_CONTAINS(m.table_schema, dataset_pattern);
 
 -- Refresh jobs: automatic ones run as bigquery-adminbot (job ids
 -- `materialized_view_refresh_*`); manual ones are CALL BQ.REFRESH_... too.
@@ -173,7 +178,7 @@ WHERE include_derived
   AND j.job_type = 'QUERY'
   AND j.state = 'DONE'
   AND j.error_result IS NULL
-  AND j.destination_table.dataset_id IN UNNEST(derived_datasets)
+  AND REGEXP_CONTAINS(j.destination_table.dataset_id, dataset_pattern)
   AND j.statement_type IN ('SELECT', 'CREATE_TABLE_AS_SELECT', 'INSERT', 'MERGE', 'UPDATE');
 
 CREATE TEMP TABLE derived_latest AS
