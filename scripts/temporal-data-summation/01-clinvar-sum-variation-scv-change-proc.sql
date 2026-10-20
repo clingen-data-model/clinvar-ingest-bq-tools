@@ -13,9 +13,11 @@ BEGIN
   SELECT
     st.start_release_date,
     st.variation_id,
+    -- numbered within each variation, so a mismatch in one variation cannot shift the pairing of
+    -- every later variation (a table-wide numbering did that in October 2026)
     row_number () OVER (
+      PARTITION BY st.variation_id
       ORDER BY
-        st.variation_id,
         st.start_release_date ASC NULLS FIRST
     ) as rownum
   FROM (
@@ -39,8 +41,8 @@ BEGIN
     en.end_release_date,
     en.variation_id,
     row_number () OVER (
+      PARTITION BY en.variation_id
       ORDER BY
-        en.variation_id,
         en.end_release_date ASC NULLS LAST
     ) as rownum
   FROM (
@@ -67,9 +69,9 @@ BEGIN
   FROM _SESSION.release_start_vsc s
   JOIN _SESSION.release_end_vsc e
   ON
-    e.rownum = s.rownum+1
-  WHERE
     e.variation_id = s.variation_id
+    AND
+    e.rownum = s.rownum+1
   ;
 
   DROP TABLE _SESSION.release_start_vsc;
