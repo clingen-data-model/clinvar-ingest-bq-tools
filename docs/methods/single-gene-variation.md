@@ -22,7 +22,7 @@ This page explains how the gene is chosen, why each rule exists, and where the m
 | `{release}.gene_association` | ClinVar release | ClinVar's variant-to-gene links, each with a `relationship_type` and a `source` (`submitted` or `calculated`) |
 | `{release}.gene` | ClinVar release | The NCBI genes ClinVar uses in this release, with the HGNC symbol and HGNC id **as they were at the time**. This is the main gene reference (see [Which genes the method can see](#which-genes-the-method-can-see)). |
 | `clinvar_ingest.ncbi_gene_history` | NCBI Gene, add-only (see [Reference data](#reference-data)) | When NCBI discontinued each gene id. Used to drop ids that were already discontinued when the release was published. |
-| `clinvar_ingest.entrez_gene` | NCBI Gene, add-only (see [Reference data](#reference-data)) | Fallback for genes the release's gene table does not list, e.g. a gene named in a variant title that ClinVar does not associate |
+| `clinvar_ingest.entrez_gene` | NCBI Gene, add-only (see [Reference data](#reference-data)) | Fallback for genes the release's gene table does not list, e.g. a gene named in a variant title that ClinVar does not associate. Also gives those genes' `symbol` and `hgnc_id`. |
 | `clinvar_ingest.mane_transcript` | NCBI MANE, add-only (see [Reference data](#reference-data)) | Every MANE release's MANE Select and MANE Plus Clinical transcripts (accession.version → gene), with its release date. Rule 1 uses the release that was current on the ClinVar release date. |
 | `clinvar_ingest.cancer_genes` | Curated list | Sets the `somatic` flag |
 
@@ -36,6 +36,19 @@ Output: `{release}.single_gene_variation`, one row per variation that gets a gen
 | `source` | ClinVar's `submitted` / `calculated`, or `cvc calculated` when the method inferred the gene. |
 | `mane_select` | `TRUE` when the gene came from rule 1: the variant name uses a MANE transcript (MANE Select or MANE Plus Clinical) of the MANE release current at the time. |
 | `somatic` | `TRUE` when the gene's HGNC id is in `clinvar_ingest.cancer_genes`. |
+| `symbol` | The gene's HGNC symbol as of the release. See [The gene's identity](#the-genes-identity). |
+| `hgnc_id` | The gene's HGNC id as of the release, e.g. `HGNC:4177`. See [The gene's identity](#the-genes-identity). |
+
+### The gene's identity
+
+`symbol` and `hgnc_id` name the chosen gene as the method saw it, so a reader needs no second gene table. They come from the same two sources the method picks genes from:
+
+- **The release's `gene` table,** when it lists the gene. This gives the symbol and HGNC id ClinVar used that week, so `symbol` always equals the release `gene` table's symbol for that `gene_id`.
+- **`entrez_gene`,** when the release does not list the gene at all. These are genes named in a variant title that ClinVar does not associate (`relationship_type` `named gene not associated`), e.g. `NR_164162.1(GLRA4):n.1091C>T`. There are about 25 such rows per recent release, e.g. GLRA4, CCDC144NL and RNU6-81P.
+
+The two filters that decide which genes can be picked (an HGNC id at the time, and not discontinued) are not applied here. They are about choosing a gene, not naming it. In practice every row has both values, with one exception: rule 7 reads associations directly, so a haplotype can get a gene the release lists without an HGNC id. In 24 releases from 2023-01-07 to 2023-06-26, variation 217510 gets LOC730100 (later NRXN1-DT), with `symbol` `LOC730100` and no `hgnc_id`.
+
+Both columns are filled by `clinvar_ingest.single_gene_variation_identity` as the last step of the method. Releases built before the columns existed get them from the [identity backfill](#backfilling-the-gene-identity-columns).
 
 ## The rules, in order
 
@@ -216,7 +229,7 @@ The table is rebuilt from scratch whenever the procedure runs for a release. Bec
 
 Remaining sources of drift, all small:
 
-- **The `entrez_gene` fallback** reflects today's knowledge. It only affects name matching for genes the release does not list, and a release's variant names can only contain symbols that existed at the time.
+- **The `entrez_gene` fallback** reflects today's knowledge. It only affects name matching, and the `symbol` and `hgnc_id`, for genes the release does not list, and a release's variant names can only contain symbols that existed at the time.
 - **`cancer_genes` is today's list.** Re-running an old release uses the current cancer genes for the `somatic` flag. MANE, by contrast, is matched against the release current at the time (see rule 1).
 - **ClinVar's gene table is taken as published.** Errors in it, apart from discontinued ids, carry through.
 
@@ -250,12 +263,12 @@ A change to the method only affects releases processed after it is deployed. Two
 | Routine | What it does |
 |---|---|
 | `clinvar_ingest.single_gene_variation_backfill(from_date, to_date, rerun_gc_scv_obs)` | Re-runs `single_gene_variation` for each release dataset in the range. Before the first re-run it keeps the original table as `{release}.single_gene_variation_before_backfill`, created once so a rerun never overwrites it. With `rerun_gc_scv_obs = TRUE` it also re-runs `gc_scv_obs`, which reads `single_gene_variation`, keeping `{release}.gc_scv_obs_before_backfill` the same way. Logs each release's comparison with the originals (added, removed, gene changed, duplicate rows; `gc_scv_obs` rows and observations whose gene changed, or the error) to `clinvar_ingest.single_gene_variation_backfill_log`. Safe to re-run. |
-| `clinvar_ingest.single_gene_variation_temporal_rebuild(apply_changes)` | Rebuilds `clinvar_single_gene_variations`, and the gene columns of `clinvar_variations`, directly from the per-release tables. It does not replay the weekly temporal pipeline, because these tables keep one row per variation per unbroken run of releases. `FALSE` only builds side tables (`*_rebuild`, expiring after 7 days) and reports differences. `TRUE` keeps `*_before_backfill` copies, then applies the changes in one transaction. No other temporal table uses `single_gene_variation`. |
+| `clinvar_ingest.single_gene_variation_temporal_rebuild(apply_changes)` | Rebuilds `clinvar_single_gene_variations`, including its `hgnc_id`, and the gene columns of `clinvar_variations`, directly from the per-release tables. Every release it reads must have the `hgnc_id` column; otherwise it stops and names the [identity backfill](#backfilling-the-gene-identity-columns) to run. It does not replay the weekly temporal pipeline, because these tables keep one row per variation per unbroken run of releases. `FALSE` only builds side tables (`*_rebuild`, expiring after 7 days) and reports differences; `hgnc_id_differs` counts rows that match except for `hgnc_id`. `TRUE` keeps `*_before_backfill` copies, then applies the changes in one transaction. No other temporal table uses `single_gene_variation`. |
 
 Steps, after the new procedures are deployed and a gene reference refresh is logged:
 
 1. **Confirm the rebuild reproduces today's data.** Run `CALL clinvar_ingest.single_gene_variation_temporal_rebuild(FALSE);` before any release is re-run.
-    - Every count except `identical` must be 0.
+    - Every count except `identical` must be 0. `hgnc_id_differs` is 0 too, once the rebuild has been applied after the [identity backfill](#backfilling-the-gene-identity-columns).
     - In October 2026 this matched all 4,668,446 `clinvar_single_gene_variations` rows and all 4,723,744 `clinvar_variations` rows, in about a minute.
 2. **Try one release.** Run `CALL clinvar_ingest.single_gene_variation_backfill(DATE '2023-01-07', DATE '2023-01-07', FALSE);`.
     - The result row should show 488 added, 4 removed, 110 gene changed and 0 duplicate rows.
@@ -275,6 +288,31 @@ Steps, after the new procedures are deployed and a gene reference refresh is log
 
 To undo, copy the `*_before_backfill` tables back over the tables they were taken from.
 
+## Backfilling the gene identity columns
+
+`symbol` and `hgnc_id` were added in October 2026. Releases built before then don't have them. The identity backfill adds them without re-running the method; no other column changes.
+
+| Routine | What it does |
+|---|---|
+| `clinvar_ingest.single_gene_variation_identity_backfill(from_date, to_date)` | For each release dataset in the range, calls `single_gene_variation_identity`, which adds the two columns if they are missing (`ALTER TABLE … ADD COLUMN IF NOT EXISTS`) and fills them for every row (see [The gene's identity](#the-genes-identity)). Logs each release's row count, rows with a symbol, rows with an HGNC id, and rows whose gene came from `entrez_gene` to `clinvar_ingest.single_gene_variation_identity_backfill_log`. Re-running a release gives the same result. |
+
+It scans about 0.4 GB for a recent release and less for older ones, about 50 GB for all 193 releases from 2023-01-07 to 2026-10-18, and adds about 12 GB of storage.
+
+Steps, after the procedures are deployed:
+
+1. **Try one release.** Run `CALL clinvar_ingest.single_gene_variation_identity_backfill(DATE '2026-10-11', DATE '2026-10-11');`. The 2026-10-11 release logs 4,642,958 rows, all with a symbol and an HGNC id, 25 of them from `entrez_gene`.
+2. **Run the rest.** Run `CALL clinvar_ingest.single_gene_variation_identity_backfill(DATE '2023-01-07', DATE '2026-10-18');`, or in chunks. Each release takes about 20 seconds.
+3. **Review the log.** For example, `SELECT * FROM clinvar_ingest.single_gene_variation_identity_backfill_log ORDER BY release_date`. `with_symbol` must equal `rows_total`. `with_hgnc_id` is one less in the 24 releases from 2023-01-07 to 2023-06-26 (variation 217510, LOC730100) and equal everywhere else.
+4. **Rebuild the temporal data,** so `clinvar_single_gene_variations` gets `hgnc_id`. Run `CALL clinvar_ingest.single_gene_variation_temporal_rebuild(FALSE);`. Every count except `identical` and `hgnc_id_differs` must be 0. Then run it with `TRUE`, between weekly releases.
+
+To undo, drop the two columns: `ALTER TABLE {release}.single_gene_variation DROP COLUMN symbol, DROP COLUMN hgnc_id`.
+
+### In the temporal tables
+
+`clinvar_single_gene_variations` carries `hgnc_id`, but not `symbol`. Each of its rows covers an unbroken run of releases, with the values of the run's last release. A symbol can change within a run when HGNC renames a gene, e.g. GBA to GBA1, so a stored symbol would describe only the last release of the run. The HGNC id stays the same across renames. The weekly `clinvar_single_gene_variations` procedure fills it for new and updated rows, and the temporal rebuild fills it for every row.
+
+`clinvar_variations` does not get `hgnc_id`. It already carries the variation's `gene_id` and `symbol` (from the release's gene table, so name-derived genes that ClinVar does not list have no symbol there). The gene's HGNC id is one join away in `clinvar_single_gene_variations`, for the same variation and release range.
+
 ## Change history
 
 | Change | Issue / PR |
@@ -285,3 +323,4 @@ To undo, copy the `*_before_backfill` tables back over the tables they were take
 | The gene reference comes from each release's own gene table, minus ids NCBI had discontinued by the release date, so every release is processed against the gene knowledge of its time | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | Antisense genes (`-AS#`) are treated as companions instead of always being ignored, so a variant whose only gene is antisense keeps it | [#39](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/issues/39) |
 | Rule 1 uses the MANE release current on each ClinVar release date (`mane_transcript`, refreshed weekly), instead of a fixed MANE v1.0 list | [#42](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/pull/42) |
+| `single_gene_variation` gains `symbol` and `hgnc_id`, the chosen gene's identity as of the release; `clinvar_single_gene_variations` gains `hgnc_id` | [#45](https://github.com/clingen-data-model/clinvar-ingest-bq-tools/pull/45) |

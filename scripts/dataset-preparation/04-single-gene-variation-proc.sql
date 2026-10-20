@@ -1,4 +1,49 @@
 -- see below for helper / setup scripts
+
+-- fill in the identity of each row's gene: its symbol and HGNC id as of the release, so readers of
+--   single_gene_variation need no second gene table. called at the end of single_gene_variation, and by
+--   single_gene_variation_identity_backfill for releases built before these columns existed.
+--   the identity comes from the release's own gene table when it lists the gene, otherwise from
+--   entrez_gene, the same two sources single_gene_variation picks genes from. the filters that decide
+--   which genes can be picked (an HGNC id at the time, not discontinued) are not applied: they are about
+--   choosing a gene, not naming it, and a haplotype or genotype can get a gene the release lists without
+--   an HGNC id (e.g. LOC730100 in early 2023), which keeps its symbol and gets a NULL hgnc_id.
+--   see docs/methods/single-gene-variation.md
+CREATE OR REPLACE PROCEDURE `clinvar_ingest.single_gene_variation_identity`(
+  schema_name STRING
+)
+BEGIN
+  EXECUTE IMMEDIATE FORMAT("""
+    ALTER TABLE `%s.single_gene_variation`
+      ADD COLUMN IF NOT EXISTS symbol STRING,
+      ADD COLUMN IF NOT EXISTS hgnc_id STRING
+  """, schema_name);
+
+  EXECUTE IMMEDIATE FORMAT("""
+    UPDATE `%s.single_gene_variation` sgv
+    SET
+      sgv.symbol = g.symbol,
+      sgv.hgnc_id = g.hgnc_id
+    FROM (
+      SELECT
+        g.id as gene_id,
+        g.symbol,
+        g.hgnc_id
+      FROM `%s.gene` g
+      UNION ALL
+      SELECT
+        e.gene_id,
+        e.symbol_from_authority as symbol,
+        e.hgnc_id
+      FROM `clinvar_ingest.entrez_gene` e
+      WHERE
+        e.gene_id NOT IN (SELECT g.id FROM `%s.gene` g)
+    ) g
+    WHERE
+      g.gene_id = sgv.gene_id
+  """, schema_name, schema_name, schema_name);
+END;
+
 CREATE OR REPLACE PROCEDURE `clinvar_ingest.single_gene_variation`(
   schema_name STRING,
   release_date DATE
@@ -15,7 +60,9 @@ BEGIN
       relationship_type STRING,
       source STRING,
       mane_select BOOL DEFAULT FALSE,
-      somatic BOOL DEFAULT FALSE
+      somatic BOOL DEFAULT FALSE,
+      symbol STRING,
+      hgnc_id STRING
     )
   """, schema_name);
 
@@ -519,6 +566,9 @@ BEGIN
           g.gene_id = sgv.gene_id
       )
   """, schema_name);
+
+    --- the gene's identity (symbol, hgnc_id) as of the release
+  CALL `clinvar_ingest.single_gene_variation_identity`(schema_name);
 
   DROP TABLE _SESSION.temp_variation;
   DROP TABLE _SESSION.temp_gene;

@@ -6,8 +6,12 @@
 --   CALL `clinvar_ingest.single_gene_variation_temporal_rebuild`(TRUE);   -- apply
 --
 -- Only two temporal tables depend on single_gene_variation:
---   clinvar_single_gene_variations  every column
+--   clinvar_single_gene_variations  every column, including hgnc_id
 --   clinvar_variations              gene_id, symbol and mane_select only
+--
+-- Every release it reads must have single_gene_variation's hgnc_id column; run
+-- clinvar_ingest.single_gene_variation_identity_backfill first for releases built before it existed.
+-- The procedure stops with an error giving the range of releases that lack it.
 --
 -- Both keep one row per variation per unbroken run of releases, with the values of the run's last
 -- release, which is what clinvar_single_gene_variations() and clinvar_variations() produce one release
@@ -26,7 +30,9 @@
 --   clinvar_ingest.clinvar_single_gene_variations_rebuild
 --   clinvar_ingest.clinvar_variations_gene_rebuild
 -- Run with apply_changes = FALSE before any release is backfilled: every count except "identical"
--- must be 0, which shows the rebuild reproduces the weekly pipeline. With apply_changes = TRUE it first
+-- and "hgnc_id_differs" must be 0, which shows the rebuild reproduces the weekly pipeline.
+-- hgnc_id_differs counts rows that match on every other column but not on hgnc_id, e.g. rows written
+-- before the column existed. It is 0 after the rebuild is applied. With apply_changes = TRUE it first
 -- keeps copies named *_before_backfill (created once), then replaces clinvar_single_gene_variations
 -- and updates the three clinvar_variations columns in one transaction. Run it between weekly releases.
 
@@ -38,6 +44,7 @@ BEGIN
   DECLARE last_processed DATE DEFAULT (SELECT MAX(end_release_date) FROM `clinvar_ingest.clinvar_single_gene_variations`);
   DECLARE sgv_union STRING;
   DECLARE gene_union STRING;
+  DECLARE missing_identity STRUCT<releases INT64, from_date DATE, to_date DATE>;
 
   -- the releases the temporal tables have processed, in order
   CREATE TEMP TABLE _SESSION.rebuild_release
@@ -51,11 +58,40 @@ BEGIN
   WHERE
     release_date BETWEEN first_processed AND last_processed;
 
+  -- every release must carry the gene identity columns (see single_gene_variation_identity_backfill)
+  SET missing_identity = (
+    SELECT AS STRUCT
+      COUNT(*),
+      MIN(r.release_date),
+      MAX(r.release_date)
+    FROM _SESSION.rebuild_release r
+    LEFT JOIN `region-us.INFORMATION_SCHEMA.COLUMNS` c
+    ON
+      c.table_schema = r.schema_name
+      AND
+      c.table_name = 'single_gene_variation'
+      AND
+      c.column_name = 'hgnc_id'
+    WHERE
+      c.table_schema IS NULL
+  );
+  IF missing_identity.releases > 0 THEN
+    RAISE USING MESSAGE = FORMAT(
+      "single_gene_variation has no hgnc_id column in %d releases between %t and %t. Run CALL `clinvar_ingest.single_gene_variation_identity_backfill`(DATE '%t', DATE '%t') first.",
+      missing_identity.releases, missing_identity.from_date, missing_identity.to_date,
+      missing_identity.from_date, missing_identity.to_date
+    );
+  END IF;
+
+  -- the comparison below reads hgnc_id, so the (empty) column is added even when apply_changes is FALSE
+  ALTER TABLE `clinvar_ingest.clinvar_single_gene_variations`
+    ADD COLUMN IF NOT EXISTS hgnc_id STRING;
+
   SET sgv_union = (
     SELECT
       STRING_AGG(
         FORMAT("""
-          SELECT %T as release_date, variation_id, gene_id, relationship_type, source, mane_select, somatic
+          SELECT %T as release_date, variation_id, gene_id, relationship_type, source, mane_select, somatic, hgnc_id
           FROM `%s.single_gene_variation`
         """, release_date, schema_name),
         "UNION ALL" ORDER BY release_date
@@ -99,7 +135,7 @@ BEGIN
       MIN(release_date) as start_release_date,
       MAX(release_date) as end_release_date,
       ARRAY_AGG(
-        STRUCT(gene_id, relationship_type, source, mane_select, somatic, next_release_date)
+        STRUCT(gene_id, relationship_type, source, mane_select, somatic, hgnc_id, next_release_date)
         ORDER BY idx DESC
         LIMIT 1
       )[OFFSET(0)] as last
@@ -117,7 +153,8 @@ BEGIN
     last.somatic,
     start_release_date,
     end_release_date,
-    last.next_release_date as deleted_release_date
+    last.next_release_date as deleted_release_date,
+    last.hgnc_id
   FROM runs;
 
   CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_variations_gene_rebuild`
@@ -166,7 +203,9 @@ BEGIN
         OR c.relationship_type IS DISTINCT FROM r.relationship_type
         OR c.source IS DISTINCT FROM r.source
         OR c.mane_select IS DISTINCT FROM r.mane_select
-        OR c.somatic IS DISTINCT FROM r.somatic)) as values_differ
+        OR c.somatic IS DISTINCT FROM r.somatic)) as values_differ,
+    COUNTIF(c.variation_id IS NOT NULL AND r.variation_id IS NOT NULL
+      AND c.hgnc_id IS DISTINCT FROM r.hgnc_id) as hgnc_id_differs
   FROM `clinvar_ingest.clinvar_single_gene_variations_rebuild` r
   FULL JOIN `clinvar_ingest.clinvar_single_gene_variations` c
   ON
@@ -184,7 +223,8 @@ BEGIN
     0,
     COUNTIF(c.gene_id IS DISTINCT FROM r.gene_id
       OR c.symbol IS DISTINCT FROM r.symbol
-      OR c.mane_select IS DISTINCT FROM r.mane_select)
+      OR c.mane_select IS DISTINCT FROM r.mane_select),
+    0
   FROM `clinvar_ingest.clinvar_variations_gene_rebuild` r
   JOIN `clinvar_ingest.clinvar_variations` c
   ON
@@ -211,7 +251,8 @@ BEGIN
       somatic,
       start_release_date,
       end_release_date,
-      deleted_release_date
+      deleted_release_date,
+      hgnc_id
     )
     SELECT
       variation_id,
@@ -222,7 +263,8 @@ BEGIN
       somatic,
       start_release_date,
       end_release_date,
-      deleted_release_date
+      deleted_release_date,
+      hgnc_id
     FROM `clinvar_ingest.clinvar_single_gene_variations_rebuild`;
 
     UPDATE `clinvar_ingest.clinvar_variations` cv

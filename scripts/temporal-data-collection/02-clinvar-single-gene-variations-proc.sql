@@ -16,6 +16,11 @@ BEGIN
     RETURN;
   END IF;
 
+  -- hgnc_id was added after the table was created. it is the gene's HGNC id from single_gene_variation;
+  -- unlike the symbol it does not change when HGNC renames a gene. see docs/methods/single-gene-variation.md
+  ALTER TABLE `clinvar_ingest.clinvar_single_gene_variations`
+    ADD COLUMN IF NOT EXISTS hgnc_id STRING;
+
   -- deleted single gene vars (where it exists in clinvar_single_gene_variations(for deleted_release_date is null), but doesn't exist in current data set )
   EXECUTE IMMEDIATE FORMAT("""
     UPDATE `clinvar_ingest.clinvar_single_gene_variations` csgv
@@ -39,6 +44,7 @@ BEGIN
     UPDATE `clinvar_ingest.clinvar_single_gene_variations` csgv
     SET
       gene_id = sgv.gene_id,
+      hgnc_id = sgv.hgnc_id,
       mane_select = sgv.mane_select,
       somatic = sgv.somatic,
       relationship_type = sgv.relationship_type,
@@ -61,7 +67,8 @@ BEGIN
       mane_select,
       somatic,
       start_release_date,
-      end_release_date
+      end_release_date,
+      hgnc_id
     )
     SELECT
       sgv.gene_id,
@@ -71,7 +78,8 @@ BEGIN
       sgv.mane_select,
       sgv.somatic,
       sgv.release_date as start_release_date,
-      sgv.release_date as end_release_date
+      sgv.release_date as end_release_date,
+      sgv.hgnc_id
     FROM `%s.single_gene_variation` sgv
     WHERE
       NOT EXISTS
