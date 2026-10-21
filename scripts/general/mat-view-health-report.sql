@@ -20,6 +20,11 @@
 --     source table that has been modified since the derived table was last
 --     written. Lineage comes from INFORMATION_SCHEMA.JOBS referenced_tables,
 --     so it only covers tables written within `derived_lookback_days`.
+--     Tables labelled `snapshot: frozen` are kept as they are on purpose; they
+--     come back with status DERIVED_FROZEN instead of DERIVED_STALE and do not
+--     hold up the rebuild order of other tables. To label one:
+--       bq update --set_label snapshot:frozen clingen-dev:<dataset>.<table>
+--     and to remove the label: bq update --clear_label snapshot ...
 --
 -- This script only READS metadata (INFORMATION_SCHEMA + per-dataset
 -- __TABLES__). It never refreshes, creates, alters or deletes any persistent
@@ -203,6 +208,15 @@ CROSS JOIN UNNEST(j.referenced_tables) AS r
 WHERE NOT STARTS_WITH(r.table_id, 'INFORMATION_SCHEMA')
   AND NOT STARTS_WITH(r.dataset_id, '_')
   AND FORMAT('%s.%s.%s', r.project_id, r.dataset_id, r.table_id) != lw.dest_fqn;
+
+-- Snapshots that are meant to stay as they are (label snapshot=frozen).
+CREATE TEMP TABLE frozen_tables AS
+SELECT FORMAT('%s.%s.%s', table_catalog, table_schema, table_name) AS fqn
+FROM `region-us`.INFORMATION_SCHEMA.TABLE_OPTIONS
+WHERE include_derived
+  AND option_name = 'labels'
+  AND REGEXP_CONTAINS(table_schema, dataset_pattern)
+  AND REGEXP_CONTAINS(option_value, r'STRUCT\("snapshot", "frozen"\)');
 
 -- ----------------------------------------------------------------------------
 -- Stage 3: current last-modified time of every table involved (__TABLES__)
@@ -398,6 +412,7 @@ IF include_derived THEN
   stale AS (
     SELECT
       dest_fqn,
+      dest_fqn IN (SELECT fqn FROM frozen_tables) AS frozen,
       ANY_VALUE(dest_last_modified) AS last_built,
       MAX(src_last_modified) AS newest_source_change,
       ARRAY_AGG(STRUCT(src_fqn AS source_table, src_last_modified AS source_last_modified)
@@ -407,12 +422,13 @@ IF include_derived THEN
     GROUP BY dest_fqn
   ),
   -- Rebuild order among stale derived tables (a table whose changed source
-  -- is itself a stale derived table is rebuilt after it).
+  -- is itself a stale derived table is rebuilt after it). A frozen table will
+  -- not be rebuilt, so nothing waits on it.
   edges AS (
     SELECT DISTINCT s.dest_fqn, cs.source_table AS upstream_fqn
     FROM stale AS s
     CROSS JOIN UNNEST(s.changed_sources) AS cs
-    JOIN stale AS up ON up.dest_fqn = cs.source_table
+    JOIN stale AS up ON up.dest_fqn = cs.source_table AND NOT up.frozen
   ),
   depth AS (
     SELECT dest_fqn, upstream_fqn, 1 AS d FROM edges
@@ -433,7 +449,7 @@ IF include_derived THEN
       AND job_id IN (SELECT w.parent_job_id FROM derived_latest)
   )
   SELECT
-    'DERIVED_STALE' AS status,
+    IF(s.frozen, 'DERIVED_FROZEN', 'DERIVED_STALE') AS status,
     COALESCE(da.rebuild_order, 0) AS rebuild_order,
     s.dest_fqn AS derived_table,
     s.last_built,
@@ -450,6 +466,6 @@ IF include_derived THEN
   JOIN derived_latest AS lw ON lw.dest_fqn = s.dest_fqn
   LEFT JOIN depth_agg AS da ON da.dest_fqn = s.dest_fqn
   LEFT JOIN parent_jobs AS pj ON pj.job_id = lw.w.parent_job_id
-  ORDER BY rebuild_order, derived_table;
+  ORDER BY s.frozen, rebuild_order, derived_table;
 
 END IF;

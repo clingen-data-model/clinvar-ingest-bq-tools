@@ -126,7 +126,20 @@ For each stale table the report shows the sources that changed, and `last built 
 
     - Tables last written more than `--lookback` days ago (180 max, the JOBS retention) do not appear.
     - Sources with no storage, such as external Google Sheet tables and logical views, cannot be checked.
-    - "Stale" means *a source changed after the build*. It does not mean the table is wrong. A snapshot that should stay frozen will still show as stale.
+    - "Stale" means *a source changed after the build*. It does not mean the table is wrong. A snapshot that should stay frozen shows as stale until it is labelled (see below).
+
+### Frozen snapshots
+
+Some tables are meant to stay as they were built: dated snapshots, audits and logs. To keep one out of the stale list, give it the label `snapshot: frozen`:
+
+```bash
+bq update --set_label snapshot:frozen clingen-dev:clinvar_ingest.monthly_conflict_snapshots
+
+# Undo
+bq update --clear_label snapshot clingen-dev:clinvar_ingest.monthly_conflict_snapshots
+```
+
+A labelled table whose sources have changed is reported as `DERIVED_FROZEN`, not `DERIVED_STALE`. The text report lists it under **FROZEN SNAPSHOTS**, after the rebuild plan, and leaves it out of the plan. Nothing waits on it in the rebuild order. The label is a table property, so a `CREATE OR REPLACE TABLE` drops it. A procedure that replaces a frozen table on purpose has to set the label again.
 
 ## Key Dependencies
 

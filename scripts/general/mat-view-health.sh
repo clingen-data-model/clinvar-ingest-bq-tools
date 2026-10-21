@@ -161,6 +161,10 @@ else:
     print("  Nothing to refresh - all materialized views are current.")
 
 if derived is not None:
+    # Tables labelled snapshot=frozen are kept as is on purpose: listed apart,
+    # left out of the rebuild plan.
+    frozen = [r for r in derived if r.get("status") == "DERIVED_FROZEN"]
+    derived = [r for r in derived if r.get("status") != "DERIVED_FROZEN"]
     print()
     print(f"STALE DERIVED TABLES ({len(derived)})  - rebuilt by procedures/scheduled queries, not BQ MVs")
     print("=" * 78)
@@ -185,6 +189,12 @@ if derived is not None:
         for builder, p in sorted(plan.items(), key=lambda kv: (kv[1]["order"], kv[0])):
             print(f"  [order {p['order']}] {builder}")
             print(f"      -> {', '.join(sorted(p['tables']))}")
+    if frozen:
+        print()
+        print(f"FROZEN SNAPSHOTS ({len(frozen)})  - labelled snapshot=frozen; sources changed, kept as is on purpose")
+        print("-" * 78)
+        for r in frozen:
+            print(f"  {short(r['derived_table'])}  (built {r['last_built']}; sources changed up to {r['newest_source_change']})")
 PYEOF
 
 echo "# Materialized view health report: project=${PROJECT} region=${REGION} ($(date -u '+%Y-%m-%d %H:%M:%S UTC'))" >&2
