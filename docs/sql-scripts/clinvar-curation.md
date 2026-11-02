@@ -35,15 +35,9 @@ The `cvc-impact-analysis/` subdirectory contains scripts for analyzing the outco
 
 The `00-run-cvc-impact-analysis.sh` script orchestrates running these analyses in order.
 
-## Manuscript Figures Subdirectory
+## Manuscript Figures
 
-The `manuscript-figures/` subdirectory contains queries that generate data for publication figures:
-
-| File | Description |
-|------|-------------|
-| `01-clinvar-landscape.sql` | ClinVar landscape overview data |
-| `02-submitter-landscape.sql` | Submitter landscape analysis |
-| `03-flagged-scv-by-consequence.sql` | Flagged SCVs broken down by consequence group |
+The queries that generate data for publication figures are maintained in the [`clinvar-curation-input-tool`](https://github.com/clingen-data-model/clinvar-curation-input-tool) repository, under `bigquery/curator/manuscript-figures/`.
 
 ## Key Dependencies
 
