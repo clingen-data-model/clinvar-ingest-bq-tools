@@ -86,7 +86,6 @@ scripts/parsing-funcs/my-new-parsing-func.sql
 
 | Directory | Purpose |
 |-----------|---------|
-| `scripts/clinvar-curation/` | ClinVar curation workflow scripts |
 | `scripts/dataset-preparation/` | Data normalization and validation procedures |
 | `scripts/external-table-setup/` | BigQuery external table definitions |
 | `scripts/gks-procs/` | GA4GH Knowledge Store procedures |

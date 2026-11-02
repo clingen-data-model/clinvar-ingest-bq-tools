@@ -14,7 +14,7 @@ Scripts are organized into subdirectories by functional area. Each directory foc
 | [`tracker-report-update/`](tracker-report-update.md) | 5 proc/setup files | Variation tracker report generation |
 | [`parsing-funcs/`](parsing-funcs.md) | 12 func files | SQL wrappers for TypeScript/JS parsing libraries |
 | [`general/`](general.md) | 10 func/proc files | Shared utility functions and procedures |
-| [`clinvar-curation/`](clinvar-curation.md) | 12+ files | ClinVar Variant Curation (CVC) workflow support |
+| [ClinVar Curation](clinvar-curation.md) | Moved | CVC workflow support, now in `bigquery/curator/` in the `clinvar-curation-input-tool` repository |
 | [`external-table-setup/`](external-table-setup.md) | 15+ def/script files | BigQuery external table definitions backed by Google Sheets |
 
 ## Naming Conventions

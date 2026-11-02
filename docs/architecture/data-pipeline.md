@@ -132,7 +132,7 @@ A coordinating procedure (`temporal-data-summation-proc.sql`) orchestrates all s
 
 ## Stage 5: Tracker Reports and Curation
 
-**Scripts:** `scripts/tracker-report-update/` and `scripts/clinvar-curation/`
+**Scripts:** `scripts/tracker-report-update/` in this repository, and `bigquery/curator/` in the `clinvar-curation-input-tool` repository
 
 ### Tracker Reports
 
@@ -149,4 +149,4 @@ The `gc_tracker_report` procedure generates GC-specific tracker reports.
 
 ### Curation Support
 
-The `scripts/clinvar-curation/` directory contains scripts that support ClinVar curation workflows, including CVC (ClinVar Curation) table initialization and manuscript figure generation.
+Scripts that support ClinVar curation workflows, including CVC (ClinVar Curation) table initialization and manuscript figure generation, live in [`bigquery/curator/`](https://github.com/clingen-data-model/clinvar-curation-input-tool/tree/main/bigquery/curator) in the `clinvar-curation-input-tool` repository. See [ClinVar Curation](../sql-scripts/clinvar-curation.md).

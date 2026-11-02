@@ -49,7 +49,7 @@ The curation project sits on top of the ingested data:
 
 ---
 
-## Current Infrastructure (scripts/clinvar-curation/)
+## Current Infrastructure (bigquery/curator/ in clinvar-curation-input-tool)
 
 ### Tables & Views Created by `00-initialize-cvc-tables.sql`
 
