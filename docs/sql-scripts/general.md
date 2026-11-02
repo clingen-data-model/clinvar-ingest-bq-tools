@@ -57,4 +57,4 @@ The schema/release table functions are foundational -- they are used by:
 - `temporal-data-collection-proc.sql` to resolve which schema to process
 - `temporal-data-summation` procedures to look up adjacent releases
 - `tracker-report-update` procedures to find the current release
-- `clinvar-curation` functions to determine release context
+- CvC functions in `bigquery/curator/` in the `clinvar-curation-input-tool` repository to determine release context
