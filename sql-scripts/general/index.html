@@ -1,0 +1,1979 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Documentation for the ClinVar Ingest BigQuery Tools repository">
+      
+      
+      
+        <link rel="canonical" href="https://clingen-data-model.github.io/clinvar-ingest-bq-tools/sql-scripts/general/">
+      
+      
+        <link rel="prev" href="../external-table-setup/">
+      
+      
+        <link rel="next" href="../../gcp-services/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.8.0">
+    
+    
+      
+        <title>General Utilities - ClinVar Ingest BQ Tools</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.57a0d79d.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.fb2fffe2.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#general-utility-scripts" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="ClinVar Ingest BQ Tools" class="md-header__button md-logo" aria-label="ClinVar Ingest BQ Tools" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            ClinVar Ingest BQ Tools
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              General Utilities
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clingen-data-model/clinvar-ingest-bq-tools
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+
+<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="ClinVar Ingest BQ Tools" class="md-nav__button md-logo" aria-label="ClinVar Ingest BQ Tools" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    ClinVar Ingest BQ Tools
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/clingen-data-model/clinvar-ingest-bq-tools" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    clingen-data-model/clinvar-ingest-bq-tools
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Architecture
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Architecture
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/data-pipeline/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Data Pipeline
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../architecture/bigquery-schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BigQuery Schema
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Methods
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Methods
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../methods/single-gene-variation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Single Gene Variation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    TypeScript Utilities
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    TypeScript Utilities
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../typescript/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../typescript/bq-utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    BQ Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../typescript/parse-utils/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parse Utils
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SQL Scripts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    SQL Scripts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dataset-preparation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Dataset Preparation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../temporal-data-collection/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Temporal Collection
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../temporal-data-summation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Temporal Summation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tracker-report-update/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Tracker Reports
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../parsing-funcs/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parsing Functions
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../clinvar-curation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClinVar Curation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../external-table-setup/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    External Tables
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    General Utilities
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    General Utilities
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#functions-auto-deployed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions (auto-deployed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#procedures-auto-deployed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Procedures (auto-deployed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-and-release-table-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema and Release Table Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shell-scripts-not-auto-deployed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell Scripts (not auto-deployed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#materialized-view-health-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Materialized View Health Report
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Materialized View Health Report">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#section-1-materialized-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section 1: Materialized views
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#section-2-stale-derived-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section 2: Stale derived tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frozen-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frozen snapshots
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCP Services
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    GCP Services
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gcp-services/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../gcp-services/gcs-file-ingest/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GCS File Ingest
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+        
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--section md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
+        
+          
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/variation-identity-issues/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Variation Identity Issues
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/acmgv4-variant-pathogenicity-under-construction.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ACMG v4 Variant Pathogenicity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../reference/clingen-knowledge-dissemination-draft/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClinGen Knowledge Dissemination
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../ci-cd/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CI/CD
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#functions-auto-deployed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Functions (auto-deployed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#procedures-auto-deployed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Procedures (auto-deployed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#schema-and-release-table-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Schema and Release Table Functions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#shell-scripts-not-auto-deployed" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shell Scripts (not auto-deployed)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#materialized-view-health-report" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Materialized View Health Report
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Materialized View Health Report">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#section-1-materialized-views" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section 1: Materialized views
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#section-2-stale-derived-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Section 2: Stale derived tables
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#frozen-snapshots" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Frozen snapshots
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#key-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Key Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="general-utility-scripts">General Utility Scripts<a class="headerlink" href="#general-utility-scripts" title="Permanent link">&para;</a></h1>
+<p>The <code>scripts/general/</code> directory contains shared utility functions and procedures used across the pipeline. These include BigQuery JavaScript UDFs backed by <code>bq-utils.js</code>, schema/release lookup table functions, and validation helper procedures.</p>
+<h2 id="functions-auto-deployed">Functions (auto-deployed)<a class="headerlink" href="#functions-auto-deployed" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Function Created</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bq-createSigType-func.sql</code></td>
+<td><code>clinvar_ingest.createSigType()</code></td>
+<td>Creates an array of three significance type structs (non-significant, uncertain, significant) with counts and percentages from input counts. Backed by <code>bq-utils.js</code>.</td>
+</tr>
+<tr>
+<td><code>bq-deriveHGVS-func.sql</code></td>
+<td><code>clinvar_ingest.deriveHGVS()</code></td>
+<td>Derives an HGVS expression string from a variation type and sequence location struct when no HGVS expression is directly available. Backed by <code>bq-utils.js</code>.</td>
+</tr>
+<tr>
+<td><code>bq-determineMonthBasedOnRange-func.sql</code></td>
+<td><code>clinvar_ingest.determineMonthBasedOnRange()</code></td>
+<td>Calculates the dominant month for a date range, returning both <code>yymm</code> and <code>monyy</code> formatted strings. Backed by <code>bq-utils.js</code>.</td>
+</tr>
+<tr>
+<td><code>bq-formatNearestMonth-func.sql</code></td>
+<td><code>clinvar_ingest.formatNearestMonth()</code></td>
+<td>Rounds a date to the nearest month boundary and returns a formatted string. Backed by <code>bq-utils.js</code>.</td>
+</tr>
+<tr>
+<td><code>bq-normalizeAndKeyById-func.sql</code></td>
+<td><code>clinvar_ingest.normalizeAndKeyById()</code></td>
+<td>Normalizes a JSON object by converting string-encoded arrays/nulls to native types and optionally keys nested arrays by their <code>id</code> field. Backed by <code>bq-utils.js</code>.</td>
+</tr>
+<tr>
+<td><code>bq-normalizeHpId-func.sql</code></td>
+<td><code>clinvar_ingest.normalizeHpId()</code></td>
+<td>Normalizes HP (Human Phenotype Ontology) identifiers to the standard <code>HP:0000000</code> format, handling various input formats. Backed by <code>bq-utils.js</code>.</td>
+</tr>
+<tr>
+<td><code>cvc-project-start-date-func.sql</code></td>
+<td><code>clinvar_ingest.cvc_project_start_date()</code></td>
+<td>Returns the CVC project start date (<code>2023-01-07</code>) as a constant. Pure SQL function.</td>
+</tr>
+</tbody>
+</table>
+<h2 id="procedures-auto-deployed">Procedures (auto-deployed)<a class="headerlink" href="#procedures-auto-deployed" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Procedure Created</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>check-release-dates-proc.sql</code></td>
+<td><code>clinvar_ingest.check_release_dates()</code></td>
+<td>Validates that release dates in specified tables match the date encoded in the schema name. Returns an array of validation error messages.</td>
+</tr>
+<tr>
+<td><code>check-required-fields-proc.sql</code></td>
+<td><code>clinvar_ingest.check_required_fields()</code></td>
+<td>Checks that specified required fields are not null across given tables. Returns an array of validation error messages.</td>
+</tr>
+<tr>
+<td><code>tables-columns-exists-proc.sql</code></td>
+<td><code>clinvar_ingest.check_table_exists()</code>, <code>clinvar_ingest.check_column_exists()</code></td>
+<td>Helper procedures that check whether a table or column exists in a given schema using <code>INFORMATION_SCHEMA</code>.</td>
+</tr>
+<tr>
+<td><code>schema-table-functions-proc.sql</code></td>
+<td>Multiple table functions</td>
+<td>Defines the core schema and release lookup functions (see below).</td>
+</tr>
+</tbody>
+</table>
+<h2 id="schema-and-release-table-functions">Schema and Release Table Functions<a class="headerlink" href="#schema-and-release-table-functions" title="Permanent link">&para;</a></h2>
+<p>The <code>schema-table-functions-proc.sql</code> file defines the foundational table functions used throughout the pipeline to discover and navigate ClinVar release schemas:</p>
+<table>
+<thead>
+<tr>
+<th>Function</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>clinvar_ingest.all_releases()</code></td>
+<td>Returns all known release dates (from both active schemas and historic records) with <code>prev_release_date</code> and <code>next_release_date</code> window columns</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.release_on(on_date)</code></td>
+<td>Returns the single release that was current on a given date</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.all_schemas()</code></td>
+<td>Returns all active release schemas with their release dates and adjacent release dates</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.schema_on(on_date)</code></td>
+<td>Returns the single schema that was current on a given date</td>
+</tr>
+<tr>
+<td><code>clinvar_ingest.schemas_on_or_after(on_or_after_date)</code></td>
+<td>Returns all schemas from the given date forward</td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Historic release dates</p>
+<p>The <code>all_releases()</code> function combines schema-derived release dates (from <code>INFORMATION_SCHEMA</code>) with a <code>historic_release_dates</code> table that covers releases prior to 2023-01-07. This is necessary because only releases from that date forward have standing schemas in BigQuery.</p>
+</div>
+<div class="admonition info">
+<p class="admonition-title">Completion gating</p>
+<p>The <code>all_releases()</code> and <code>all_schemas()</code> functions check for the existence of the <code>scv_summary</code> table in each schema. A release is only considered fully processed (and therefore available to downstream stages) if its dataset-preparation step has completed and produced <code>scv_summary</code>.</p>
+</div>
+<h2 id="shell-scripts-not-auto-deployed">Shell Scripts (not auto-deployed)<a class="headerlink" href="#shell-scripts-not-auto-deployed" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>copy-datasets-to-dev.sh</code></td>
+<td>Copies datasets between BigQuery projects</td>
+</tr>
+<tr>
+<td><code>service-account-permission-setup.sh</code></td>
+<td>Sets up service account permissions for BigQuery and GCS access</td>
+</tr>
+<tr>
+<td><code>transfer-table.sh</code></td>
+<td>Transfers individual tables between BigQuery projects</td>
+</tr>
+<tr>
+<td><code>fetch_gene_pubmed.sh</code></td>
+<td>Fetches PubMed article counts for a list of gene symbols</td>
+</tr>
+<tr>
+<td><code>mat-view-health.sh</code> + <code>mat-view-health-report.sql</code></td>
+<td>Read-only health report for materialized views and derived tables (see <a href="#materialized-view-health-report">below</a>)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="materialized-view-health-report">Materialized View Health Report<a class="headerlink" href="#materialized-view-health-report" title="Permanent link">&para;</a></h2>
+<p><code>mat-view-health.sh</code> (a wrapper around <code>mat-view-health-report.sql</code>) tells you which materialized views, and which "materialized" tables rebuilt by procedures, are behind the tables they are built from. It only reads <code>INFORMATION_SCHEMA</code> metadata. Nothing is refreshed unless you pass <code>--refresh</code>.</p>
+<p>One report covers every dataset in scope. By default that is <code>clinvar_ingest</code>, <code>variation_tracker</code> and every dataset whose name starts with <code>clinvar_curator</code> (today <code>clinvar_curator</code>, <code>clinvar_curator_v4</code> and <code>clinvar_curator_v4_dev</code>). A new <code>clinvar_curator*</code> dataset is picked up automatically. The tables these views and snapshots are built from are checked wherever they live, including release datasets. <code>--datasets</code> changes the scope for the whole report.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Readable report (default project clingen-dev, region us)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>scripts/general/mat-view-health.sh
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Only the real BigQuery materialized views</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>scripts/general/mat-view-health.sh<span class="w"> </span>--mv-only
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Cover a different set of datasets (* matches any characters; quote it so the shell</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># leaves it alone), with a shorter JOBS lookback</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>scripts/general/mat-view-health.sh<span class="w"> </span>--datasets<span class="w"> </span><span class="s1">'clinvar_ingest,clinvar_curator*,clinvar_2026_10_11_v2_6_0'</span><span class="w"> </span>--lookback<span class="w"> </span><span class="m">60</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="c1"># Raw result sets as JSON</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>scripts/general/mat-view-health.sh<span class="w"> </span>--format<span class="w"> </span>json
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="c1"># Report, then refresh every MV that needs it (asks for confirmation first)</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>scripts/general/mat-view-health.sh<span class="w"> </span>--refresh
+</code></pre></div>
+<p>The SQL file also runs on its own, with no wrapper: <code>bq query --nouse_legacy_sql --project_id=clingen-dev &lt; scripts/general/mat-view-health-report.sql</code>. Its settings are the <code>DECLARE</code> defaults at the top of the file. The file name does not end in <code>-proc.sql</code>/<code>-func.sql</code>, so CI does not deploy it.</p>
+<p>You need <code>bigquery.jobs.listAll</code> on the project, because the report reads <code>INFORMATION_SCHEMA.JOBS_BY_PROJECT</code>. A full run takes about 40 seconds and scans up to about 13 GB of job metadata. <code>--mv-only</code> or a smaller <code>--lookback</code> reduces both.</p>
+<div class="admonition info">
+<p class="admonition-title">Why <code>__TABLES__</code> and not <code>TABLE_STORAGE</code></p>
+<p><code>INFORMATION_SCHEMA.TABLE_STORAGE.storage_last_modified_time</code> is updated asynchronously. It was seen lagging an hourly <code>WRITE_TRUNCATE</code> load by about an hour, long enough to hide staleness. So the script reads <code>__TABLES__.last_modified_time</code> from each dataset involved. BigQuery rate-limits concurrent <code>__TABLES__</code> reads, so the script reads only the datasets it needs, a few at a time. The only things it writes are script-scoped temp tables, which BigQuery drops when the run ends. Note that <code>__TABLES__.last_modified_time</code> also changes on metadata-only edits, such as a new description.</p>
+</div>
+<h3 id="section-1-materialized-views">Section 1: Materialized views<a class="headerlink" href="#section-1-materialized-views" title="Permanent link">&para;</a></h3>
+<p>The report finds every BigQuery materialized view in the covered datasets automatically. Today that is just <code>clinvar_curator.cvc_annotations_base_mv</code>. For each view it shows the following.</p>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>last refresh</code> / <code>watermark</code></td>
+<td>When BigQuery last refreshed the MV, and the base-table point in time the MV reflects</td>
+</tr>
+<tr>
+<td><code>base tables</code></td>
+<td>Each base table and when it last changed (<code>__TABLES__.last_modified_time</code>). <code>*</code> = changed after the watermark, <code>!</code> = table no longer exists. This list comes from the most recent successful refresh job's <code>referenced_tables</code>. If no refresh job is in the window, it comes from a parse of the MV's DDL.</td>
+</tr>
+<tr>
+<td><code>auto-refresh</code></td>
+<td><code>enable_refresh</code> and <code>refresh_interval_minutes</code> (plus <code>max_staleness</code> if set)</td>
+</tr>
+<tr>
+<td><code>refresh jobs</code></td>
+<td>Refresh jobs in the last 30 days, and how many failed. "Materialized view is already being refreshed" collisions are harmless and not counted.</td>
+</tr>
+<tr>
+<td><code>fix</code></td>
+<td>A ready-to-run <code>CALL BQ.REFRESH_MATERIALIZED_VIEW('project.dataset.view');</code></td>
+</tr>
+</tbody>
+</table>
+<p>Status values:</p>
+<table>
+<thead>
+<tr>
+<th>Status</th>
+<th>Meaning</th>
+<th>Action</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>OK</code></td>
+<td>No base table changed after the refresh watermark</td>
+<td>None</td>
+</tr>
+<tr>
+<td><code>STALE</code></td>
+<td>A base table changed after the watermark, and the next auto-refresh is still within <code>refresh_interval_minutes</code> + grace (default 30 min)</td>
+<td>Usually none; BigQuery will refresh it. Queries still return current results, but read the base tables to do it.</td>
+</tr>
+<tr>
+<td><code>STALE_OVERDUE</code></td>
+<td>Stale for longer than the refresh interval + grace</td>
+<td>Run the <code>fix</code> statement and find out why auto-refresh is not keeping up</td>
+</tr>
+<tr>
+<td><code>STALE_MANUAL</code></td>
+<td>Stale, and auto-refresh is disabled</td>
+<td>Run the <code>fix</code> statement</td>
+</tr>
+<tr>
+<td><code>STALE_UPSTREAM</code></td>
+<td>The MV is current, but an MV it is built on needs a refresh</td>
+<td>Refresh after the upstream MV</td>
+</tr>
+<tr>
+<td><code>REFRESH_FAILED</code></td>
+<td><code>last_refresh_status</code> or the latest refresh job reports an error</td>
+<td>Read <code>refresh error</code>, fix the cause, then refresh</td>
+</tr>
+<tr>
+<td><code>BROKEN</code></td>
+<td>A base table is missing</td>
+<td>Re-create the MV from its source script</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>MV REFRESH PLAN</strong> lists the refresh statements in dependency order: an MV built on another MV comes after it. <code>--refresh</code> runs exactly these statements, in that order, after a confirmation prompt (<code>--yes</code> skips the prompt).</p>
+<div class="admonition note">
+<p class="admonition-title">Why <code>cvc_annotations_base_mv</code> is often briefly STALE</p>
+<p>Scheduled queries rewrite two of its base tables every hour with <code>WRITE_TRUNCATE</code>: <code>clinvar_curator.clinvar_annotations_native</code> (from the curation Google Sheet) and <code>clinvar_ingest.all_releases_materialized</code> (from <code>all_releases()</code>). Each rewrite leaves the MV stale until the next 30-minute auto-refresh, which does a full recompute. A short <code>STALE</code> window is normal. Only <code>STALE_OVERDUE</code> or <code>REFRESH_FAILED</code> needs attention.</p>
+</div>
+<h3 id="section-2-stale-derived-tables">Section 2: Stale derived tables<a class="headerlink" href="#section-2-stale-derived-tables" title="Permanent link">&para;</a></h3>
+<p>Many tables in the covered datasets are snapshots built with <code>CREATE OR REPLACE TABLE ... AS SELECT</code> by procedures such as <code>clinvar_curator.refresh_cvc_impact_analysis()</code>, <code>clinvar_ingest.refresh_mechanism_threshold()</code>, the tracker report rebuilds and the release pipeline. They work like materialized views, but BigQuery does not track them. For every table in the covered datasets written within <code>--lookback</code> days, the report:</p>
+<ol>
+<li>Finds the most recent successful job that wrote the table, plus any other writes to it from the same script run.</li>
+<li>Takes that job's <code>referenced_tables</code> as the table's sources. <code>INFORMATION_SCHEMA</code> and temp tables are ignored.</li>
+<li>Marks the table <code>DERIVED_STALE</code> if any source has changed since the table was last written.</li>
+</ol>
+<p>For each stale table the report shows the sources that changed, and <code>last built by</code>: the procedure <code>CALL</code> or script that built it last, or "scheduled query". The <strong>DERIVED REBUILD PLAN</strong> groups the stale tables by that builder. Run builders with a lower <code>order</code> first: order 1 means one of the table's changed sources is itself a stale derived table.</p>
+<div class="admonition warning">
+<p class="admonition-title">Heuristic</p>
+<p>Section 2 relies on job history, so:</p>
+<ul>
+<li>Tables last written more than <code>--lookback</code> days ago (180 max, the JOBS retention) do not appear.</li>
+<li>Sources with no storage, such as external Google Sheet tables and logical views, cannot be checked.</li>
+<li>"Stale" means <em>a source changed after the build</em>. It does not mean the table is wrong. A snapshot that should stay frozen shows as stale until it is labelled (see below).</li>
+</ul>
+</div>
+<h3 id="frozen-snapshots">Frozen snapshots<a class="headerlink" href="#frozen-snapshots" title="Permanent link">&para;</a></h3>
+<p>Some tables are meant to stay as they were built: dated snapshots, audits and logs. To keep one out of the stale list, give it the label <code>snapshot: frozen</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>bq<span class="w"> </span>update<span class="w"> </span>--set_label<span class="w"> </span>snapshot:frozen<span class="w"> </span>clingen-dev:clinvar_ingest.monthly_conflict_snapshots
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Undo</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>bq<span class="w"> </span>update<span class="w"> </span>--clear_label<span class="w"> </span>snapshot<span class="w"> </span>clingen-dev:clinvar_ingest.monthly_conflict_snapshots
+</code></pre></div>
+<p>A labelled table whose sources have changed is reported as <code>DERIVED_FROZEN</code>, not <code>DERIVED_STALE</code>. The text report lists it under <strong>FROZEN SNAPSHOTS</strong>, after the rebuild plan, and leaves it out of the plan. Nothing waits on it in the rebuild order. The label is a table property, so a <code>CREATE OR REPLACE TABLE</code> drops it. A procedure that replaces a frozen table on purpose has to set the label again.</p>
+<h2 id="key-dependencies">Key Dependencies<a class="headerlink" href="#key-dependencies" title="Permanent link">&para;</a></h2>
+<p>The schema/release table functions are foundational -- they are used by:</p>
+<ul>
+<li><code>temporal-data-collection-proc.sql</code> to resolve which schema to process</li>
+<li><code>temporal-data-summation</code> procedures to look up adjacent releases</li>
+<li><code>tracker-report-update</code> procedures to find the current release</li>
+<li>CvC functions in <code>bigquery/curator/</code> in the <code>clinvar-curation-input-tool</code> repository to determine release context</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.sections", "navigation.expand", "navigation.top", "search.highlight", "content.code.copy"], "search": "../../assets/javascripts/workers/search.a7633da7.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.c21346df.min.js"></script>
+      
+        <script src="../../javascripts/mermaid-init.js"></script>
+      
+    
+  </body>
+</html>
