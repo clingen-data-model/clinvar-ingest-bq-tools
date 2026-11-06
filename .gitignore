@@ -15,3 +15,7 @@ site/
 .gitignore
 .vscode/settings.json
 .claude/settings.json
+
+# submitter-contacts scraper outputs (generated; contain scraped personnel data)
+scripts/submitter-contacts/*.ndjson
+scripts/submitter-contacts/*_submitter_ids.txt
