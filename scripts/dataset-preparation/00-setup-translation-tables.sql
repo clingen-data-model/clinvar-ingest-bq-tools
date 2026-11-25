@@ -63,13 +63,13 @@ VALUES
     ('path',    'lb',        'Likely benign',                     0, 31,  31,  'disputes',  'likely',     'Likely',     'likely benign',                     null,          'ACMG Guidelines, 2015',                                        'isCausalFor'),
     ('path',    'b/lb',      'Benign/Likely benign',              0, 32,  32,  'disputes',  null,         null,         'benign/likely benign',              null,          'ClinVar',                                                      'isCausalFor'),
     ('path',    'vus',       'Uncertain significance',            1, 20,  20,  'neutral',   null,         null,         'uncertain significance',            null,          'ACMG Guidelines, 2015',                                        'isCausalFor'),
-    ('path',    'vus-h',     'VUS-high',                          1, 21,  21,  'neutral',   'high',       'High',       'vus-high',                          null,          'SVC v4',                                                       'isCausalFor'),
-    ('path',    'vus-m',     'VUS-mid',                           1, 22,  22,  'neutral',   'mid',        'Mid',        'vus-mid',                           null,          'SVC v4',                                                       'isCausalFor'),
-    ('path',    'vus-l',     'VUS-low',                           1, 23,  23,  'neutral',   'low',        'Low',        'vus-low',                           null,          'SVC v4',                                                       'isCausalFor'),
+    ('path',    'vus-h',     'VUS-high',                          1, 21,  21,  'neutral',   'high',       'High',       'vus-high',                          null,          'ACMG/AMP/CAP/ClinGen SVCv4.0',                                 'isCausalFor'),
+    ('path',    'vus-m',     'VUS-mid',                           1, 22,  22,  'neutral',   'mid',        'Mid',        'vus-mid',                           null,          'ACMG/AMP/CAP/ClinGen SVCv4.0',                                 'isCausalFor'),
+    ('path',    'vus-l',     'VUS-low',                           1, 23,  23,  'neutral',   'low',        'Low',        'vus-low',                           null,          'ACMG/AMP/CAP/ClinGen SVCv4.0',                                 'isCausalFor'),
     ('path',    'ura',       'Uncertain risk allele',             1, 25,  25,  'neutral',   null,         null,         'uncertain risk allele',             'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'isCausalFor'),
     ('path',    'p',         'Pathogenic',                        2, 10,  10,  'supports',  'definitive', 'Definitive', 'pathogenic',                        null,          'ACMG Guidelines, 2015',                                        'isCausalFor'),
     ('path',    'lp',        'Likely pathogenic',                 2, 11,  11,  'supports',  'likely',     'Likely',     'likely pathogenic',                 null,          'ACMG Guidelines, 2015',                                        'isCausalFor'),
-    ('path',    'p/lp',      'Pathogenic/Likely pathogenic',      2, 12,  12,  'supports',  null,         null,         'pathogenic/Likely pathogenic',      null,          'ClinVar',                                                      'isCausalFor'),
+    ('path',    'p/lp',      'Pathogenic/Likely pathogenic',      2, 12,  12,  'supports',  null,         null,         'pathogenic/likely pathogenic',      null,          'ClinVar',                                                      'isCausalFor'),
     ('path',    'p-lp',      'Pathogenic, low penetrance',        2, 13,  13,  'supports',  'definitive', 'Definitive', 'pathogenic, low penetrance',        'low',         'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'isCausalFor'),
     ('path',    'lp-lp',     'Likely pathogenic, low penetrance', 2, 14,  14,  'supports',  'likely',     'Likely',     'likely pathogenic, low penetrance', 'low',         'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'isCausalFor'),
     ('path',    'era',       'Established risk allele',           2, 15,  15,  'supports',  'definitive', 'Definitive', 'established risk allele',           'risk allele', 'ClinGen Low Penetrance and Risk Allele Recommendations, 2024', 'isCausalFor'),
@@ -93,44 +93,10 @@ VALUES
     ('protect', 'protect',   'protective',                        0, 160, 160, 'supports',   null,        null,         'protective',                        null,          'ClinVar',                                                      'isProtectiveFor'),
     ('rf',      'rf',        'risk factor',                       2, 170, 170, 'supports',   null,        null,         'risk factor',                       null,          'ClinVar',                                                      'isRiskFactorFor'),
     -- Somatic Clinical Impact
-    ('sci',     't1',        'Tier I (Strong)',                    2, 10,  10,  'supports',  'strong',     'Strong',     'tier 1',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'isClinicallySignificantFor'),
-    ('sci',     't2',        'Tier II (Potential)',                2, 11,  11,  'supports',  'potential',  'Potential',  'tier 2',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'isClinicallySignificantFor'),
-    ('sci',     't3',        'Tier III Unknown',                   1, 20,  20,  'neutral',   null,         null,         'tier 3',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'isClinicallySignificantFor'),
-    ('sci',     't4',        'Tier IV (Benign)/Likely benign',     0, 32,  32,  'disputes',  null,         null,         'tier 4',                            null,          'AMP/ASCO/CAP (AAC) Guidelines, 2017',                          'isClinicallySignificantFor');
-
--- drop the non-GERMLINE rows from the clinsig_types table (on stage only)
-BEGIN
-    DECLARE project_id STRING;
-
-    SET project_id = (SELECT
-        catalog_name as paroject_id
-    FROM `INFORMATION_SCHEMA.SCHEMATA`
-    WHERE schema_name = 'clinvar_ingest');
-
-    IF (project_id = 'clingen-stage') THEN
-        CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types`
-        AS
-        SELECT
-            cst.proposition_type,
-            cst.code,
-            cst.label,
-            cst.significance,
-            cst.code_order,
-            cst.description_order,
-            cst.direction,
-            cst.strength_code,
-            cst.strength_label,
-            cst.classification_code,
-            cst.penetrance_level,
-            cst.final_predicate
-        FROM `clinvar_ingest.clinvar_clinsig_types` cst
-        JOIN `clinvar_ingest.clinvar_proposition_types` cpt
-        ON cpt.code = cst.proposition_type
-        WHERE cpt.statement_type_code = 'GermlineClassification';
-
-    END IF;
-
-END;
+    ('sci',     't1',        'Tier I (Strong)',                    2, 10,  10,  'supports',  'strong',     'Strong',     'tier i',                            null,          'AMP/ASCO/CAP Guidelines, 2017',                                'isClinicallySignificantFor'),
+    ('sci',     't2',        'Tier II (Potential)',                2, 11,  11,  'supports',  'potential',  'Potential',  'tier ii',                           null,          'AMP/ASCO/CAP Guidelines, 2017',                                'isClinicallySignificantFor'),
+    ('sci',     't3',        'Tier III Unknown',                   1, 20,  20,  'neutral',   null,         null,         'tier iii',                          null,          'AMP/ASCO/CAP Guidelines, 2017',                                'isClinicallySignificantFor'),
+    ('sci',     't4',        'Tier IV (Benign)/Likely benign',     0, 32,  32,  'disputes',  null,         null,         'tier iv',                           null,          'AMP/ASCO/CAP Guidelines, 2017',                                'isClinicallySignificantFor');
 
 CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_proposition_types` (
     code STRING,
@@ -168,6 +134,41 @@ VALUES
     ('prog',    'Prognostic',                       'VariantPrognosticProposition',                   'SomaticClinicalImpact',      100, FALSE),
     ('diag',    'Diagnostic',                       'VariantDiagnosticProposition',                   'SomaticClinicalImpact',      110, FALSE),
     ('tr',      'Therapeutic Response',             'VariantTherapeuticResponseProposition',          'SomaticClinicalImpact',      120, FALSE);
+
+-- drop the non-GERMLINE rows from the clinsig_types table (on stage only)
+BEGIN
+    DECLARE project_id STRING;
+
+    SET project_id = (SELECT
+        catalog_name as paroject_id
+    FROM `INFORMATION_SCHEMA.SCHEMATA`
+    WHERE schema_name = 'clinvar_ingest');
+
+    IF (project_id = 'clingen-stage') THEN
+        CREATE OR REPLACE TABLE `clinvar_ingest.clinvar_clinsig_types`
+        AS
+        SELECT
+            cst.proposition_type,
+            cst.code,
+            cst.label,
+            cst.significance,
+            cst.code_order,
+            cst.description_order,
+            cst.direction,
+            cst.strength_code,
+            cst.strength_label,
+            cst.classification_code,
+            cst.penetrance_level,
+            cst.code_system,
+            cst.final_predicate
+        FROM `clinvar_ingest.clinvar_clinsig_types` cst
+        JOIN `clinvar_ingest.clinvar_proposition_types` cpt
+        ON cpt.code = cst.proposition_type
+        WHERE cpt.statement_type_code = 'GermlineClassification';
+
+    END IF;
+
+END;
 
 
 CREATE OR REPLACE TABLE `clinvar_ingest.scv_clinsig_map` (

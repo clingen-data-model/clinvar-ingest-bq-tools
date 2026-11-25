@@ -62,7 +62,7 @@ The numeric prefixes define the required execution order. Each step depends on t
 - `{schema}.submitter` -- Submitter metadata
 - `{schema}.variation_archive`, `{schema}.variation_archive_classification` -- VCV-level data
 - `{schema}.rcv_accession`, `{schema}.rcv_accession_classification` -- RCV-level data
-- `clinvar_ingest.clinvar_clinsig_types` -- Clinical significance type mappings
+- `clinvar_ingest.clinvar_clinsig_types` -- Clinical significance type mappings, with each classification's guideline code (`classification_code`) and system (`code_system`)
 - `clinvar_ingest.clinvar_proposition_types` -- Proposition metadata (GKS type, statement_type_code)
 - `clinvar_ingest.scv_clinsig_map` -- SCV classification term mappings
 - `clinvar_ingest.status_rules`, `clinvar_ingest.status_definitions` -- Review status mappings
