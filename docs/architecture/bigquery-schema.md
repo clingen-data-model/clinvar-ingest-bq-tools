@@ -46,7 +46,7 @@ These tables are populated by the setup scripts and Cloud Functions. They provid
 
 | Table | Description |
 |-------|-------------|
-| `clinvar_clinsig_types` | Classification type definitions mapping codes to labels, significance levels, proposition types, direction, strength, and predicate. Keyed by `(proposition_type, code)`. |
+| `clinvar_clinsig_types` | Classification type definitions mapping codes to labels, significance levels, proposition types, direction, strength, predicate, and the guideline coding (`classification_code` in the guideline system `code_system`: ACMG 2015, SVCv4, CCV 2022, AMP/ASCO/CAP 2017, ClinGen 2024 low penetrance and risk allele, or ClinVar). Keyed by `(proposition_type, code)`. |
 | `scv_clinsig_map` | Maps raw SCV `interpretation_description` strings to normalized `clinvar_clinsig_types` codes. Handles legacy terms like "vous", "mutation", "poly". |
 | `clinvar_proposition_types` | Single source of truth for proposition metadata -- maps proposition codes (path, onco, sci, prog, diag, tr, etc.) to GKS type names, owning `statement_type_code`, display order, and conflict detectability. |
 | `status_rules` | Maps review status strings to logical context: SCV vs. aggregate level, rule type (SINGLE, CONFLICT, MULTIPLE_AGREE), and conflict detectability. |

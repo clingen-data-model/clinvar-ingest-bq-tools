@@ -12,7 +12,7 @@ Before aggregation, data is passed through a "Rosetta Stone" of configuration ta
 
 - **`clinvar_statement_categories`**: Defines high-level classification categories and their associated proposition types.
 - **`clinvar_statement_types`**: Categorizes data into high-level buckets (Germline, Somatic Clinical Impact, Oncogenicity) and assigns the ID codes (G, S, O).
-- **`clinvar_clinsig_types`**: Maps messy ClinVar strings to standardized codes, guidelines (ACMG/AMP), and a numeric significance scale (0–2).
+- **`clinvar_clinsig_types`**: Maps messy ClinVar strings to standardized codes, guideline codings (`classification_code` in `code_system`: ACMG 2015, SVCv4 for VUS-high/mid/low, CCV 2022 for oncogenicity, AMP/ASCO/CAP 2017 for somatic tiers, ClinGen 2024 for low penetrance and risk alleles, or ClinVar), and a numeric significance scale (0–2).
 - **`scv_clinsig_map`**: A "fuzzy" lookup that cleans raw submitter strings (e.g., "vous" → "vus") into the standardized codes used by the system.
 
 ### B. The Proposition Logic Layer
