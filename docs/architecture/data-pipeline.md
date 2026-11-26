@@ -55,7 +55,7 @@ This stage normalizes and validates each ClinVar release before downstream proce
 
 Creates and populates lookup/reference tables in `clinvar_ingest`:
 
-- **`clinvar_clinsig_types`** -- Maps classification codes to labels, significance levels, proposition types, direction, strength, and predicate. Keyed by `(proposition_type, code)`.
+- **`clinvar_clinsig_types`** -- Maps classification codes to labels, significance levels, proposition types, direction, strength, predicate, and the guideline coding (`classification_code` in the guideline system `code_system`, e.g. `tier i` in `AMP/ASCO/CAP Guidelines, 2017`, `vus-high` in `ACMG/AMP/CAP/ClinGen SVCv4.0`). Keyed by `(proposition_type, code)`.
 - **`scv_clinsig_map`** -- Maps raw SCV interpretation description strings (e.g., "likely pathogenic", "vous", "mutation") to normalized `clinvar_clinsig_types` codes.
 - **`status_rules`** / **`status_definitions`** -- Two-table system for review status ranking. `status_rules` defines the logical context (SCV vs. aggregate, conflict detection). `status_definitions` maps review statuses to star-rating ranks with temporal validity windows.
 - **`clinvar_proposition_types`** -- Single source of truth for proposition metadata -- maps codes to GKS type names, owning `statement_type_code`, display order, and conflict detectability.
